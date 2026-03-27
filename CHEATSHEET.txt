@@ -1,0 +1,176 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║              ALGOTEC TRADING — CHEATSHEET                   ║
+║              Print this and keep it handy                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EVERY SESSION — RUN THESE FIRST (every time you open terminal)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    cd ~/Desktop/trading_system
+    source venv/bin/activate
+
+You must do this in EVERY new terminal tab you open.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DASHBOARD  (Tab 1 — always keep running)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    sudo venv/bin/python server.py
+
+    Open browser → http://algotectrading
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKTESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Standard RBI (3 datasets, sequential):
+    python src/agents/rbi_agent.py
+
+Parallel RBI (25 datasets, 8x faster):
+    python src/agents/rbi_parallel.py
+
+Parallel RBI — single idea test:
+    python src/agents/rbi_parallel.py --idea "RSI below 30 buy signal"
+
+ICT Multi-Timeframe Backtest (ETH):
+    python src/agents/ict_backtester.py --symbol ETH --days 90
+
+ICT Backtest (BTC, 120 days):
+    python src/agents/ict_backtester.py --symbol BTC --days 120
+
+ICT Backtest (all symbols):
+    python src/agents/ict_backtester.py
+
+Monte Carlo Risk Simulation:
+    python src/agents/monte_carlo_agent.py
+
+Reset backtester (re-run all ideas from scratch):
+    rm src/data/processed_ideas.json
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MARKET SCANNERS  (run once a day or continuously)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ICT A+ Setup Scanner (continuous):
+    python src/agents/ict_scanner.py
+
+ICT Scanner — single scan:
+    python src/agents/ict_scanner.py --once
+
+ICT Scanner — single symbol:
+    python src/agents/ict_scanner.py --symbol ETH
+
+Market Regime Detector:
+    python src/agents/regime_agent.py --once
+
+Sentiment Analysis:
+    python src/agents/sentiment_agent.py --once
+
+Whale Monitor:
+    python src/agents/whale_agent.py --once
+
+Liquidation Tracker:
+    python src/agents/liquidation_agent.py --once
+
+Funding Rate Arbitrage:
+    python src/agents/funding_arb_agent.py --once
+
+VWAP Reversion:
+    python src/agents/vwap_agent.py --once
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRADING  (only after forward testing)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Psychology check (run BEFORE every live session):
+    python src/agents/psychology_guard.py --check
+
+Clear a trading pause:
+    python src/agents/psychology_guard.py --clear-pause
+
+ICT Executor — dry run (no real trades, safe testing):
+    python src/agents/ict_executor.py --dryrun
+
+ICT Executor — single symbol dry run:
+    python src/agents/ict_executor.py --symbol ETH --dryrun
+
+ICT Executor — live trading:
+    python src/agents/ict_executor.py
+
+Swarm Agent — single scan:
+    python src/agents/swarm_agent.py --once
+
+Swarm Agent — single symbol:
+    python src/agents/swarm_agent.py --symbol BTC
+
+Swarm Agent — live continuous:
+    python src/agents/swarm_agent.py
+
+Copy Bot — single scan:
+    python src/agents/copy_bot_agent.py --once
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RUN EVERYTHING TOGETHER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Enable agents in src/config.py then run:
+
+    python src/main.py
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USEFUL SHORTCUTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+New terminal tab:                         Cmd + T
+Stop any running agent:                   Ctrl + C
+Deactivate virtual environment:           deactivate
+Open config file:                         open -e src/config.py
+Open ideas file:                          open -e src/data/ideas.txt
+Open API keys file:                       open -e .env
+View backtest results CSV:                open src/data/rbi_results/backtest_stats.csv
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRADE SIZE SETTINGS  (src/config.py and agent files)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backtest starting cash:       BACKTEST_INITIAL_CASH = 100_000
+Max position per trade:       MAX_POSITION_SIZE_USD = 100
+Max daily loss:               MAX_DAILY_LOSS_USD    = 500
+Stop loss:                    STOP_LOSS_PCT         = 0.03  (3%)
+Take profit:                  TAKE_PROFIT_PCT       = 0.06  (6%)
+
+ICT Executor trade size:      ICT_TRADE_SIZE_USD    = 50   (in ict_executor.py)
+Swarm trade size:             SWARM_TRADE_SIZE_USD  = 50   (in swarm_agent.py)
+
+START AT $10 PER TRADE WHEN GOING LIVE FOR THE FIRST TIME.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE LOCATIONS — WHERE RESULTS ARE SAVED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backtest results CSV:         src/data/rbi_results/backtest_stats.csv
+ICT backtest results:         src/data/ict_backtest/ict_backtest_summary.csv
+ICT trade logs:               src/data/ict_backtest/ict_trades_*.csv
+Live trade log:               src/data/trade_log.csv
+ICT execution log:            src/data/ict_exec_log.csv
+Swarm decisions:              src/data/swarm_log.csv
+Whale alerts:                 src/data/whale_log.csv
+Liquidation alerts:           src/data/liquidation_log.csv
+Sentiment log:                src/data/sentiment_log.csv
+Funding arb log:              src/data/funding_arb_log.csv
+Regime log:                   src/data/regime_log.csv
+Monte Carlo results:          src/data/monte_carlo_results.csv
+Psychology events:            src/data/psychology_log.csv
+Current market regime:        src/data/current_regime.json
+Trading paused flag:          src/data/trading_paused.json

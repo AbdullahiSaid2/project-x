@@ -1,0 +1,248 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║           ALGOTEC TRADING — FULL WORKFLOW GUIDE             ║
+║       From Backtesting → Demo → Live Trading                ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 1 — BACKTESTING  (Week 1-2)
+Goal: Find 2-3 strategies with Sharpe above 1.5 and drawdown under 15%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — Start the dashboard (keep this running the whole time)
+
+    sudo venv/bin/python server.py
+    Open: http://algotectrading
+
+
+STEP 2 — Run the Parallel RBI Backtester (Tab 2)
+
+    python src/agents/rbi_parallel.py
+
+    This tests all 79 strategy ideas across 25 datasets.
+    Takes 1-2 hours. Watch results appear live on the Backtests tab.
+
+
+STEP 3 — Run the ICT Backtester (Tab 3)
+
+    python src/agents/ict_backtester.py --symbol ETH --days 90
+    python src/agents/ict_backtester.py --symbol BTC --days 90
+    python src/agents/ict_backtester.py --symbol SOL --days 90
+
+
+STEP 4 — Run Monte Carlo Risk Simulation
+
+    python src/agents/monte_carlo_agent.py
+
+    Look for strategies where ruin probability is BELOW 5%.
+    Reject any strategy with ruin probability above 15%.
+
+
+STEP 5 — Pick your top 2-3 strategies
+
+    From the dashboard Backtests tab, sort by Sharpe ratio.
+    Your ideal strategy has ALL FOUR of these:
+
+    ✓ Return % beats Buy & Hold
+    ✓ Sharpe ratio above 1.5
+    ✓ Max drawdown under 15%
+    ✓ Monte Carlo ruin probability under 5%
+    ✓ More than 15 trades (enough data to be meaningful)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 2 — FORWARD TESTING / DEMO TRADING  (Week 3-6)
+Goal: Confirm the strategy works on live data before risking money
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — Check market regime
+
+    python src/agents/regime_agent.py --once
+
+    This tells you whether we are in a Bull, Bear, or Sideways market.
+    Confirms which strategies to run right now.
+
+
+STEP 2 — Check sentiment
+
+    python src/agents/sentiment_agent.py --once
+
+
+STEP 3 — Run the ICT Scanner continuously (Tab 2)
+
+    python src/agents/ict_scanner.py
+
+    Every time it fires an A+ or A alert:
+    → Go to your chart manually
+    → Check the M5 for a clean CISD
+    → Write in your journal what you would have done
+    → Check the outcome the next day
+
+    Do this for 2 weeks. Build your forward test log manually.
+
+
+STEP 4 — Run the ICT Executor in DRY RUN (Tab 3)
+
+    python src/agents/ict_executor.py --dryrun
+
+    This runs all checks and logs every potential trade
+    but places NO real orders. Watch the ICT Executions
+    tab on the dashboard. Track the hypothetical outcomes.
+
+
+STEP 5 — Weekly review questions
+
+    - Are signals appearing at sensible prices?
+    - Is live win rate close to backtest win rate? (within 10% is fine)
+    - Does the system behave differently in this market vs backtest?
+    - Are there patterns in what gets blocked?
+
+    If YES to all → proceed to Phase 3
+    If results look very different → go back to Phase 1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 3 — LIVE TRADING — MICRO SIZE  (Month 2)
+Goal: Experience real money psychology with minimal risk
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — Fund your exchange
+
+    Start with an amount you are completely comfortable losing.
+    Recommended starting amount: $200-500
+    Fund Hyperliquid or Coinbase.
+    Add your API keys to .env
+
+
+STEP 2 — Set minimum trade sizes
+
+    In src/agents/ict_executor.py:
+        ICT_TRADE_SIZE_USD = 10
+
+    In src/agents/swarm_agent.py:
+        SWARM_TRADE_SIZE_USD = 10
+
+    In src/config.py:
+        MAX_POSITION_SIZE_USD = 10
+        MAX_DAILY_LOSS_USD    = 50
+
+
+STEP 3 — Always run Psychology Guard first
+
+    python src/agents/psychology_guard.py --check
+
+    If it shows a pause → respect it and do not trade today.
+
+
+STEP 4 — Run your chosen execution agent (pick ONE)
+
+    Option A — ICT A+ setup execution:
+        python src/agents/ict_executor.py
+
+    Option B — Swarm consensus trading:
+        python src/agents/swarm_agent.py
+
+
+STEP 5 — Run supporting agents alongside
+
+    Tab 3:  python src/agents/regime_agent.py
+    Tab 4:  python src/agents/funding_arb_agent.py --once
+    Tab 5:  python src/agents/whale_agent.py
+
+
+STEP 6 — Keep a trade journal
+
+    After every trade write down:
+    - What was the setup?
+    - Did you feel the urge to override the system?
+    - Did you follow the system or deviate?
+    - What was the outcome?
+
+    The journal is how you build discipline.
+
+
+STEP 7 — Weekly assessment after 4 weeks
+
+    Compare live results to forward test results.
+    If broadly consistent → proceed to Phase 4.
+    If very different → do another 2 weeks of forward testing.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 4 — SCALING UP  (Month 3 onwards)
+Goal: Systematically grow size as confidence and results build
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Only increase size when ALL THREE are true:
+
+    ✓ You have 20+ live trades to review
+    ✓ Live win rate is within 10% of backtest win rate
+    ✓ You did NOT manually override or turn off the system
+      during a drawdown
+
+Scaling ladder:
+
+    Month 2:   $10 per trade    (psychology testing)
+    Month 3:   $25 per trade    (if results hold)
+    Month 4:   $50 per trade    (if still consistent)
+    Month 5:   $100 per trade   (approaching normal size)
+    Month 6+:  Position sizer takes over (ATR + Kelly)
+
+
+STEP 1 — Enable the Position Sizer (Month 6+)
+
+    In any agent file replace fixed size with:
+
+        from src.models.position_sizer import get_position_size
+        result = get_position_size("ETH", win_rate=0.55, rr_ratio=2.0)
+        size   = result["final_size_usd"]
+
+
+STEP 2 — Enable Copy Bot for additional trades
+
+    python src/agents/copy_bot_agent.py
+
+
+STEP 3 — Run the full system together
+
+    Enable agents in src/config.py by setting them to True.
+    Then run:
+
+        python src/main.py
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE GOLDEN RULES — READ THESE BEFORE EVERY SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. NEVER skip Phase 2. Forward testing costs nothing and
+   proves the strategy works in current market conditions.
+
+2. NEVER increase trade size during a drawdown. The urge
+   to recover losses faster is the most dangerous impulse
+   in trading.
+
+3. LET THE SYSTEM WORK. Every override removes your edge.
+   If you keep overriding it, you don't trust it. If you
+   don't trust it, go back to Phase 1.
+
+4. START THE PSYCHOLOGY GUARD before every live session.
+   It exists for the moments when you don't think you need it.
+
+5. SIZE KILLS ACCOUNTS, not bad strategies. A good strategy
+   with too much size will blow your account. A mediocre
+   strategy with correct sizing will survive and compound.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TIMELINE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Week 1-2:    Backtesting — find your strategies
+Week 3-6:    Forward testing — prove they work now
+Month 2:     Go live at $10/trade
+Month 3:     Scale to $25/trade if results hold
+Month 4+:    Scale further systematically
+
+Traders who skip steps lose money.
+Traders who follow the process build consistent returns.

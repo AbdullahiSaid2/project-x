@@ -1,0 +1,107 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║          ALGOTEC TRADING — DAILY SESSION CHECKLIST          ║
+║              Print and tick off each session                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BEFORE EVERY SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] cd ~/Desktop/trading_system
+[ ] source venv/bin/activate
+[ ] sudo venv/bin/python server.py   (Tab 1)
+[ ] Open browser → http://algotectrading
+
+[ ] Psychology check
+    python src/agents/psychology_guard.py --check
+    → If PAUSED: do not trade today
+
+[ ] Regime check (once daily)
+    python src/agents/regime_agent.py --once
+
+[ ] Sentiment check (once daily)
+    python src/agents/sentiment_agent.py --once
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKTESTING SESSION  (Phase 1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] python src/agents/rbi_parallel.py      (Tab 2)
+[ ] Check Backtests tab on dashboard
+[ ] Sort by Sharpe ratio
+[ ] Note top 3 strategies in your journal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORWARD TESTING SESSION  (Phase 2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] python src/agents/ict_scanner.py       (Tab 2, continuous)
+[ ] python src/agents/ict_executor.py --dryrun  (Tab 3)
+[ ] python src/agents/whale_agent.py --once
+[ ] python src/agents/liquidation_agent.py --once
+
+When ICT Scanner fires A+ alert:
+[ ] Go to chart → check M5 for CISD
+[ ] Write in journal: setup details + outcome next day
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LIVE TRADING SESSION  (Phase 3 and 4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] Psychology check passed (not paused)
+[ ] Regime agent run → confirms strategy matches market
+[ ] Sentiment checked → no extreme bearish news
+
+[ ] python src/agents/ict_executor.py      (Tab 2)
+    OR
+    python src/agents/swarm_agent.py       (Tab 2)
+
+[ ] python src/agents/regime_agent.py      (Tab 3)
+[ ] python src/agents/funding_arb_agent.py --once  (Tab 4)
+[ ] python src/agents/whale_agent.py       (Tab 5)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AFTER EVERY SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] Review dashboard — check all tabs for any alerts
+[ ] Write in journal:
+      - Date and session time
+      - Market regime today
+      - Signals fired
+      - Trades taken (or not taken)
+      - Outcomes
+      - Notes on system behaviour
+
+[ ] Stop all agents (Ctrl + C in each tab)
+[ ] deactivate
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WEEKLY REVIEW (every Sunday)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] Open backtest_stats.csv — any new strategies to test?
+[ ] Run Monte Carlo on new results:
+      python src/agents/monte_carlo_agent.py
+[ ] Compare live win rate vs backtest win rate
+[ ] Review psychology log for any warning patterns
+[ ] Review trade journal — are you following the system?
+[ ] Decide: ready to increase size or stay at current level?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KILL ZONES  (best times to watch for ICT setups)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+London Open:        2:00am  -  5:00am  EST   (7am - 10am UK)
+New York AM:        7:00am  - 10:00am  EST   (12pm - 3pm UK)
+London Close:      10:00am  - 12:00pm  EST
+
+These are the ONLY times you should look for ICT A+ entries.
+Outside these windows → no trade, no matter how good it looks.

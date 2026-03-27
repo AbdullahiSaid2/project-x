@@ -1,0 +1,195 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║           ALGOTEC TRADING — MAC SETUP GUIDE                 ║
+║                   Complete Installation                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+Follow every step in order. Do not skip any.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — INSTALL HOMEBREW (Mac package manager)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open Terminal (press Cmd + Space, type Terminal, press Enter)
+Then run:
+
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+Follow the prompts. Takes 2-3 minutes.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — INSTALL PYTHON 3.10.9
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run each line one at a time:
+
+    brew install pyenv
+
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
+    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
+
+    source ~/.zshrc
+
+    pyenv install 3.10.9
+
+Verify it worked:
+
+    python --version
+    → Should say: Python 3.10.9
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — UNZIP AND SET UP THE PROJECT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    cd ~/Desktop
+
+    unzip trading_system_final.zip
+
+    cd trading_system
+
+    pyenv local 3.10.9
+
+    python --version
+    → Should say: Python 3.10.9
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 — CREATE A VIRTUAL ENVIRONMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    python -m venv venv
+
+    source venv/bin/activate
+
+You will see (venv) appear at the start of your terminal line.
+You must run the activate command every time you open a new terminal.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5 — INSTALL ALL DEPENDENCIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    pip install --upgrade pip
+
+    pip install -r requirements.txt
+
+    pip install openai pandas numpy requests yfinance flask python-dotenv
+
+    pip install backtesting==0.3.3
+
+    pip install ta pytz
+
+    pip install git+https://github.com/twopirllc/pandas-ta.git@development
+
+    pip install groq google-generativeai
+
+    pip install hyperliquid-python-sdk eth-account
+
+Takes 3-5 minutes total.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6 — GET YOUR API KEYS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You need at minimum ONE AI key to start. Get them here:
+
+  REQUIRED:
+  DeepSeek  → platform.deepseek.com       (~$0.14 per million tokens)
+
+  FREE FALLBACKS (recommended — sign up takes 2 minutes each):
+  Groq      → console.groq.com            (completely free)
+  Gemini    → aistudio.google.com         (completely free)
+
+  FOR LIVE TRADING (only needed when ready to trade):
+  Hyperliquid private key  → from your crypto wallet
+  Coinbase API key         → coinbase.com/settings/api
+  CoinGlass API key        → coinglass.com (free tier)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7 — CREATE YOUR .ENV FILE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    cp .env.example .env
+
+    open -e .env
+
+Fill in your keys:
+
+    DEEPSEEK_API_KEY=sk-your-key-here
+    GROQ_API_KEY=your-groq-key-here
+    GEMINI_KEY=your-gemini-key-here
+
+    # Leave these blank until ready to trade live:
+    HYPERLIQUID_PRIVATE_KEY=
+    HYPERLIQUID_WALLET_ADDRESS=
+    COINBASE_API_KEY=
+    COINBASE_API_SECRET=
+    COINGLASS_API_KEY=
+
+Save and close the file.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 8 — TEST EVERYTHING WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    python -c "import pandas, backtesting, openai, flask, ta; print('All packages OK')"
+
+    → Should print: All packages OK
+    → If you see an error go to the TROUBLESHOOTING file
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 9 — SET UP THE ALGOTECTRADING URL (one time only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    sudo nano /etc/hosts
+
+Add this line at the very bottom:
+
+    127.0.0.1    algotectrading
+
+Press Ctrl + X  then  Y  then  Enter  to save.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 10 — RUN THE BACKTESTER (your first real run)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    python src/agents/rbi_agent.py
+
+Watch it process your strategy ideas. Takes 60-90 seconds per idea.
+Results are saved automatically to src/data/rbi_results/
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 11 — START THE LIVE DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open a NEW terminal tab (Cmd + T) then run:
+
+    cd ~/Desktop/trading_system
+    source venv/bin/activate
+    sudo venv/bin/python server.py
+
+Then open your browser and go to:
+
+    http://algotectrading
+
+The dashboard auto-refreshes every 10 seconds.
+Results from the backtester appear on the Backtests tab.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SETUP COMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You are now ready to use the Algotec Trading System.
+See CHEATSHEET.txt for daily commands.
+See WORKFLOW.txt for the full trading roadmap.
+See TROUBLESHOOTING.txt if anything goes wrong.

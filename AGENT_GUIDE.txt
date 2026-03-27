@@ -1,0 +1,176 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║          ALGOTEC TRADING — AGENT REFERENCE GUIDE            ║
+║              What every agent does                           ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESEARCH & BACKTESTING AGENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔬 RBI AGENT  (rbi_agent.py)
+   The starting point. You give it a trading idea in plain
+   English. It sends the idea to AI which researches it,
+   writes Python backtesting code, and tests it against real
+   historical price data for BTC, ETH and SOL.
+   Run: python src/agents/rbi_agent.py
+
+⚡ PARALLEL RBI  (rbi_parallel.py)
+   Same as RBI Agent but tests 25 datasets simultaneously
+   using 8 parallel threads. 8x faster than standard RBI.
+   Covers BTC/ETH/SOL/ARB/AVAX on 15m, 1H, 4H, 1D timeframes.
+   Run: python src/agents/rbi_parallel.py
+
+📐 ICT BACKTESTER  (ict_backtester.py)
+   Custom multi-timeframe backtester built specifically for
+   ICT strategies. Tests D1 direction + H1 confirmation +
+   M15 entry simultaneously. The only backtester that can
+   properly test ICT A+ setups.
+   Run: python src/agents/ict_backtester.py --symbol ETH
+
+🎲 MONTE CARLO  (monte_carlo_agent.py)
+   Runs 1,000 simulated trading paths using your real backtest
+   results. Answers: What is my ruin probability? What is the
+   worst 6-month streak to expect? Stress-tests your strategies
+   before real money goes in.
+   Run: python src/agents/monte_carlo_agent.py
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MARKET ANALYSIS AGENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔭 REGIME AGENT  (regime_agent.py)
+   Detects whether the current market is Bull Trend, Bear Trend,
+   Sideways, High Volatility, or Low Volatility. Tells you which
+   strategies to activate and which to pause. Runs every 4 hours.
+   Run: python src/agents/regime_agent.py --once
+
+🐋 WHALE MONITOR  (whale_agent.py)
+   Watches open interest, funding rates, and large individual
+   trades on Hyperliquid. Alerts when a whale opens or closes
+   a massive position — often a signal before major price moves.
+   Run: python src/agents/whale_agent.py --once
+
+💦 LIQUIDATION TRACKER  (liquidation_agent.py)
+   Monitors liquidation events across 15m, 1H, 4H windows.
+   When millions of longs get wiped, the selling pressure is
+   exhausted — often the best reversal entries in crypto.
+   Run: python src/agents/liquidation_agent.py --once
+
+📰 SENTIMENT AGENT  (sentiment_agent.py)
+   Pulls live headlines from crypto news feeds and scores the
+   overall market mood. Gives sentiment score per token.
+   Flags extreme news that might affect your trades.
+   Run: python src/agents/sentiment_agent.py --once
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRADE EXECUTION AGENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 ICT SCANNER  (ict_scanner.py)
+   Runs the full 4-step ICT A+ checklist every 5 minutes.
+   Step 1: D1 direction from previous day high/low.
+   Step 2: Price in discount (buys) or premium (sells).
+   Step 3: H1 fair value gaps, order blocks, displacement.
+   Step 4: London or New York Kill Zone active.
+   Grades each setup A+, A, B, or No Setup.
+   Run: python src/agents/ict_scanner.py
+
+⚡ ICT EXECUTOR  (ict_executor.py)
+   Takes ICT Scanner further — when A+ fires it checks M15
+   CISD quality, runs all risk gates, gets AI confirmation,
+   then executes with SL and TP automatically.
+   Run: python src/agents/ict_executor.py --dryrun (safe test)
+   Run: python src/agents/ict_executor.py (live trading)
+
+🐝 SWARM AGENT  (swarm_agent.py)
+   Five specialist AI agents vote in parallel on each trade.
+   Trend Agent + Momentum Agent + Whale Agent + Sentiment Agent
+   + Risk Agent. Trade only executes if 65% weighted consensus
+   and at least 3 of 5 agents agree. Reduces bad trades.
+   Run: python src/agents/swarm_agent.py --once
+
+📊 VWAP AGENT  (vwap_agent.py)
+   Trades mean reversion back to VWAP. When price moves more
+   than 2 standard deviations above or below VWAP, it signals
+   an entry expecting price to return to the mean.
+   Run: python src/agents/vwap_agent.py --once
+
+💰 FUNDING ARB AGENT  (funding_arb_agent.py)
+   Moon Dev's favourite strategy. Scans all Hyperliquid assets
+   for extreme funding rates above 20% annualised. Near
+   risk-free income in sideways markets.
+   Run: python src/agents/funding_arb_agent.py --once
+
+🤖 COPY BOT  (copy_bot_agent.py)
+   Fetches the Hyperliquid leaderboard, identifies top-performing
+   wallets, monitors their positions. When a top trader opens a
+   new position it analyses whether to copy and mirrors the trade.
+   Run: python src/agents/copy_bot_agent.py --once
+
+📈 TRADING AGENT  (trading_agent.py)
+   Simple single-AI live trader. Fetches data, computes
+   indicators, asks AI for BUY/SELL/HOLD, checks risk agent,
+   executes. Less sophisticated than swarm but simpler to run.
+   Run: python src/agents/trading_agent.py --once
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISK & PROTECTION AGENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🛡️ RISK AGENT  (risk_agent.py)
+   The gatekeeper. Every other agent calls this before placing
+   a trade. Enforces max position size, max daily loss, max
+   portfolio risk, and blocks duplicate positions.
+   Runs automatically — you never call it directly.
+
+🧠 PSYCHOLOGY GUARD  (psychology_guard.py)
+   Watches your trade log for dangerous patterns: overtrading,
+   revenge trading, loss streaks. When triggered it alerts you
+   and can automatically pause all trading for 4 hours.
+   Run: python src/agents/psychology_guard.py --check
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUPPORTING MODELS (used by agents automatically)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔀 LLM ROUTER  (src/models/llm_router.py)
+   Routes AI calls to DeepSeek first, then Groq, then Gemini,
+   then OpenAI. Automatic failover — if DeepSeek is down the
+   system switches to your next available provider seamlessly.
+
+📐 POSITION SIZER  (src/models/position_sizer.py)
+   Calculates optimal trade size using ATR-based sizing and
+   Kelly Criterion. Replaces fixed $50 trades with sizes
+   that adjust to market volatility automatically.
+
+📊 TA WRAPPER  (src/models/ta_wrapper.py)
+   Provides all technical indicators (EMA, RSI, MACD, Bollinger
+   Bands etc.) using the 'ta' library. Drop-in replacement for
+   pandas_ta which doesn't work on Mac Python 3.10.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW THE AGENTS WORK TOGETHER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PARALLEL RBI    → finds strategies that work historically
+      ↓
+MONTE CARLO     → stress-tests them before real money
+      ↓
+REGIME AGENT    → confirms current market suits the strategy
+      ↓
+ICT SCANNER     → finds the actual setup forming right now
+      ↓
+SWARM AGENT     → 5 agents vote — do conditions align?
+      ↓
+ICT EXECUTOR    → executes only when all gates pass
+      ↓
+RISK AGENT      → enforces position size and loss limits
+      ↓
+PSYCHOLOGY GUARD → monitors your behaviour and pauses if needed

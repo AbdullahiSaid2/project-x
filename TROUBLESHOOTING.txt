@@ -1,0 +1,186 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║           ALGOTEC TRADING — TROUBLESHOOTING                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: ModuleNotFoundError: No module named 'pandas'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your virtual environment is not activated. Run:
+
+    source venv/bin/activate
+
+Then try again. You should see (venv) at the start of your
+terminal line before running any command.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: No module named 'pandas_ta'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+pandas_ta is not compatible with Python 3.10 on Mac.
+The system uses 'ta' instead. Install it:
+
+    pip install ta
+
+If you still see the error, the system uses ta_wrapper.py
+which is already included in src/models/
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Error code 402 — Insufficient Balance
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your DeepSeek account has run out of credits.
+
+Option A — Top up DeepSeek:
+    Go to platform.deepseek.com → Billing → Add $5
+
+Option B — Use a free fallback:
+    Get a free Groq key at console.groq.com
+    Add to .env:  GROQ_API_KEY=your_key_here
+    The system will automatically switch to Groq.
+
+Option C — Use free Gemini:
+    Get a free key at aistudio.google.com
+    Add to .env:  GEMINI_KEY=your_key_here
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Port 5000 already in use  OR  Port 80 already in use
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mac uses port 5000 for AirPlay. Fix:
+
+    Open server.py in a text editor
+    Change:  app.run(host="0.0.0.0", port=80)
+    To:      app.run(host="0.0.0.0", port=5001)
+
+    Then visit http://algotectrading:5001 instead
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Permission denied (port 80)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Port 80 requires admin permissions on Mac. Run with sudo:
+
+    sudo venv/bin/python server.py
+
+Enter your Mac password when prompted.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: python not found  OR  python3 not found
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    source ~/.zshrc
+    source venv/bin/activate
+
+If still not found, reinstall pyenv:
+
+    brew install pyenv
+    pyenv install 3.10.9
+    pyenv local 3.10.9
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: SSL certificate error
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /Applications/Python\ 3.10/Install\ Certificates.command
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Packages install slowly or fail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    pip install --upgrade pip setuptools wheel
+    pip install -r requirements.txt
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Some prices are larger than initial cash (BTC warning)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BTC is ~$80,000 but backtest cash is set lower.
+Increase the starting cash in src/config.py:
+
+    BACKTEST_INITIAL_CASH = 100_000
+
+This is paper money only — does not affect live trade sizes.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: Long orders require SL < LIMIT < TP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The AI generated code with reversed stop loss / take profit.
+The system automatically retries up to 3 times and asks the
+AI to fix it. If it still fails after 3 attempts it skips
+that strategy and moves to the next one.
+
+This is normal — not all strategy ideas can be coded perfectly.
+The strategies that DO work are the ones worth focusing on.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR: No data returned for symbol
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+yfinance sometimes has connectivity issues. Wait 1 minute
+and try again. If persistent:
+
+    pip install --upgrade yfinance
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DASHBOARD SHOWS NO DATA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The dashboard reads live from CSV files in src/data/
+Data only appears AFTER you run the relevant agent:
+
+    No backtest data  → run:  python src/agents/rbi_agent.py
+    No whale data     → run:  python src/agents/whale_agent.py
+    No ICT data       → run:  python src/agents/ict_scanner.py
+
+Each tab shows the correct command to run at the bottom
+of the empty state.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALGOTECTRADING URL NOT WORKING IN BROWSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Make sure you added it to the hosts file:
+
+    sudo nano /etc/hosts
+
+Check that this line exists at the bottom:
+
+    127.0.0.1    algotectrading
+
+Also make sure server.py is actually running in a terminal.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRADING IS PAUSED — HOW TO UNPAUSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Psychology Guard may have paused trading automatically.
+To clear it:
+
+    python src/agents/psychology_guard.py --clear-pause
+
+Or wait 4 hours for the pause to expire automatically.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STILL STUCK?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copy the full error message from your terminal and share it
+with Claude at claude.ai for specific help.

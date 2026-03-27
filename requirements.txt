@@ -1,0 +1,28 @@
+# 🌙 Trading System — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# AI
+openai>=1.0.0           # DeepSeek uses OpenAI-compatible API
+
+# Data
+yfinance>=0.2.40
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+
+# Technical Analysis (works on Python 3.10+ Mac/Windows/Linux)
+ta>=0.11.0
+
+# Backtesting
+backtesting==0.3.3
+
+# Utils
+python-dotenv>=1.0.0
+
+# Dashboard server
+flask>=3.0.0
+pytz>=2023.3
+
+# Additional LLM providers (optional fallbacks)
+groq>=0.9.0
+google-generativeai>=0.7.0

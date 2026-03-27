@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🌙 Trading System Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+  :root{--bg:#08090d;--surface:#0f1117;--border:#1e2130;--accent:#7cffa4;--accent2:#ff6b6b;--accent3:#ffd166;--accent4:#60b4ff;--text:#e2e8f0;--muted:#4a5568}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:1.5rem}
+  header{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;border-bottom:1px solid var(--border);padding-bottom:1.2rem}
+  .logo{font-size:2rem}
+  h1{font-size:1.5rem;font-weight:800;letter-spacing:-.03em}
+  h1 span{color:var(--accent)}
+  .sub{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.2rem}
+  /* tabs */
+  .tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+  .tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:.75rem;padding:.45rem 1rem;border-radius:6px;cursor:pointer;transition:all .15s}
+  .tab.active,.tab:hover{border-color:var(--accent);color:var(--accent)}
+  /* panels */
+  .panel{display:none}.panel.active{display:block}
+  /* upload */
+  .upload{background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+  .upload-label{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--muted)}
+  .btn{background:var(--accent);color:#08090d;font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;padding:.5rem 1rem;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  /* stats bar */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.8rem;margin-bottom:1.5rem}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem}
+  .stat-label{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .stat-value{font-size:1.4rem;font-weight:800;margin-top:.25rem}
+  .pos{color:var(--accent)}.neg{color:var(--accent2)}.neu{color:var(--accent3)}.info{color:var(--accent4)}
+  /* table */
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  thead tr{border-bottom:2px solid var(--border)}
+  th{font-family:'Space Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:.6rem .9rem;text-align:left;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+  tbody tr:hover{background:var(--surface)}
+  td{padding:.65rem .9rem;vertical-align:middle}
+  .mono{font-family:'Space Mono',monospace;font-size:.78rem}
+  .badge{display:inline-block;padding:.12rem .5rem;border-radius:999px;font-family:'Space Mono',monospace;font-size:.68rem;font-weight:700}
+  .bp{background:#0d2e1a;color:var(--accent);border:1px solid #1a5c34}
+  .bn{background:#2e0d0d;color:var(--accent2);border:1px solid #5c1a1a}
+  .by{background:#2e240d;color:var(--accent3);border:1px solid #5c480d}
+  .bb{background:#0d1e2e;color:var(--accent4);border:1px solid #1a3d5c}
+  .empty{text-align:center;padding:3rem;color:var(--muted);font-family:'Space Mono',monospace;font-size:.8rem;line-height:2}
+  /* controls */
+  .controls{display:flex;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end}
+  .ctrl label{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);display:block;margin-bottom:.3rem}
+  input[type=text],select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:.78rem;padding:.45rem .8rem;border-radius:6px;outline:none}
+  input[type=text]{width:180px}
+  input:focus,select:focus{border-color:var(--accent)}
+  /* sentiment bar */
+  .sent-bar{display:inline-block;width:100px;height:8px;background:var(--border);border-radius:4px;vertical-align:middle;margin-left:.5rem;overflow:hidden}
+  .sent-fill{height:100%;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🌙</div>
+  <div>
+    <h1>AI <span>Trading</span> Dashboard</h1>
+    <div class="sub">DeepSeek · Hyperliquid + Coinbase · All Agents</div>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('backtest')">📊 Backtests</div>
+  <div class="tab" onclick="switchTab('trades')">💸 Live Trades</div>
+  <div class="tab" onclick="switchTab('whale')">🐋 Whales</div>
+  <div class="tab" onclick="switchTab('liq')">💦 Liquidations</div>
+  <div class="tab" onclick="switchTab('sentiment')">📰 Sentiment</div>
+</div>
+
+<!-- ═══ BACKTEST PANEL ═══ -->
+<div id="panel-backtest" class="panel active">
+  <div class="upload">
+    <div><div class="upload-label">Load backtest_stats.csv</div><div class="upload-label" style="font-size:.65rem;margin-top:.2rem">src/data/rbi_results/backtest_stats.csv</div></div>
+    <input type="file" id="f-backtest" accept=".csv" style="display:none" onchange="loadCSV('backtest',this)"/>
+    <button class="btn" onclick="document.getElementById('f-backtest').click()">📂 Load CSV</button>
+    <button class="btn btn-ghost" onclick="loadDemo('backtest')">Demo</button>
+  </div>
+  <div class="stats" id="stats-backtest" style="display:none">
+    <div class="stat"><div class="stat-label">Strategies</div><div class="stat-value neu" id="b-total">—</div></div>
+    <div class="stat"><div class="stat-label">Avg Return</div><div class="stat-value" id="b-avg">—</div></div>
+    <div class="stat"><div class="stat-label">Best Return</div><div class="stat-value pos" id="b-best">—</div></div>
+    <div class="stat"><div class="stat-label">Avg Sharpe</div><div class="stat-value" id="b-sharpe">—</div></div>
+  </div>
+  <div class="controls">
+    <div class="ctrl"><label>Search</label><input type="text" id="s-backtest" placeholder="strategy, symbol..." oninput="render('backtest')"/></div>
+    <div class="ctrl"><label>Sort by</label><select id="sort-backtest" onchange="render('backtest')"><option value="return_pct">Return %</option><option value="sharpe">Sharpe</option><option value="max_drawdown">Drawdown</option></select></div>
+    <div class="ctrl"><label>Min Return %</label><input type="text" id="min-backtest" placeholder="e.g. 5" style="width:100px" oninput="render('backtest')"/></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Strategy</th><th>Symbol</th><th>TF</th><th>Return %</th><th>B&H %</th><th>Drawdown %</th><th>Sharpe</th><th>Trades</th><th>Win %</th><th>Date</th></tr></thead><tbody id="tbody-backtest"><tr><td colspan="10"><div class="empty">📂 Load backtest_stats.csv<br><span style="font-size:.7rem">or click Demo</span></div></td></tr></tbody></table></div>
+</div>
+
+<!-- ═══ TRADES PANEL ═══ -->
+<div id="panel-trades" class="panel">
+  <div class="upload">
+    <div><div class="upload-label">Load trade_log.csv</div><div class="upload-label" style="font-size:.65rem;margin-top:.2rem">src/data/trade_log.csv</div></div>
+    <input type="file" id="f-trades" accept=".csv" style="display:none" onchange="loadCSV('trades',this)"/>
+    <button class="btn" onclick="document.getElementById('f-trades').click()">📂 Load CSV</button>
+    <button class="btn btn-ghost" onclick="loadDemo('trades')">Demo</button>
+  </div>
+  <div class="stats" id="stats-trades" style="display:none">
+    <div class="stat"><div class="stat-label">Total Trades</div><div class="stat-value neu" id="t-total">—</div></div>
+    <div class="stat"><div class="stat-label">Buys</div><div class="stat-value pos" id="t-buys">—</div></div>
+    <div class="stat"><div class="stat-label">Sells</div><div class="stat-value neg" id="t-sells">—</div></div>
+    <div class="stat"><div class="stat-label">Avg Confidence</div><div class="stat-value info" id="t-conf">—</div></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Exchange</th><th>Symbol</th><th>Action</th><th>USD</th><th>Price</th><th>Stop Loss</th><th>Take Profit</th><th>Confidence</th><th>Reasoning</th></tr></thead><tbody id="tbody-trades"><tr><td colspan="10"><div class="empty">📂 Load trade_log.csv</div></td></tr></tbody></table></div>
+</div>
+
+<!-- ═══ WHALE PANEL ═══ -->
+<div id="panel-whale" class="panel">
+  <div class="upload">
+    <div><div class="upload-label">Load whale_log.csv</div><div class="upload-label" style="font-size:.65rem;margin-top:.2rem">src/data/whale_log.csv</div></div>
+    <input type="file" id="f-whale" accept=".csv" style="display:none" onchange="loadCSV('whale',this)"/>
+    <button class="btn" onclick="document.getElementById('f-whale').click()">📂 Load CSV</button>
+    <button class="btn btn-ghost" onclick="loadDemo('whale')">Demo</button>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Symbol</th><th>Alert</th><th>Sentiment</th><th>OI (USD)</th><th>Funding %</th><th>Whale Trades</th><th>OI Spike</th><th>Observation</th></tr></thead><tbody id="tbody-whale"><tr><td colspan="9"><div class="empty">📂 Load whale_log.csv</div></td></tr></tbody></table></div>
+</div>
+
+<!-- ═══ LIQUIDATION PANEL ═══ -->
+<div id="panel-liq" class="panel">
+  <div class="upload">
+    <div><div class="upload-label">Load liquidation_log.csv</div><div class="upload-label" style="font-size:.65rem;margin-top:.2rem">src/data/liquidation_log.csv</div></div>
+    <input type="file" id="f-liq" accept=".csv" style="display:none" onchange="loadCSV('liq',this)"/>
+    <button class="btn" onclick="document.getElementById('f-liq').click()">📂 Load CSV</button>
+    <button class="btn btn-ghost" onclick="loadDemo('liq')">Demo</button>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Symbol</th><th>Window</th><th>Total Liq $M</th><th>Longs $M</th><th>Shorts $M</th><th>Dominant</th><th>Signal</th><th>Alert</th><th>Action</th></tr></thead><tbody id="tbody-liq"><tr><td colspan="10"><div class="empty">📂 Load liquidation_log.csv</div></td></tr></tbody></table></div>
+</div>
+
+<!-- ═══ SENTIMENT PANEL ═══ -->
+<div id="panel-sentiment" class="panel">
+  <div class="upload">
+    <div><div class="upload-label">Load sentiment_log.csv</div><div class="upload-label" style="font-size:.65rem;margin-top:.2rem">src/data/sentiment_log.csv</div></div>
+    <input type="file" id="f-sentiment" accept=".csv" style="display:none" onchange="loadCSV('sentiment',this)"/>
+    <button class="btn" onclick="document.getElementById('f-sentiment').click()">📂 Load CSV</button>
+    <button class="btn btn-ghost" onclick="loadDemo('sentiment')">Demo</button>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Time</th><th>Sentiment</th><th>Score</th><th>Confidence</th><th>BTC</th><th>ETH</th><th>SOL</th><th>Themes</th><th>Summary</th></tr></thead><tbody id="tbody-sentiment"><tr><td colspan="9"><div class="empty">📂 Load sentiment_log.csv</div></td></tr></tbody></table></div>
+</div>
+
+<script>
+// ── state ──────────────────────────────────────────────────
+const data = {backtest:[],trades:[],whale:[],liq:[],sentiment:[]};
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['backtest','trades','whale','liq','sentiment'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+// ── CSV parse ─────────────────────────────────────────────
+function parseCSV(text){
+  const lines=text.trim().split('\n'), headers=lines[0].split(',').map(h=>h.trim());
+  return lines.slice(1).map(line=>{
+    const vals=line.split(','), obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());
+    return obj;
+  });
+}
+
+function loadCSV(panel, input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{data[panel]=parseCSV(e.target.result);render(panel);};
+  reader.readAsText(file);
+}
+
+// ── badge helpers ─────────────────────────────────────────
+function retBadge(v){v=parseFloat(v)||0;const c=v>5?'bp':v>0?'by':'bn';return`<span class="badge ${c}">${v>=0?'+':''}${v}%</span>`}
+function sentBadge(s){const m={VERY_BULLISH:'bp',BULLISH:'bp',NEUTRAL:'by',BEARISH:'bn',VERY_BEARISH:'bn'};return`<span class="badge ${m[s]||'by'}">${s||'—'}</span>`}
+function alertBadge(a){const m={HIGH:'bn',MEDIUM:'by',LOW:'bp'};return`<span class="badge ${m[a]||'by'}">${a||'—'}</span>`}
+function sigBadge(s){const m={BUY_OPPORTUNITY:'bp',BULLISH:'bp',SELL_OPPORTUNITY:'bn',BEARISH:'bn',WATCH:'by',NEUTRAL:'by',BULLISH:'bp'};return`<span class="badge ${m[s]||'by'}">${(s||'—').replace('_',' ')}</span>`}
+
+// ── renderers ─────────────────────────────────────────────
+function render(panel){
+  const rows=data[panel];
+  if(!rows||!rows.length) return;
+
+  if(panel==='backtest'){
+    const search=(document.getElementById('s-backtest').value||'').toLowerCase();
+    const sortCol=document.getElementById('sort-backtest').value;
+    const minRet=parseFloat(document.getElementById('min-backtest').value)||(-Infinity);
+    let r=rows.filter(x=>Object.values(x).join(' ').toLowerCase().includes(search)&&(parseFloat(x.return_pct)||0)>=minRet);
+    r.sort((a,b)=>sortCol==='max_drawdown'?(parseFloat(a[sortCol])||0)-(parseFloat(b[sortCol])||0):(parseFloat(b[sortCol])||0)-(parseFloat(a[sortCol])||0));
+    document.getElementById('stats-backtest').style.display='grid';
+    const rets=rows.map(x=>parseFloat(x.return_pct)||0), sh=rows.map(x=>parseFloat(x.sharpe)||0);
+    const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    const avgR=avg(rets);
+    document.getElementById('b-total').textContent=rows.length;
+    document.getElementById('b-avg').textContent=(avgR>=0?'+':'')+avgR.toFixed(1)+'%';
+    document.getElementById('b-avg').className='stat-value '+(avgR>=0?'pos':'neg');
+    document.getElementById('b-best').textContent='+'+Math.max(...rets).toFixed(1)+'%';
+    document.getElementById('b-sharpe').textContent=avg(sh).toFixed(2);
+    document.getElementById('tbody-backtest').innerHTML=r.length?r.map(x=>`<tr>
+      <td><strong>${x.strategy||'—'}</strong></td><td class="mono">${x.symbol||'—'}</td>
+      <td class="mono">${x.timeframe||'—'}</td><td>${retBadge(x.return_pct)}</td>
+      <td class="mono" style="color:var(--muted)">${x.buy_hold_pct||'—'}%</td>
+      <td>${retBadge(x.max_drawdown)}</td>
+      <td class="mono">${x.sharpe||'—'}</td><td class="mono">${x.num_trades||'—'}</td>
+      <td class="mono">${x.win_rate||'—'}%</td>
+      <td class="mono" style="color:var(--muted);font-size:.7rem">${x.date||'—'}</td></tr>`).join('')
+      :'<tr><td colspan="10"><div class="empty">No results match filters</div></td></tr>';
+    return;
+  }
+
+  if(panel==='trades'){
+    document.getElementById('stats-trades').style.display='grid';
+    const buys=rows.filter(x=>x.action==='BUY').length, sells=rows.filter(x=>x.action==='SELL').length;
+    const avgConf=rows.map(x=>parseFloat(x.confidence)||0).reduce((a,b)=>a+b,0)/rows.length;
+    document.getElementById('t-total').textContent=rows.length;
+    document.getElementById('t-buys').textContent=buys;
+    document.getElementById('t-sells').textContent=sells;
+    document.getElementById('t-conf').textContent=(avgConf*100).toFixed(0)+'%';
+    document.getElementById('tbody-trades').innerHTML=rows.slice().reverse().map(x=>{
+      const ac=x.action==='BUY'?'bp':'bn';
+      return`<tr>
+        <td class="mono" style="font-size:.7rem">${(x.timestamp||'').slice(0,16)}</td>
+        <td class="mono">${x.exchange||'—'}</td><td class="mono">${x.symbol||'—'}</td>
+        <td><span class="badge ${ac}">${x.action||'—'}</span></td>
+        <td class="mono">$${parseFloat(x.usd_amount||0).toFixed(0)}</td>
+        <td class="mono">$${parseFloat(x.price||0).toLocaleString()}</td>
+        <td class="mono" style="color:var(--accent2)">$${parseFloat(x.stop_loss||0).toFixed(2)}</td>
+        <td class="mono" style="color:var(--accent)">$${parseFloat(x.take_profit||0).toFixed(2)}</td>
+        <td class="mono">${(parseFloat(x.confidence||0)*100).toFixed(0)}%</td>
+        <td style="font-size:.75rem;color:var(--muted);max-width:200px">${x.reasoning||'—'}</td>
+      </tr>`;
+    }).join('');
+    return;
+  }
+
+  if(panel==='whale'){
+    document.getElementById('tbody-whale').innerHTML=rows.slice().reverse().map(x=>`<tr>
+      <td class="mono" style="font-size:.7rem">${(x.timestamp||'').slice(0,16)}</td>
+      <td class="mono">${x.symbol||'—'}</td>
+      <td>${alertBadge(x.alert_level)}</td>
+      <td>${sentBadge(x.sentiment)}</td>
+      <td class="mono">$${(parseFloat(x.oi_usd||0)/1e9).toFixed(2)}B</td>
+      <td class="mono">${x.funding_rate||'—'}%</td>
+      <td class="mono">${x.large_trades||'0'}</td>
+      <td><span class="badge ${x.oi_spike==='True'?'bn':'bp'}">${x.oi_spike==='True'?'YES':'NO'}</span></td>
+      <td style="font-size:.75rem;color:var(--muted);max-width:220px">${x.observation||'—'}</td>
+    </tr>`).join('');
+    return;
+  }
+
+  if(panel==='liq'){
+    document.getElementById('tbody-liq').innerHTML=rows.slice().reverse().map(x=>`<tr>
+      <td class="mono" style="font-size:.7rem">${(x.timestamp||'').slice(0,16)}</td>
+      <td class="mono">${x.symbol||'—'}</td>
+      <td><span class="badge by">${x.window||'—'}</span></td>
+      <td class="mono">${x.total_liq_m||'—'}M</td>
+      <td class="mono" style="color:var(--accent)">${x.long_liq_m||'—'}M</td>
+      <td class="mono" style="color:var(--accent2)">${x.short_liq_m||'—'}M</td>
+      <td><span class="badge by">${(x.dominant||'—').replace('_',' ')}</span></td>
+      <td>${sigBadge(x.signal)}</td>
+      <td>${alertBadge(x.alert_level)}</td>
+      <td style="font-size:.75rem;color:var(--muted);max-width:180px">${x.action||'—'}</td>
+    </tr>`).join('');
+    return;
+  }
+
+  if(panel==='sentiment'){
+    document.getElementById('tbody-sentiment').innerHTML=rows.slice().reverse().map(x=>{
+      const score=parseFloat(x.score||0);
+      const pct=Math.round((score+1)/2*100);
+      const col=score>0.2?'var(--accent)':score<-0.2?'var(--accent2)':'var(--accent3)';
+      return`<tr>
+        <td class="mono" style="font-size:.7rem">${(x.timestamp||'').slice(0,16)}</td>
+        <td>${sentBadge(x.sentiment)}</td>
+        <td><span class="mono">${score>=0?'+':''}${score}</span><span class="sent-bar"><span class="sent-fill" style="width:${pct}%;background:${col}"></span></span></td>
+        <td class="mono">${(parseFloat(x.confidence||0)*100).toFixed(0)}%</td>
+        <td>${sentBadge(x.btc_sentiment)}</td>
+        <td>${sentBadge(x.eth_sentiment)}</td>
+        <td>${sentBadge(x.sol_sentiment)}</td>
+        <td style="font-size:.72rem;color:var(--muted)">${(x.key_themes||'').replace(/\|/g,', ')}</td>
+        <td style="font-size:.75rem;color:var(--muted);max-width:220px">${x.summary||'—'}</td>
+      </tr>`;
+    }).join('');
+    return;
+  }
+}
+
+// ── demo data ─────────────────────────────────────────────
+function loadDemo(panel){
+  if(panel==='backtest'){
+    data.backtest=[
+      {strategy:'RSIMeanReversion',symbol:'BTC',timeframe:'1H',return_pct:'18.4',buy_hold_pct:'12.1',max_drawdown:'-8.2',sharpe:'1.42',num_trades:'34',win_rate:'61.8',date:'2025-03-27'},
+      {strategy:'MACDCrossover',symbol:'BTC',timeframe:'4H',return_pct:'22.7',buy_hold_pct:'12.1',max_drawdown:'-6.9',sharpe:'1.81',num_trades:'12',win_rate:'66.7',date:'2025-03-27'},
+      {strategy:'BollingerBreakout',symbol:'ETH',timeframe:'1H',return_pct:'9.8',buy_hold_pct:'9.8',max_drawdown:'-12.6',sharpe:'0.74',num_trades:'47',win_rate:'53.2',date:'2025-03-27'},
+      {strategy:'EMACrossover',symbol:'SOL',timeframe:'4H',return_pct:'-3.1',buy_hold_pct:'8.4',max_drawdown:'-18.2',sharpe:'-0.3',num_trades:'8',win_rate:'37.5',date:'2025-03-27'},
+    ];
+  } else if(panel==='trades'){
+    data.trades=[
+      {timestamp:'2025-03-27T09:14:00',exchange:'hyperliquid',symbol:'BTC',action:'BUY',usd_amount:'50',price:'67200',stop_loss:'65184',take_profit:'71232',confidence:'0.82',reasoning:'MACD crossover with high volume confirmation'},
+      {timestamp:'2025-03-27T11:30:00',exchange:'hyperliquid',symbol:'ETH',action:'SELL',usd_amount:'50',price:'3480',stop_loss:'3584',take_profit:'3271',confidence:'0.75',reasoning:'RSI overbought at 78, bearish divergence forming'},
+    ];
+  } else if(panel==='whale'){
+    data.whale=[
+      {timestamp:'2025-03-27T08:00:00',symbol:'BTC',alert_level:'HIGH',sentiment:'BULLISH',oi_usd:'12400000000',funding_rate:'0.0082',large_trades:'3',oi_spike:'True',observation:'$1.2B OI spike detected with bullish funding rate surge'},
+      {timestamp:'2025-03-27T10:00:00',symbol:'ETH',alert_level:'MEDIUM',sentiment:'NEUTRAL',oi_usd:'5200000000',funding_rate:'-0.0031',large_trades:'1',oi_spike:'False',observation:'Single $800k sell detected, funding slightly negative'},
+    ];
+  } else if(panel==='liq'){
+    data.liq=[
+      {timestamp:'2025-03-27T07:45:00',symbol:'BTC',window:'15m',total_liq_m:'8.2',long_liq_m:'7.1',short_liq_m:'1.1',dominant:'LONGS_LIQUIDATED',signal:'BUY_OPPORTUNITY',alert_level:'HIGH',action:'Consider long entry — long liquidation cascade may be exhausted'},
+      {timestamp:'2025-03-27T09:00:00',symbol:'ETH',window:'1h',total_liq_m:'22.5',long_liq_m:'4.2',short_liq_m:'18.3',dominant:'SHORTS_LIQUIDATED',signal:'SELL_OPPORTUNITY',alert_level:'MEDIUM',action:'Watch for pullback — shorts wiped in rapid squeeze'},
+    ];
+  } else if(panel==='sentiment'){
+    data.sentiment=[
+      {timestamp:'2025-03-27T08:00:00',sentiment:'BULLISH',score:'0.62',confidence:'0.78',btc_sentiment:'BULLISH',eth_sentiment:'BULLISH',sol_sentiment:'NEUTRAL',key_themes:'ETF inflows|Fed pivot|altseason',summary:'Strong institutional demand narrative dominating headlines. Bitcoin ETF inflows hit record highs driving bullish sentiment across the board.'},
+      {timestamp:'2025-03-27T10:00:00',sentiment:'NEUTRAL',score:'0.05',confidence:'0.61',btc_sentiment:'NEUTRAL',eth_sentiment:'BEARISH',sol_sentiment:'BULLISH',key_themes:'regulatory clarity|SEC|Solana DeFi',summary:'Mixed signals as regulatory headlines temper bullish momentum. Solana ecosystem growth stories providing localised optimism.'},
+    ];
+  }
+  render(panel);
+}
+</script>
+</body>
+</html>
