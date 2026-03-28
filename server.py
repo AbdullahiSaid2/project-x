@@ -35,6 +35,8 @@ CSV_FILES = {
     "ict_exec":    DATA_DIR / "ict_exec_log.csv",
     "ict_bt":      DATA_DIR / "ict_backtest" / "ict_backtest_summary.csv",
     "forward_test": DATA_DIR / "forward_test_log.csv",
+    "prop_firm":    DATA_DIR / "prop_firm_log.csv",
+    "signal_log":   DATA_DIR / "signal_log.csv",
     "funding_arb":  DATA_DIR / "funding_arb_log.csv",
     "copy_bot":     DATA_DIR / "copy_bot_log.csv",
     "regime":       DATA_DIR / "regime_log.csv",
@@ -44,6 +46,14 @@ CSV_FILES = {
 }
 
 app = Flask(__name__)
+
+# Register TradingView webhook
+try:
+    from src.webhooks.tradingview_webhook import webhook_bp
+    app.register_blueprint(webhook_bp)
+    print("📡 TradingView webhook registered at /webhook/tradingview")
+except Exception as e:
+    print(f"⚠️  Webhook not loaded: {e}")
 
 
 # ── CSV reader ────────────────────────────────────────────────
@@ -141,6 +151,47 @@ def index():
     return HTML
 
 
+@app.route("/api/signals/pending")
+def get_pending_signals():
+    """Return all pending signals for dashboard."""
+    try:
+        pending_file = DATA_DIR / "pending_signals.json"
+        if not pending_file.exists():
+            return jsonify([])
+        signals = json.loads(pending_file.read_text())
+        return jsonify(signals[-100:])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/signals/approve/<sig_id>", methods=["POST"])
+def approve_signal(sig_id):
+    """Approve a pending signal for execution."""
+    try:
+        from src.agents.signal_notifier import approve_signal as _approve, execute_signal
+        signal = _approve(sig_id)
+        if not signal:
+            return jsonify({"error": "Signal not found"}), 404
+        # Execute the trade
+        result = execute_signal(signal)
+        return jsonify({"status": "approved", "signal": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/signals/reject/<sig_id>", methods=["POST"])
+def reject_signal_route(sig_id):
+    """Reject a pending signal."""
+    try:
+        from src.agents.signal_notifier import reject_signal
+        ok = reject_signal(sig_id)
+        if not ok:
+            return jsonify({"error": "Signal not found"}), 404
+        return jsonify({"status": "rejected", "id": sig_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print("""
 🌙 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -148,4 +199,4 @@ if __name__ == "__main__":
    Open: http://algotectrading
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """)
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=80, debug=False)

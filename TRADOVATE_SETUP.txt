@@ -1,0 +1,239 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║       ALGOTEC — TRADOVATE + TRADINGVIEW SETUP GUIDE         ║
+║          Futures Trading: MNQ · MES · MYM                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1 — TRADOVATE ACCOUNT SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — Open a Tradovate account
+  Go to: tradovate.com
+  Click: Open Account
+  Choose: Simulated (paper) account first — completely free
+  Complete registration and verify email
+
+STEP 2 — Get API credentials
+  Log into Tradovate web platform
+  Go to: Account (top right) → API Access
+  Click: Create New Application
+  Fill in:
+    App Name:    Algotec Trading
+    App Version: 1.0
+  Click Create
+  You will receive:
+    CID (Client ID)
+    Secret
+
+STEP 3 — Add credentials to your .env file
+  Open your .env file:
+    open -e .env
+
+  Add these lines:
+    TRADOVATE_USERNAME=your_email@example.com
+    TRADOVATE_PASSWORD=your_tradovate_password
+    TRADOVATE_APP_ID=Algotec Trading
+    TRADOVATE_APP_VERSION=1.0
+    TRADOVATE_CID=your_cid_number
+    TRADOVATE_SECRET=your_secret_key
+    TRADOVATE_SIM=true
+    WEBHOOK_SECRET=make_up_a_secret_password_here
+
+STEP 4 — Switch Algotec to Tradovate
+  Open src/config.py:
+    open -e src/config.py
+
+  Change:
+    EXCHANGE = "hyperliquid"
+  To:
+    EXCHANGE = "tradovate"
+
+STEP 5 — Test the connection
+  source venv/bin/activate
+  python -c "from src.exchanges.tradovate import get_balance; print(get_balance())"
+
+  Should print your sim account balance.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2 — TRADINGVIEW DATA EXPORT (for backtesting)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TradingView Pro+ has years of intraday history.
+Export it once and your backtester uses it forever.
+
+STEP 1 — Open TradingView
+  Go to: tradingview.com
+  Log in with your Pro+ account
+
+STEP 2 — Load your futures chart
+  Search for:
+    MNQ1!   (Micro Nasdaq front month)
+    MES1!   (Micro S&P front month)
+    MYM1!   (Micro Dow front month)
+
+STEP 3 — Set your timeframe
+  Click the timeframe selector
+  Choose: 1H (start with this)
+  Load as much history as possible (scroll left on chart)
+
+STEP 4 — Export the data
+  Right-click anywhere on the chart
+  Click: Export chart data
+  OR look for the download icon (↓) in the chart toolbar
+  Click: Export chart data
+
+STEP 5 — Save to the correct folder
+  Save the file to:
+    ~/trading-project/trading_system/src/data/tradingview/
+
+  Rename the file to match this format exactly:
+    MNQ_1H.csv
+    MES_1H.csv
+    MYM_1H.csv
+
+  For other timeframes:
+    MNQ_15m.csv
+    MNQ_4H.csv
+    MNQ_1D.csv
+
+STEP 6 — Check the data loaded correctly
+  python src/data/tradingview_fetcher.py
+
+  Should show all your available datasets with candle counts.
+
+STEP 7 — Run backtest using TradingView data
+  The RBI backtester automatically uses TradingView data
+  when available, and falls back to yfinance if not found.
+
+  python src/agents/rbi_agent.py
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3 — TRADINGVIEW WEBHOOK ALERTS (auto-fire trades)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This lets TradingView Pine Script strategies fire trades
+directly through Algotec → Tradovate automatically.
+
+STEP 1 — Install ngrok (makes your Mac reachable from internet)
+  brew install ngrok
+  ngrok config add-authtoken your_ngrok_token
+  (get free token at: ngrok.com)
+
+STEP 2 — Start ngrok tunnel
+  Open a new terminal tab (Cmd + T)
+  source venv/bin/activate
+  ngrok http 8080
+
+  You will see a URL like:
+    https://abc123.ngrok.io
+
+  Copy this URL — you need it for TradingView.
+
+STEP 3 — Start Algotec server
+  In another terminal tab:
+  source venv/bin/activate
+  python server.py
+
+STEP 4 — Test webhook is working
+  Open browser: https://abc123.ngrok.io/webhook/status
+  Should show: {"status": "online", "exchange": "tradovate"}
+
+STEP 5 — Set up TradingView alert
+  Open TradingView → your MNQ chart
+  Click the Alert button (clock icon) or press Alt+A
+  Set your condition (e.g. EMA crossover, ICT signal etc.)
+
+  Under Notifications:
+    Check: Webhook URL
+    Enter: https://abc123.ngrok.io/webhook/tradingview
+
+  Under Message — paste this JSON:
+    {
+      "symbol":    "{{ticker}}",
+      "action":    "BUY",
+      "contracts": 1,
+      "strategy":  "MyStrategy",
+      "timeframe": "{{interval}}",
+      "price":     {{close}},
+      "secret":    "your_webhook_secret_from_env"
+    }
+
+  Change "BUY" to "SELL" for short signals.
+  Change "contracts" to how many contracts you want.
+  Make sure "secret" matches WEBHOOK_SECRET in your .env
+
+STEP 6 — Test a manual alert
+  In TradingView → Alerts → trigger your alert manually
+  Check your terminal — should show the trade being processed
+  Check Tradovate sim account — should show the order
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4 — RUNNING ALGOTEC AGENTS ON FUTURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Once Tradovate is connected all agents work on futures:
+
+ICT Scanner on MNQ:
+  python src/agents/ict_scanner.py --symbol MNQ
+
+Swarm Agent on futures:
+  python src/agents/swarm_agent.py
+
+RBI Backtest using TradingView data:
+  python src/agents/rbi_agent.py
+  (automatically uses MNQ_1H.csv if available)
+
+ICT Backtest on MNQ:
+  python src/agents/ict_backtester.py --symbol MNQ --days 365
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FUTURES QUICK REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contract specs:
+  MNQ: tick = 0.25 pts = $0.50  | intraday margin ~$40
+  MES: tick = 0.25 pts = $12.50 | intraday margin ~$50
+  MYM: tick = 1.0  pts = $0.50  | intraday margin ~$50
+
+TradingView symbols:
+  MNQ1!   MES1!   MYM1!   (front month — use these)
+
+Market hours (EST):
+  Open:  Sunday 6:00pm
+  Close: Friday 5:00pm
+  Daily break: 4:00pm - 5:00pm EST (maintenance)
+
+Kill Zones (same as crypto ICT):
+  London Open:  2:00am - 5:00am EST
+  New York AM:  7:00am - 10:00am EST  ← highest probability on NQ/ES
+  London Close: 10:00am - 12:00pm EST
+
+Switch between crypto and futures:
+  Crypto:  EXCHANGE = "hyperliquid"  in src/config.py
+  Futures: EXCHANGE = "tradovate"    in src/config.py
+  Restart agents after changing.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT WARNINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Always start with TRADOVATE_SIM=true in your .env
+   Only change to false when you are consistently profitable
+   on the sim account for at least 4 weeks.
+
+2. Futures move fast. A 10-point move on MNQ = $200 on
+   1 contract. Respect stop losses at all times.
+
+3. The ngrok URL changes every time you restart ngrok
+   (free plan). Update your TradingView webhook URL each time.
+   Upgrade to ngrok paid plan for a permanent URL.
+
+4. Never leave ngrok running unattended without your server
+   also running — alerts will fail silently.

@@ -13,7 +13,10 @@ from src.config import EXCHANGE, HYPERLIQUID_TOKENS, COINBASE_TOKENS
 
 def get_price(symbol: str) -> float:
     """Get current market price for a symbol."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         from src.exchanges.hyperliquid import get_price as hl_price
         return hl_price(symbol)
     else:
@@ -25,7 +28,10 @@ def get_price(symbol: str) -> float:
 
 def get_balance() -> dict:
     """Get account balance."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         import os
         from src.exchanges.hyperliquid import get_balance as hl_bal
         wallet = os.getenv("HYPERLIQUID_WALLET_ADDRESS", "")
@@ -38,7 +44,10 @@ def get_balance() -> dict:
 
 def get_positions() -> list[dict]:
     """Get all open positions."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         import os
         from src.exchanges.hyperliquid import get_positions as hl_pos
         wallet = os.getenv("HYPERLIQUID_WALLET_ADDRESS", "")
@@ -50,7 +59,10 @@ def get_positions() -> list[dict]:
 
 def buy(symbol: str, usd_amount: float) -> dict:
     """Open a long / buy position."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         from src.exchanges.hyperliquid import market_buy
         return market_buy(symbol, usd_amount)
     else:
@@ -61,7 +73,10 @@ def buy(symbol: str, usd_amount: float) -> dict:
 
 def sell(symbol: str, usd_amount: float) -> dict:
     """Open a short / sell position."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         from src.exchanges.hyperliquid import market_sell
         return market_sell(symbol, usd_amount)
     else:
@@ -74,7 +89,10 @@ def sell(symbol: str, usd_amount: float) -> dict:
 
 def close(symbol: str) -> dict:
     """Close / exit a position."""
-    if EXCHANGE == "hyperliquid":
+    if EXCHANGE == "tradovate":
+        from src.exchanges.tradovate import get_price as tv_price
+        return tv_price(symbol)
+    elif EXCHANGE == "hyperliquid":
         from src.exchanges.hyperliquid import close_position
         return close_position(symbol)
     else:

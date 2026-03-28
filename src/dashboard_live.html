@@ -471,6 +471,18 @@ td { padding: .6rem 1rem; vertical-align: middle; }
       <span>📋</span> Forward Test
       <span class="nav-count" id="n-forward_test">0</span>
     </div>
+    <div class="nav-item" onclick="switchPanel('prop_firm')">
+      <span>🏢</span> Prop Firm
+      <span class="nav-count" id="n-prop_firm">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('pending_signals')" id="nav-pending">
+      <span>👆</span> Pending Signals
+      <span class="nav-count" id="n-pending_signals" style="background:var(--red)">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('signal_log')">
+      <span>🔔</span> Signal Log
+      <span class="nav-count" id="n-signal_log">0</span>
+    </div>
     <div class="nav-item" onclick="switchPanel('funding_arb')">
       <span>💰</span> Funding Arb
       <span class="nav-count" id="n-funding_arb">0</span>
@@ -826,6 +838,73 @@ td { padding: .6rem 1rem; vertical-align: middle; }
         </table>
       </div>
     </div>
+
+    <div class="panel" id="panel-prop_firm">
+      <div class="panel-header">
+        <div class="panel-title">🏢 PROP FIRM EVALUATION TRACKER</div>
+        <div class="panel-meta">Live rule monitoring · Auto-pause on breach · Updated <span id="age-prop_firm">—</span></div>
+      </div>
+      <div style="padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);font-size:.7rem;color:var(--muted2)">
+        Run: <span style="color:var(--green);font-family:monospace">python src/agents/prop_firm_monitor.py --firm apex --account 50k</span>
+        &nbsp;|&nbsp; List firms: <span style="color:var(--green);font-family:monospace">python src/agents/prop_firm_monitor.py --list</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Firm</th><th>Account</th><th>Phase</th>
+            <th>Balance</th><th>Total P&L</th><th>Daily Loss %</th>
+            <th>Drawdown %</th><th>Profit %</th><th>Days</th>
+            <th>Can Trade</th><th>Eval Passed</th>
+          </tr></thead>
+          <tbody id="tbody-prop_firm"><tr><td colspan="12"><div class="empty"><span class="empty-icon">🏢</span>No prop firm data.<br/><small>python src/agents/prop_firm_monitor.py --firm apex --account 50k</small></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PENDING SIGNALS PANEL -->
+    <div class="panel" id="panel-pending_signals">
+      <div class="panel-header">
+        <div class="panel-title">👆 PENDING SIGNALS — AWAITING YOUR APPROVAL</div>
+        <div class="panel-meta">Manual confirmation mode · Signals expire in 30 minutes · Updated <span id="age-pending_signals">—</span></div>
+      </div>
+      <div style="padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);font-size:.7rem;color:var(--muted2)">
+        Run in manual mode: <span style="color:var(--green);font-family:monospace">python src/agents/signal_notifier.py --mode manual</span>
+        &nbsp;·&nbsp; Auto mode: <span style="color:var(--green);font-family:monospace">python src/agents/signal_notifier.py --mode auto</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Symbol</th><th>Grade</th><th>Direction</th>
+            <th>Entry</th><th>Stop Loss</th><th>Take Profit</th>
+            <th>R:R</th><th>Kill Zone</th><th>Zone</th><th>Score</th>
+            <th>Expires</th><th>Action</th>
+          </tr></thead>
+          <tbody id="tbody-pending_signals">
+            <tr><td colspan="13"><div class="empty"><span class="empty-icon">👆</span>No pending signals.<br/><small>python src/agents/signal_notifier.py --mode manual</small></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SIGNAL LOG PANEL -->
+    <div class="panel" id="panel-signal_log">
+      <div class="panel-header">
+        <div class="panel-title">🔔 SIGNAL LOG — ALL SIGNALS</div>
+        <div class="panel-meta">Auto + Manual + Notify modes · Updated <span id="age-signal_log">—</span></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Symbol</th><th>Grade</th><th>Direction</th>
+            <th>Entry</th><th>SL</th><th>TP</th><th>Size</th>
+            <th>Kill Zone</th><th>CISD</th><th>Mode</th><th>Status</th>
+          </tr></thead>
+          <tbody id="tbody-signal_log">
+            <tr><td colspan="12"><div class="empty"><span class="empty-icon">🔔</span>No signals logged yet.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -1052,6 +1131,56 @@ function renderPsychology(rows) {
   '</tr>').join('');
 }
 
+
+
+function renderPendingSignals(rows) {
+  // This panel is handled by loadPendingSignals() above
+  return '';
+}
+function renderSignalLog(rows) {
+  if(!rows.length) return '<tr><td colspan="12"><div class="empty"><span class="empty-icon">🔔</span>No signals yet</div></td></tr>';
+  const statusMap = {'EXECUTED':'badge-g','APPROVED':'badge-g','REJECTED':'badge-r','EXPIRED':'badge-p','PENDING':'badge-y','BLOCKED':'badge-r','FAILED':'badge-r'};
+  return [...rows].reverse().map(x => '<tr>' +
+    '<td style="color:var(--muted2);font-size:.65rem">' + ts(x.timestamp) + '</td>' +
+    '<td>' + badge(x.symbol,'badge-b') + '</td>' +
+    '<td>' + badge(x.grade||'—', x.grade==='A+'?'badge-r':'badge-y') + '</td>' +
+    '<td>' + badge(x.direction||'—', x.direction==='LONG'?'badge-g':'badge-r') + '</td>' +
+    '<td class="mono">$' + parseFloat(x.entry||0).toLocaleString() + '</td>' +
+    '<td class="mono" style="color:var(--red)">$' + parseFloat(x.stop_loss||0).toLocaleString() + '</td>' +
+    '<td class="mono" style="color:var(--green)">$' + parseFloat(x.take_profit||0).toLocaleString() + '</td>' +
+    '<td class="mono">$' + (x.size_usd||'—') + '</td>' +
+    '<td style="font-size:.68rem;color:var(--muted2)">' + (x.kill_zone||'—') + '</td>' +
+    '<td>' + badge(x.cisd||'—', x.cisd==='STRONG'?'badge-g':'badge-y') + '</td>' +
+    '<td>' + badge(x.mode||'—','badge-b') + '</td>' +
+    '<td>' + badge(x.status||'—', statusMap[x.status]||'badge-y') + '</td>' +
+  '</tr>').join('');
+}
+function renderPropFirm(rows) {
+  if(!rows.length) return '<tr><td colspan="12"><div class="empty"><span class="empty-icon">🏢</span>No prop firm data yet</div></td></tr>';
+  return [...rows].reverse().slice(0,50).map(x => {
+    const dailyPct = parseFloat(x.daily_pct||0);
+    const ddPct    = parseFloat(x.dd_pct||0);
+    const profPct  = parseFloat(x.profit_pct||0);
+    const canTrade = x.can_trade === 'True';
+    const passed   = x.eval_passed === 'True';
+    return '<tr>' +
+      '<td style="color:var(--muted2);font-size:.65rem">' + ts(x.timestamp) + '</td>' +
+      '<td>' + badge((x.firm||'').toUpperCase(),'badge-b') + '</td>' +
+      '<td class="mono">$' + (x.account||'').toUpperCase() + '</td>' +
+      '<td>' + badge(x.phase||'—', x.phase==='funded'?'badge-g':'badge-y') + '</td>' +
+      '<td class="mono">$' + parseFloat(x.balance||0).toLocaleString() + '</td>' +
+      '<td style="color:' + (parseFloat(x.total_pnl||0)>=0?'var(--green)':'var(--red)') + ';font-weight:600">' +
+        (parseFloat(x.total_pnl||0)>=0?'+':'') + '$' + parseFloat(x.total_pnl||0).toFixed(0) + '</td>' +
+      '<td>' + badge(dailyPct.toFixed(0)+'%', dailyPct<50?'badge-g':dailyPct<80?'badge-y':'badge-r') + '</td>' +
+      '<td>' + badge(ddPct.toFixed(0)+'%', ddPct<50?'badge-g':ddPct<80?'badge-y':'badge-r') + '</td>' +
+      '<td>' + badge(profPct.toFixed(0)+'%', profPct>=100?'badge-g':profPct>=50?'badge-y':'badge-b') + '</td>' +
+      '<td class="mono">' + (x.days_traded||'0') + 'd</td>' +
+      '<td>' + badge(canTrade?'YES':'NO', canTrade?'badge-g':'badge-r') + '</td>' +
+      '<td>' + badge(passed?'✅ PASSED':'Pending', passed?'badge-g':'badge-y') + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
 function renderForwardTest(rows) {
   if(!rows.length) return '<tr><td colspan="16"><div class="empty"><span class="empty-icon">📋</span>No forward test signals yet.<br/><small>python src/agents/forward_test_logger.py</small></div></td></tr>';
   const gradeMap = {'A+':'badge-r','A':'badge-y','B':'badge-b'};
@@ -1204,6 +1333,9 @@ const renderers = {
   ict_exec:    renderIctExec,
   ict_bt:      renderIctBt,
   forward_test: renderForwardTest,
+  prop_firm:       renderPropFirm,
+  pending_signals: renderPendingSignals,
+  signal_log:      renderSignalLog,
   funding_arb: renderFundingArb,
   copy_bot:    renderCopyBot,
   regime:      renderRegime,
@@ -1221,7 +1353,7 @@ function render(panel) {
 }
 
 // ── fetch all data ─────────────────────────────────────────
-const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','forward_test','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status'];
+const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','forward_test','prop_firm','pending_signals','signal_log','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status'];
 
 async function fetchPanel(panel) {
   try {
@@ -1323,6 +1455,105 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+
+// ── Pending Signals (live polling) ───────────────────────────
+async function loadPendingSignals() {
+  try {
+    const r = await fetch('/api/signals/pending');
+    const all = await r.json();
+    const pending = all.filter(s => s.status === 'PENDING');
+    const tbody = document.getElementById('tbody-pending_signals');
+    const countEl = document.getElementById('n-pending_signals');
+
+    if (countEl) countEl.textContent = pending.length;
+
+    // Flash nav if signals waiting
+    const navEl = document.getElementById('nav-pending');
+    if (navEl) {
+      navEl.style.background = pending.length > 0 ? 'rgba(239,68,68,.15)' : '';
+    }
+
+    if (!tbody) return;
+    if (!pending.length) {
+      tbody.innerHTML = '<tr><td colspan="13"><div class="empty"><span class="empty-icon">👆</span>No pending signals right now.<br/><small>Signals appear here when signal_notifier runs in manual mode</small></div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = pending.map(s => {
+      const expires = new Date(s.expires);
+      const now = new Date();
+      const minsLeft = Math.max(0, Math.round((expires - now) / 60000));
+      const timeColour = minsLeft < 5 ? 'var(--red)' : minsLeft < 15 ? 'var(--yellow)' : 'var(--green)';
+      const rr = parseFloat(s.risk_reward||0);
+      return '<tr>' +
+        '<td style="color:var(--muted2);font-size:.65rem">' + ts(s.timestamp||s.created) + '</td>' +
+        '<td>' + badge(s.symbol,'badge-b') + '</td>' +
+        '<td>' + badge(s.grade||'—', s.grade==='A+'?'badge-r':'badge-y') + '</td>' +
+        '<td>' + badge(s.direction||'—', s.direction==='LONG'?'badge-g':'badge-r') + '</td>' +
+        '<td class="mono" style="font-weight:600">$' + parseFloat(s.entry_price||0).toLocaleString() + '</td>' +
+        '<td class="mono" style="color:var(--red)">$' + parseFloat(s.stop_loss||0).toLocaleString() + '</td>' +
+        '<td class="mono" style="color:var(--green)">$' + parseFloat(s.take_profit||0).toLocaleString() + '</td>' +
+        '<td style="color:' + (rr>=2?'var(--green)':'var(--yellow)') + ';font-weight:600">' + rr.toFixed(1) + 'R</td>' +
+        '<td style="font-size:.68rem;color:' + (s.kill_zone?'var(--green)':'var(--muted)') + '">' + (s.kill_zone||'Outside') + '</td>' +
+        '<td style="font-size:.68rem;color:var(--muted2)">' + (s.price_zone||'—') + '</td>' +
+        '<td class="mono">' + (s.score||'—') + '</td>' +
+        '<td style="color:' + timeColour + ';font-size:.7rem;font-weight:600">' + minsLeft + 'm left</td>' +
+        '<td>' +
+          '<div style="display:flex;gap:.4rem">' +
+            '<button onclick="approveSignal(\'' + s.id + '\')" style="background:var(--green);color:#000;border:none;border-radius:4px;padding:.25rem .7rem;cursor:pointer;font-size:.7rem;font-weight:700">✅ APPROVE</button>' +
+            '<button onclick="rejectSignal(\'' + s.id + '\')" style="background:var(--red);color:#fff;border:none;border-radius:4px;padding:.25rem .7rem;cursor:pointer;font-size:.7rem;font-weight:700">❌ REJECT</button>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    console.error('Pending signals error:', e);
+  }
+}
+
+async function approveSignal(id) {
+  if (!confirm('Approve this trade for execution?')) return;
+  try {
+    const r = await fetch('/api/signals/approve/' + id, {method:'POST'});
+    const data = await r.json();
+    if (data.error) {
+      alert('Error: ' + data.error);
+    } else {
+      showToast('✅ Trade approved and executed!');
+      loadPendingSignals();
+    }
+  } catch(e) {
+    alert('Failed to approve: ' + e);
+  }
+}
+
+async function rejectSignal(id) {
+  try {
+    const r = await fetch('/api/signals/reject/' + id, {method:'POST'});
+    const data = await r.json();
+    if (data.error) {
+      alert('Error: ' + data.error);
+    } else {
+      showToast('❌ Signal rejected');
+      loadPendingSignals();
+    }
+  } catch(e) {
+    alert('Failed to reject: ' + e);
+  }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:var(--card);border:1px solid var(--border);padding:.75rem 1.25rem;border-radius:8px;font-size:.85rem;z-index:9999;color:var(--text)';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Poll pending signals every 15 seconds
+loadPendingSignals();
+setInterval(loadPendingSignals, 15000);
 
 </script>
 </body>

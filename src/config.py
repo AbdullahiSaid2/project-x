@@ -24,6 +24,17 @@ TAKE_PROFIT_PCT        = 0.06    # 6% take profit
 HYPERLIQUID_TOKENS = ["BTC", "ETH", "SOL", "ARB", "AVAX"]
 COINBASE_TOKENS    = ["BTC-USD", "ETH-USD", "SOL-USD"]
 
+# ── Futures (Tradovate) ──────────────────────────────────────
+TRADOVATE_TOKENS   = ["MNQ", "MES", "MYM"]   # Micro contracts
+# Start with 1 contract each. Margin: MNQ~$40, MES~$50, MYM~$50
+DEFAULT_CONTRACTS  = 1
+
+# TradingView backtest data directory
+TV_DATA_DIR        = "src/data/tradingview"
+
+# Webhook security (change this!)
+WEBHOOK_SECRET    = os.getenv("WEBHOOK_SECRET", "algotec_secret_change_me")
+
 # ── Data / Backtesting ──────────────────────────────────────
 BACKTEST_INITIAL_CASH = 10_000
 BACKTEST_COMMISSION   = 0.001    # 0.1%
@@ -50,3 +61,17 @@ ACTIVE_AGENTS = {
     "liquidation":    False,   # flip to True to track liquidations
     "sentiment":      False,   # flip to True for news sentiment
 }
+
+# ── Execution Mode ─────────────────────────────────────────────
+# Controls how ICT signals are handled
+EXECUTION_MODE = "manual"   # "auto"   = execute immediately
+                             # "manual" = wait for dashboard approval
+                             # "notify" = alert only, never execute
+
+# ── Prop Firm Settings ─────────────────────────────────────────
+# Set these when trading with a prop firm account
+PROP_FIRM_ACTIVE   = False          # set True when using prop account
+PROP_FIRM_NAME     = "apex"         # apex | topstep | ftmo | fundednext
+PROP_FIRM_ACCOUNT  = "50k"          # account size tier
+# When PROP_FIRM_ACTIVE is True, risk limits are automatically
+# loaded from the prop firm profile in prop_firm_monitor.py
