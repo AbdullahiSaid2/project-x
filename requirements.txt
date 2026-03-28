@@ -26,3 +26,7 @@ pytz>=2023.3
 # Additional LLM providers (optional fallbacks)
 groq>=0.9.0
 google-generativeai>=0.7.0
+
+# Institutional market data
+databento>=0.74.0
+pyarrow>=14.0.0     # for parquet cache files

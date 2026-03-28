@@ -110,12 +110,28 @@ def detect_m5_cisd(symbol: str, bias: str) -> dict:
     """
     try:
         # Get last 60 M5 candles
-        df = get_ohlcv(
-            symbol.replace("-USD", ""),
-            exchange=EXCHANGE,
-            timeframe="15m",   # yfinance doesn't have 5m reliably, use 15m as proxy
-            days_back=3,
-        )
+        # Priority: Databento 5m (precise) → yfinance 15m (proxy)
+        m5_data = None
+        try:
+            from src.data.databento_fetcher import get_databento_ohlcv, FUTURES_DB_MAP
+            import os
+            if os.getenv("DATABENTO_API_KEY") and symbol.upper() in FUTURES_DB_MAP:
+                m5_data = get_databento_ohlcv(symbol, "5m", days_back=5)
+                print(f"     📡 M5 data: Databento ({len(m5_data)} candles)")
+        except Exception:
+            pass
+
+        if m5_data is None or m5_data.empty:
+            # Fall back to 15m as proxy (yfinance doesn't have reliable 5m)
+            m5_data = get_ohlcv(
+                symbol.replace("-USD", ""),
+                exchange=EXCHANGE,
+                timeframe="15m",
+                days_back=3,
+            )
+            print(f"     📡 M5 data: 15m proxy ({len(m5_data)} candles)")
+
+        df = m5_data
         if len(df) < 20:
             return {"found": False, "strength": "NONE", "reason": "Insufficient M5 data"}
 
@@ -190,7 +206,7 @@ def detect_m5_cisd(symbol: str, bias: str) -> dict:
                 "found":    False,
                 "strength": "NONE",
                 "entry":    0.0,
-                "reason":   f"No {bias} displacement candle found on M5/15m",
+                "reason":   f"No {bias} displacement candle found on M5",
             }
 
         # Return the most recent strong one, or best available

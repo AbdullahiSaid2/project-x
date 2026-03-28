@@ -41,28 +41,28 @@ Short when 9 EMA crosses below 21 EMA and RSI is below 50 confirming downward mo
 # ══════════════════════════════════════════════════════════════
 
 # Order Blocks
-Long at bullish order block: identify the last bearish candle before a strong 3-candle bullish move, price returns to that candle body, enter long with stop below candle low
-Short at bearish order block: identify the last bullish candle before a strong 3-candle bearish move, price returns to that candle body, enter short with stop above candle high
+Long when a 3-bar bullish move occurs where each bar closes higher than the previous and the total move exceeds 1.5 ATR, then price retraces back to the open of the first bar of that move within the next 8 bars, enter long at that level with stop 0.5 ATR below entry
+Short when a 3-bar bearish move occurs where each bar closes lower than the previous and the total move exceeds 1.5 ATR, then price retraces back to the open of the first bar of that move within the next 8 bars, enter short at that level with stop 0.5 ATR above entry
 
 # Fair Value Gaps
-Long when price retraces into a bullish fair value gap where candle 1 high and candle 3 low do not overlap, enter long at the 50 percent midpoint of the gap
-Short when price retraces into a bearish fair value gap where candle 1 low and candle 3 high do not overlap, enter short at the 50 percent midpoint
+Long when price makes a strong up move of at least 1 ATR in a single bar leaving a gap between the prior bar high and the next bar low, then price retraces into that gap within 5 bars, enter long at the midpoint of the gap with stop below the gap low
+Short when price makes a strong down move of at least 1 ATR in a single bar leaving a gap between the prior bar low and the next bar high, then price retraces into that gap within 5 bars, enter short at the midpoint of the gap with stop above the gap high
 
 # Liquidity Sweeps
-Long after price sweeps below the most recent swing low then closes back above it within 2 candles, stop below the sweep low
-Short after price sweeps above the most recent swing high then closes back below it within 2 candles, stop above the sweep high
+Long when a candle's low breaks below the lowest low of the previous 20 bars but the candle closes above that 20-bar low level indicating a false breakout, enter long at the candle close with stop at the candle low
+Short when a candle's high breaks above the highest high of the previous 20 bars but the candle closes below that 20-bar high level indicating a false breakout, enter short at the candle close with stop at the candle high
 
 # Change of Character
-Long on Change of Character: after a series of lower highs and lower lows price breaks and closes above the most recent lower high
-Short on Change of Character: after a series of higher highs and higher lows price breaks and closes below the most recent higher low
+Long when price closes above the highest high of the previous 10 bars after having made a new 10-bar low within the last 5 bars, stop below the 10-bar low, target 2x the distance from the 10-bar low to entry
+Short when price closes below the lowest low of the previous 10 bars after having made a new 10-bar high within the last 5 bars, stop above the 10-bar high, target 2x the distance from entry to the 10-bar high
 
 # Premium and Discount Zone
-Long when price is in the lower 50 percent of the 20-bar range and RSI is below 40 and price is above the 50 EMA
-Short when price is in the upper 50 percent of the 20-bar range and RSI is above 60 and price is below the 50 EMA
+Long when price is below the midpoint of the 20-bar high-low range and RSI is below 40, exit when price reaches the 20-bar high
+Short when price is above the midpoint of the 20-bar high-low range and RSI is above 60, exit when price reaches the 20-bar low
 
 # FVG after Liquidity Sweep
-Long when price sweeps a swing low then forms a bullish fair value gap on the next 3 candles and returns to fill the gap
-Short when price sweeps a swing high then forms a bearish fair value gap on the next 3 candles and returns to fill the gap
+Long when price makes a new 20-bar low then within the next 3 bars makes a single bar move up of at least 1 ATR, then price retraces 50 percent of that up move, enter long at the 50 percent retracement with stop at the 20-bar low
+Short when price makes a new 20-bar high then within the next 3 bars makes a single bar move down of at least 1 ATR, then price retraces 50 percent of that down move, enter short at the 50 percent retracement with stop at the 20-bar high
 
 
 # ══════════════════════════════════════════════════════════════
@@ -240,3 +240,124 @@ Short when price rises more than 2 ATR in a single bar and then forms a bearish 
 # Regime-Adjusted EMA Cross — only trades in low volatility trending environments
 Long when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
 Short when 20 EMA crosses below 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
+
+
+# ══════════════════════════════════════════════════════════════
+# HYPOMENO MODEL STRATEGIES
+# Based on the 2Quartersin framework: Sweep → Time → Entry (IFVG)
+# All concepts translated into measurable code-able conditions
+# ══════════════════════════════════════════════════════════════
+
+# ── Inverse Fair Value Gap (IFVG) ─────────────────────────────
+# Core entry mechanic of the Hypomeno Model.
+# A bearish FVG that gets closed above becomes a bullish IFVG.
+# A bullish FVG that gets closed below becomes a bearish IFVG.
+# Price returns to that zone for the entry.
+
+Long when price drops at least 1.5 ATR over 3 consecutive bars creating a downward imbalance then a candle closes above the high of that 3-bar down move inverting the gap, enter long when price pulls back to the midpoint of the original 3-bar range with stop below the lowest point of the 3-bar move
+Short when price rises at least 1.5 ATR over 3 consecutive bars creating an upward imbalance then a candle closes below the low of that 3-bar up move inverting the gap, enter short when price pulls back to the midpoint of the original 3-bar range with stop above the highest point of the 3-bar move
+
+# ── Breaker Block ─────────────────────────────────────────────
+# Forms after a liquidity sweep followed by strong displacement.
+# The last opposing candle before the strong move is the breaker.
+# Smart money returns to that candle body to mitigate positions.
+
+Long when price makes a new 20-bar low sweeping liquidity then reverses upward by at least 1.5 ATR within the next 3 bars, enter long when price retraces to the open of the first bullish candle in that reversal with stop below the 20-bar low
+Short when price makes a new 20-bar high sweeping liquidity then reverses downward by at least 1.5 ATR within the next 3 bars, enter short when price retraces to the open of the first bearish candle in that reversal with stop above the 20-bar high
+
+# ── Session Sweep Reversal ────────────────────────────────────
+# Asia/London/NY sessions sweep liquidity then reverse.
+# Approximated as: early move sweeps an extreme then reverses
+# to close back through the opening price of the last 8 bars.
+
+Long when price makes a new 15-bar low then within the next 5 bars closes above the high of the candle that made the 15-bar low indicating a failed sweep and reversal, enter long at the close with stop at the 15-bar low
+Short when price makes a new 15-bar high then within the next 5 bars closes below the low of the candle that made the 15-bar high indicating a failed sweep and reversal, enter short at the close with stop at the 15-bar high
+
+# ── CISD+ / CISD- (Change in State of Delivery) ──────────────
+# A sequence of directional candles followed by a candle that
+# closes beyond the entire sequence — confirming the shift.
+
+Long when at least 3 consecutive candles each close lower than the previous forming a down sequence then a bullish candle closes above the open of the first candle in that down sequence confirming a change in delivery, enter long at that candle close with stop below the lowest low of the sequence
+Short when at least 3 consecutive candles each close higher than the previous forming an up sequence then a bearish candle closes below the open of the first candle in that up sequence confirming a change in delivery, enter short at that candle close with stop above the highest high of the sequence
+
+# ── Premium Wicks (PW+ / PW-) ────────────────────────────────
+# A candle wick that pierces beyond the 50% equilibrium of the
+# 20-bar range but the candle body closes back inside — signals
+# a liquidity sweep and likely reversal.
+
+Long when a candle low extends below the midpoint of the 20-bar high-low range but the candle closes above that midpoint indicating the lower wick swept discount liquidity and rejected, enter long at the candle close with stop at the candle low
+Short when a candle high extends above the midpoint of the 20-bar high-low range but the candle closes below that midpoint indicating the upper wick swept premium liquidity and rejected, enter short at the candle close with stop at the candle high
+
+# ── Unicorn Model ─────────────────────────────────────────────
+# Highest probability Hypomeno setup: sweep + strong displacement
+# + FVG forming inside the reversal = triple confluence.
+# Simplified: sweep of extreme + displacement candle body > 70%
+# of its range + retracement to displacement candle midpoint.
+
+Long when price sweeps the 20-bar low then the very next candle is a strong bullish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter long when price retraces to the midpoint of that strong bullish candle with stop below the sweep low
+Short when price sweeps the 20-bar high then the very next candle is a strong bearish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter short when price retraces to the midpoint of that strong bearish candle with stop above the sweep high
+
+# ── Protected Swing Double Test ───────────────────────────────
+# A Protected Low/High is a swing extreme that gets tested twice
+# but holds both times — confirming strong support or resistance.
+# Stop goes just beyond the protected level.
+
+Long when the lowest low of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that low again but closes above it on both tests, enter long on the second successful hold with stop 0.5 ATR below the protected low
+Short when the highest high of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that high again but closes below it on both tests, enter short on the second successful hold with stop 0.5 ATR above the protected high
+
+# ── IRL to ERL / ERL to IRL ──────────────────────────────────
+# Market moves from internal liquidity (FVG) to external
+# liquidity (swing high/low) and back. Trade the transition.
+
+Long when price retraces into the midpoint of the lowest gap in the past 20 bars where no candle body has closed inside that gap, enter long at the midpoint targeting the 20-bar high as the ERL target with stop below the gap low
+Short when price retraces into the midpoint of the highest gap in the past 20 bars where no candle body has closed inside that gap, enter short at the midpoint targeting the 20-bar low as the ERL target with stop above the gap high
+
+# ── Macro Momentum Entry ──────────────────────────────────────
+# Macros are 20-minute windows around each hour turn.
+# 9:50-10:10 AM EST is most important — start of 4H candle.
+# Approximated as: strong directional move at the open of a new
+# 4-bar cycle that breaks the prior 4-bar range high or low.
+
+Long when price breaks above the highest high of the prior 4 bars with a bullish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter long at the break with stop below the prior 4-bar low target prior 4-bar range projected upward
+Short when price breaks below the lowest low of the prior 4 bars with a bearish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter short at the break with stop above the prior 4-bar high target prior 4-bar range projected downward
+
+
+# ══════════════════════════════════════════════════════════════
+# TOPTICK TYPE 1 — ICT SESSION SWEEP + REJECTION BLOCK
+# 6-step model: ERL Sweep → Rejection Block → C.E refinement
+# → SIBI entry → COS confirmation → STDV targets
+# ══════════════════════════════════════════════════════════════
+
+# ── Step 1-3: Session Sweep + Rejection Block at C.E ─────────
+# Price sweeps a 20-bar high (ERL), the sweep candle then
+# closes back below the prior candle high (rejection).
+# Price retraces to the 50% C.E of that sweep candle body.
+# Entry at C.E with stop above the sweep high.
+
+Short when price makes a new 20-bar high and the candle that makes the high closes below the high of the previous candle indicating a rejection of the sweep, then price retraces back up to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter short at that midpoint with stop above the 20-bar high targeting the 20-bar low
+Long when price makes a new 20-bar low and the candle that makes the low closes above the low of the previous candle indicating a rejection of the sweep, then price retraces back down to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter long at that midpoint with stop below the 20-bar low targeting the 20-bar high
+
+# ── Step 4: SIBI Entry (Volume Imbalance within Rejection Block)
+# A SIBI is a gap between consecutive candle closes and opens
+# with no overlap — similar to an FVG but specific to the
+# sell-side imbalance. Entry at the 50% of the imbalance gap.
+
+Short when price sweeps a 20-bar high then within 3 bars forms a gap where consecutive bearish candle closes are lower than the next candle opens leaving a visible imbalance, then price retraces up into the midpoint of that gap, enter short at the midpoint of the gap with stop above the top of the gap
+Long when price sweeps a 20-bar low then within 3 bars forms a gap where consecutive bullish candle closes are higher than the next candle opens leaving a visible imbalance, then price retraces down into the midpoint of that gap, enter long at the midpoint of the gap with stop below the bottom of the gap
+
+# ── Step 5: Change of Structure Confirmation ─────────────────
+# After price reaches the entry zone, wait for COS:
+# a candle that closes beyond the most recent opposing swing.
+# This confirms the reversal before committing to the trade.
+
+Short when price makes a new 20-bar high then forms 3 or more lower highs in a row and a candle closes below the lowest low of those lower highs confirming a change of structure, enter short at the break close with stop above the 20-bar high targeting the 20-bar low
+Long when price makes a new 20-bar low then forms 3 or more higher lows in a row and a candle closes above the highest high of those higher lows confirming a change of structure, enter long at the break close with stop below the 20-bar low targeting the 20-bar high
+
+# ── Step 6: STDV Extension Targets ───────────────────────────
+# Targets align with standard deviation extensions of 2-2.5
+# and 4-4.5 from the entry. Approximated as ATR multiples:
+# STDV 2-2.5 ≈ 2x ATR from entry (first target)
+# STDV 4-4.5 ≈ 4x ATR from entry (full target)
+
+Short when price sweeps a 20-bar high and the sweep candle closes in the lower 25 percent of its range indicating strong rejection, enter short on the next candle close with stop above the sweep high and target exit at 3 ATR below entry representing the standard deviation extension zone
+Long when price sweeps a 20-bar low and the sweep candle closes in the upper 25 percent of its range indicating strong rejection, enter long on the next candle close with stop below the sweep low and target exit at 3 ATR above entry representing the standard deviation extension zone

@@ -107,12 +107,15 @@ class BacktestResult:
 # ════════════════════════════════════════════════════════════════
 
 def load_data(symbol: str, days: int = 90) -> dict:
-    """Load D1, H1, and 15m data for backtesting."""
+    """Load D1, H1, and M5 data for backtesting.
+    Uses Databento for M5 (precise) with 15m fallback."""
     print(f"  📡 Loading data for {symbol}...")
     sym = symbol.replace("-USD", "")
 
     data = {}
-    for tf, label in [("1D", "d1"), ("1H", "h1"), ("15m", "m15")]:
+
+    # D1 and H1 — use standard fetcher (Databento auto-routes for futures)
+    for tf, label in [("1D", "d1"), ("1H", "h1")]:
         try:
             df = get_ohlcv(sym, exchange=EXCHANGE, timeframe=tf, days_back=days)
             df.index = pd.to_datetime(df.index)
@@ -121,6 +124,30 @@ def load_data(symbol: str, days: int = 90) -> dict:
         except Exception as e:
             print(f"     ❌ {tf} failed: {e}")
             data[label] = pd.DataFrame()
+
+    # M5 — try Databento first, fall back to 15m
+    m5_loaded = False
+    try:
+        from src.data.databento_fetcher import get_databento_ohlcv, FUTURES_DB_MAP
+        import os
+        if os.getenv("DATABENTO_API_KEY") and sym.upper() in FUTURES_DB_MAP:
+            df = get_databento_ohlcv(sym, "5m", days_back=min(days, 90))
+            df.index = pd.to_datetime(df.index)
+            data["m15"] = df   # stored as m15 key for compatibility
+            print(f"     5m (Databento): {len(df)} candles ← precise M5")
+            m5_loaded = True
+    except Exception:
+        pass
+
+    if not m5_loaded:
+        try:
+            df = get_ohlcv(sym, exchange=EXCHANGE, timeframe="15m", days_back=days)
+            df.index = pd.to_datetime(df.index)
+            data["m15"] = df
+            print(f"     15m (proxy): {len(df)} candles")
+        except Exception as e:
+            print(f"     ❌ 15m failed: {e}")
+            data["m15"] = pd.DataFrame()
 
     return data
 
@@ -282,7 +309,7 @@ def check_h1_displacement(h1_slice: pd.DataFrame, bias: str) -> str:
 
 
 def check_m15_cisd(m15_slice: pd.DataFrame, bias: str) -> dict:
-    """Detect CISD quality on M15 (proxy for M5)."""
+    """Detect CISD quality on M5 (or 15m proxy if Databento unavailable)."""
     if len(m15_slice) < 5:
         return {"found": False, "strength": "NONE", "entry": 0}
 
@@ -623,7 +650,7 @@ def print_results(r: BacktestResult):
 
 
 def save_results(r: BacktestResult):
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Save trade log CSV
     trade_csv = RESULTS_DIR / f"ict_trades_{r.symbol}_{today}.csv"
