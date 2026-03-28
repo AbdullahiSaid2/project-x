@@ -1,0 +1,12 @@
+#Run futures backtest (Databento data — 5 years, MNQ/MES/MYM):
+rm src/data/processed_ideas.json
+python src/agents/rbi_parallel.py --market futures
+
+
+#Run crypto backtest (yfinance — BTC/ETH/SOL + alts):
+rm src/data/processed_ideas.json
+python src/agents/rbi_parallel.py --market crypto
+
+
+#Run both markets together:
+python src/agents/rbi_parallel.py --market all

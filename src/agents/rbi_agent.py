@@ -170,6 +170,7 @@ class RBIAgent:
             import numpy as np
             import pandas as pd
             import ta as ta_lib
+        import ta
             from backtesting import Strategy
             from backtesting.lib import crossover
         """)
@@ -218,7 +219,7 @@ class RBIAgent:
 
     # ── save results ─────────────────────────────────────────
     def save_results(self, idea: str, spec: dict, all_stats: list):
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         out_dir = RESULTS_DIR / today
         out_dir.mkdir(parents=True, exist_ok=True)
 

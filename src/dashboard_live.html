@@ -947,10 +947,30 @@ function retBadge(v) {
 function sentBadge(s) { return badge(s, sentMap[s]||'badge-y'); }
 function alertBadge(a) { return badge(a, alertMap[a]||'badge-y'); }
 function sigBadge(s) { return badge((s||'—').replace(/_/g,' '), sigMap[s]||'badge-y'); }
-function ts(t) { return (t||'').slice(0,16).replace('T',' '); }
+function ts(t) {
+  if (!t) return '—';
+  const d = new Date(t.replace(' ','T'));
+  if (isNaN(d)) return t.slice(0,19).replace('T',' ');
+  const dd   = String(d.getDate()).padStart(2,'0');
+  const mm   = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  const hh   = String(d.getHours()).padStart(2,'0');
+  const mi   = String(d.getMinutes()).padStart(2,'0');
+  const ss   = String(d.getSeconds()).padStart(2,'0');
+  return dd+'/'+mm+'/'+yyyy+'<br><span style="color:var(--muted);font-size:.58rem">'+hh+':'+mi+':'+ss+'</span>';
+}
 function mono(t) { return `<span style="font-family:inherit">${t||'—'}</span>`; }
 
 // ── renderers ──────────────────────────────────────────────
+function safeReturn(val) {
+  // Reject scientific notation / overflow values
+  const n = parseFloat(val);
+  if (isNaN(n)) return {text: '—', colour: 'var(--muted)'};
+  if (Math.abs(n) > 100000) return {text: '⚠️ overflow', colour: 'var(--yellow)'};
+  const colour = n > 0 ? 'var(--green)' : n < 0 ? 'var(--red)' : 'var(--muted)';
+  return {text: (n > 0 ? '+' : '') + n.toFixed(1) + '%', colour};
+}
+
 function renderBacktest(rows) {
   const q = (document.getElementById('q-backtest').value||'').toLowerCase();
   const sort = document.getElementById('sort-backtest').value;
@@ -971,7 +991,7 @@ function renderBacktest(rows) {
     <td style="color:${parseFloat(x.sharpe||0)>=1?'var(--green)':parseFloat(x.sharpe||0)>=0?'var(--yellow)':'var(--red)'}">${parseFloat(x.sharpe||0).toFixed(2)}</td>
     <td style="color:var(--muted2)">${x.num_trades||'—'}</td>
     <td style="color:var(--muted2)">${parseFloat(x.win_rate||0).toFixed(1)}%</td>
-    <td style="color:var(--muted);font-size:.65rem">${(x.date||'').slice(0,10)}</td>
+    <td style="color:var(--muted);font-size:.65rem">${ts(x.date)}</td>
   </tr>`).join('');
 }
 
@@ -1218,7 +1238,7 @@ function renderIctBt(rows) {
     const wr  = parseFloat(x.win_rate||0);
     const pf  = parseFloat(x.profit_factor||0);
     return '<tr>' +
-      '<td class="mono" style="font-size:.65rem;color:var(--muted2)">' + (x.date||'—') + '</td>' +
+      '<td class="mono" style="font-size:.65rem;color:var(--muted2)">' + ts(x.date) + '</td>' +
       '<td>' + badge(x.symbol,'badge-b') + '</td>' +
       '<td class="mono" style="color:var(--muted2)">' + (x.days||'—') + 'd</td>' +
       '<td class="mono">' + (x.trades||'0') + '</td>' +

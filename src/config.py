@@ -36,7 +36,7 @@ TV_DATA_DIR        = "src/data/tradingview"
 WEBHOOK_SECRET    = os.getenv("WEBHOOK_SECRET", "algotec_secret_change_me")
 
 # ── Data / Backtesting ──────────────────────────────────────
-BACKTEST_INITIAL_CASH = 10_000
+BACKTEST_INITIAL_CASH = 100_000
 BACKTEST_COMMISSION   = 0.001    # 0.1%
 DATA_TIMEFRAMES       = ["15m", "1H", "4H", "1D"]
 DEFAULT_TIMEFRAME     = "1H"
@@ -61,6 +61,13 @@ ACTIVE_AGENTS = {
     "liquidation":    False,   # flip to True to track liquidations
     "sentiment":      False,   # flip to True for news sentiment
 }
+
+# ── Data Sources ───────────────────────────────────────────────
+# Priority: Databento > TradingView CSV > yfinance
+# Set DATABENTO_API_KEY in .env to enable institutional data
+# Futures symbols (MNQ/MES/MYM) auto-route to Databento if key present
+DATABENTO_CACHE_HOURS  = 4      # hours before refreshing cached data
+DATABENTO_DEFAULT_DAYS = 1825   # 5 years of history
 
 # ── Execution Mode ─────────────────────────────────────────────
 # Controls how ICT signals are handled
