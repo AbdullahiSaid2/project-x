@@ -1,187 +1,242 @@
+# ============================================================
 # 🌙 Trading Ideas — Full Strategy Library
-# Based on Moon Dev's complete roadmap
-# Add one idea per line. Lines starting with # are ignored.
-# NOTE: Keep ideas single-timeframe — no "higher timeframe" references.
+# ============================================================
+# Rules for this file:
+#   - Each idea is one line
+#   - Lines starting with # are ignored
+#   - Paired ideas (long + short) are separate consecutive lines
+#   - Direction is explicit in every idea
+#   - Long ideas only fire when confirmed bullish
+#   - Short ideas only fire when confirmed bearish
+#   - Single-direction ideas stay single-direction where logic demands it
+# ============================================================
+
 
 # ══════════════════════════════════════════════════════════════
 # ORIGINAL CORE STRATEGIES
+# Fixed: was missing short counterparts and had ambiguous direction.
 # ══════════════════════════════════════════════════════════════
-Buy when RSI drops below 30 and price is above the 200 EMA
-MACD crossover with volume confirmation entry
-Bollinger Band squeeze breakout strategy
-EMA 9 crosses above EMA 21 with RSI above 50
+
+# RSI Extremes with Trend Filter
+Long when RSI drops below 30 and price is above the 200 EMA, exit when RSI rises back above 50
+Short when RSI rises above 70 and price is below the 200 EMA, exit when RSI falls back below 50
+
+# MACD Crossover with Volume
+Long when MACD line crosses above the signal line with volume above the 20-bar average confirming the move, exit when MACD crosses back below signal
+Short when MACD line crosses below the signal line with volume above the 20-bar average confirming the move, exit when MACD crosses back above signal
+
+# Bollinger Band Squeeze Breakout
+Long when Bollinger Band width contracts to a 6-month low squeeze and price breaks and closes above the upper band with volume, stop below the lower band
+Short when Bollinger Band width contracts to a 6-month low squeeze and price breaks and closes below the lower band with volume, stop above the upper band
+
+# EMA Cross with RSI Momentum Guard
+Long when 9 EMA crosses above 21 EMA and RSI is above 50 confirming upward momentum, exit when 9 EMA crosses back below 21 EMA
+Short when 9 EMA crosses below 21 EMA and RSI is below 50 confirming downward momentum, exit when 9 EMA crosses back above 21 EMA
+
 
 # ══════════════════════════════════════════════════════════════
 # ICT STRATEGIES
+# Inherently directional — each setup is one direction only.
+# Long and short versions are separate entries as they should be.
 # ══════════════════════════════════════════════════════════════
-Buy at bullish order block: identify the last bearish candle before a strong 3-candle bullish move, price returns to that candle body, enter long with stop below candle low
-Sell at bearish order block: identify the last bullish candle before a strong 3-candle bearish move, price returns to that candle body, enter short with stop above candle high
-Buy when price retraces into a bullish fair value gap where candle 1 high and candle 3 low do not overlap, enter long at the 50 percent midpoint of the gap
-Sell when price retraces into a bearish fair value gap where candle 1 low and candle 3 high do not overlap, enter short at the 50 percent midpoint
-Buy after price sweeps below the most recent swing low then closes back above it within 2 candles, stop below sweep low
-Sell after price sweeps above the most recent swing high then closes back below it within 2 candles, stop above sweep high
-Buy on Change of Character: after lower highs and lower lows, price breaks and closes above the most recent lower high
-Sell on Change of Character: after higher highs and higher lows, price breaks and closes below the most recent higher low
-Buy when price is in the lower 50 percent of the 20-bar range and RSI is below 40 and price is above the 50 EMA
-Sell when price is in the upper 50 percent of the 20-bar range and RSI is above 60 and price is below the 50 EMA
-Buy when price sweeps a swing low then forms a bullish fair value gap on the next 3 candles and returns to fill the gap
-Sell when price sweeps a swing high then forms a bearish fair value gap on the next 3 candles and returns to fill the gap
+
+# Order Blocks
+Long at bullish order block: identify the last bearish candle before a strong 3-candle bullish move, price returns to that candle body, enter long with stop below candle low
+Short at bearish order block: identify the last bullish candle before a strong 3-candle bearish move, price returns to that candle body, enter short with stop above candle high
+
+# Fair Value Gaps
+Long when price retraces into a bullish fair value gap where candle 1 high and candle 3 low do not overlap, enter long at the 50 percent midpoint of the gap
+Short when price retraces into a bearish fair value gap where candle 1 low and candle 3 high do not overlap, enter short at the 50 percent midpoint
+
+# Liquidity Sweeps
+Long after price sweeps below the most recent swing low then closes back above it within 2 candles, stop below the sweep low
+Short after price sweeps above the most recent swing high then closes back below it within 2 candles, stop above the sweep high
+
+# Change of Character
+Long on Change of Character: after a series of lower highs and lower lows price breaks and closes above the most recent lower high
+Short on Change of Character: after a series of higher highs and higher lows price breaks and closes below the most recent higher low
+
+# Premium and Discount Zone
+Long when price is in the lower 50 percent of the 20-bar range and RSI is below 40 and price is above the 50 EMA
+Short when price is in the upper 50 percent of the 20-bar range and RSI is above 60 and price is below the 50 EMA
+
+# FVG after Liquidity Sweep
+Long when price sweeps a swing low then forms a bullish fair value gap on the next 3 candles and returns to fill the gap
+Short when price sweeps a swing high then forms a bearish fair value gap on the next 3 candles and returns to fill the gap
+
 
 # ══════════════════════════════════════════════════════════════
 # TECHNICAL INDICATOR STRATEGIES
+# All correctly paired. Long only fires in uptrend context, short only in downtrend.
 # ══════════════════════════════════════════════════════════════
 
-# StochRSI
-Buy when StochRSI crosses above 20 from oversold territory and price is above 200 EMA, sell when StochRSI crosses above 80
-Sell when StochRSI crosses below 80 from overbought territory and price is below 200 EMA, cover when StochRSI crosses below 20
+# StochRSI — trend-filtered so we never long in a downtrend or short in an uptrend
+Long when StochRSI crosses above 20 from oversold territory and price is above the 200 EMA, exit when StochRSI crosses above 80
+Short when StochRSI crosses below 80 from overbought territory and price is below the 200 EMA, exit when StochRSI crosses below 20
 
-# RSI Divergence
-Buy when price makes lower low but RSI makes higher low (bullish divergence), enter on the next bullish candle close
-Sell when price makes higher high but RSI makes lower high (bearish divergence), enter on the next bearish candle close
+# RSI Divergence — divergence is inherently directional
+Long when price makes a lower low but RSI makes a higher low indicating bullish divergence, enter on the next bullish candle close
+Short when price makes a higher high but RSI makes a lower high indicating bearish divergence, enter on the next bearish candle close
 
 # MACD Histogram Turning Points
-Buy when MACD histogram turns from negative to less negative (histogram starts rising) while below zero, target zero line
-Sell when MACD histogram turns from positive to less positive (histogram starts falling) while above zero
+Long when MACD histogram turns from negative to less negative meaning histogram starts rising while still below zero, target the zero line
+Short when MACD histogram turns from positive to less positive meaning histogram starts falling while still above zero, target the zero line
 
 # Bollinger Band Squeeze
-Buy when Bollinger Band width reaches 6-month low (squeeze) and price breaks above upper band with volume
-Sell when Bollinger Band width reaches 6-month low and price breaks below lower band with volume
+Long when Bollinger Band width reaches a 6-month low squeeze and price breaks above the upper band with volume
+Short when Bollinger Band width reaches a 6-month low squeeze and price breaks below the lower band with volume
 
 # Keltner Channel Breakout
-Buy when price closes above the upper Keltner Channel (20 EMA plus 1.5 ATR) with RSI above 50
-Sell when price closes below the lower Keltner Channel (20 EMA minus 1.5 ATR) with RSI below 50
+Long when price closes above the upper Keltner Channel which is 20 EMA plus 1.5 ATR with RSI above 50
+Short when price closes below the lower Keltner Channel which is 20 EMA minus 1.5 ATR with RSI below 50
 
-# ADX Trend Strength
-Buy when ADX crosses above 25 indicating strong trend and price is above 50 EMA, only trade in trend direction
-Sell when ADX crosses above 25 and price is below 50 EMA, hold until ADX drops below 20
+# ADX Trend Strength — trades only in direction of the confirmed trend
+Long when ADX crosses above 25 indicating a strong trend and price is above the 50 EMA, hold until ADX drops below 20
+Short when ADX crosses above 25 indicating a strong trend and price is below the 50 EMA, hold until ADX drops below 20
 
-# CCI Overbought Oversold
-Buy when CCI drops below negative 100 and then crosses back above negative 100, targeting zero line
-Sell when CCI rises above positive 100 and then crosses back below positive 100, targeting zero line
+# CCI Overbought Oversold — symmetric mean reversion
+Long when CCI drops below negative 100 and then crosses back above negative 100, targeting the zero line
+Short when CCI rises above positive 100 and then crosses back below positive 100, targeting the zero line
 
-# Williams %R
-Buy when Williams %R drops below negative 80 and crosses back above negative 80, stop below recent low
-Sell when Williams %R rises above negative 20 and crosses back below negative 20, stop above recent high
+# Williams %R — symmetric oscillator
+Long when Williams %R drops below negative 80 and crosses back above negative 80, stop below recent swing low
+Short when Williams %R rises above negative 20 and crosses back below negative 20, stop above recent swing high
 
-# Parabolic SAR
-Buy when Parabolic SAR flips from above price to below price, stop at SAR level, trail stop as SAR moves
-Sell when Parabolic SAR flips from below price to above price, stop at SAR level
+# Parabolic SAR — trend-following trail
+Long when Parabolic SAR flips from above price to below price, stop at SAR level, trail stop as SAR moves up
+Short when Parabolic SAR flips from below price to above price, stop at SAR level, trail stop as SAR moves down
 
-# Money Flow Index
-Buy when MFI drops below 20 indicating oversold with high volume and then crosses back above 20
-Sell when MFI rises above 80 indicating overbought with high volume and then crosses back below 80
+# Money Flow Index — volume-weighted oscillator
+Long when MFI drops below 20 indicating oversold with high volume and then crosses back above 20
+Short when MFI rises above 80 indicating overbought with high volume and then crosses back below 80
 
-# Ichimoku Cloud
-Buy when price breaks above the Ichimoku cloud, tenkan-sen is above kijun-sen, and chikou span is above price
-Sell when price breaks below the Ichimoku cloud, tenkan-sen is below kijun-sen
+# Ichimoku Cloud — trend-confirmed entries only
+Long when price breaks above the Ichimoku cloud and tenkan-sen is above kijun-sen and chikou span is above price
+Short when price breaks below the Ichimoku cloud and tenkan-sen is below kijun-sen and chikou span is below price
+
 
 # ══════════════════════════════════════════════════════════════
 # VOLUME AND ORDER FLOW STRATEGIES
 # ══════════════════════════════════════════════════════════════
 
-# On-Balance Volume
-Buy when OBV makes new high before price makes new high (OBV leading price), enter long on price confirmation
-Sell when OBV makes new low before price makes new low, enter short on price confirmation
+# On-Balance Volume — OBV leads price
+Long when OBV makes a new high before price makes a new high, enter long on price confirmation
+Short when OBV makes a new low before price makes a new low, enter short on price confirmation
 
-# Volume Spread Analysis
-Buy when a wide spread down bar closes on its high with very high volume (stopping volume), price likely to reverse up
-Sell when a wide spread up bar closes on its low with very high volume (supply entering), price likely to reverse down
+# Volume Spread Analysis — stopping volume is directional
+Long when a wide spread down bar closes on its high with very high volume indicating stopping volume
+Short when a wide spread up bar closes on its low with very high volume indicating supply entering
 
-# Volume Spike Reversal
-Buy when volume is 3x the 20-bar average on a down bar and price closes in upper 25 percent of bar range
-Sell when volume is 3x the 20-bar average on an up bar and price closes in lower 25 percent of bar range
+# Volume Spike Reversal — spike direction determines trade
+Long when volume is 3x the 20-bar average on a down bar and price closes in the upper 25 percent of bar range
+Short when volume is 3x the 20-bar average on an up bar and price closes in the lower 25 percent of bar range
 
-# VWAP Reversion
-Buy when price drops more than 2 standard deviations below VWAP and volume is declining, target VWAP
-Sell when price rises more than 2 standard deviations above VWAP and volume is declining, target VWAP
+# VWAP Reversion — symmetric mean reversion
+Long when price drops more than 2 standard deviations below VWAP and volume is declining, target VWAP
+Short when price rises more than 2 standard deviations above VWAP and volume is declining, target VWAP
+
 
 # ══════════════════════════════════════════════════════════════
 # MEAN REVERSION STRATEGIES
+# Symmetric by nature — both directions valid.
 # ══════════════════════════════════════════════════════════════
 
 # Z-Score Mean Reversion
-Buy when the 20-bar z-score of price drops below negative 2.0, exit when z-score returns to zero
-Sell when the 20-bar z-score of price rises above positive 2.0, exit when z-score returns to zero
+Long when the 20-bar z-score of price drops below negative 2.0, exit when z-score returns to zero
+Short when the 20-bar z-score of price rises above positive 2.0, exit when z-score returns to zero
 
 # RSI Mean Reversion
-Buy when RSI drops below 30 and the previous bar RSI was above 30, stop below recent swing low
-Sell when RSI rises above 70 and the previous bar RSI was below 70, stop above recent swing high
+Long when RSI drops below 30 and the previous bar RSI was above 30, stop below recent swing low
+Short when RSI rises above 70 and the previous bar RSI was below 70, stop above recent swing high
 
 # Distance from Moving Average
-Buy when price is more than 3 percent below the 20 EMA and RSI is below 40, target 20 EMA
-Sell when price is more than 3 percent above the 20 EMA and RSI is above 60, target 20 EMA
+Long when price is more than 3 percent below the 20 EMA and RSI is below 40, target the 20 EMA
+Short when price is more than 3 percent above the 20 EMA and RSI is above 60, target the 20 EMA
 
 # Bollinger Band Bounce
-Buy when price touches the lower Bollinger Band with RSI below 35, target middle band
-Sell when price touches the upper Bollinger Band with RSI above 65, target middle band
+Long when price touches the lower Bollinger Band with RSI below 35, target middle band
+Short when price touches the upper Bollinger Band with RSI above 65, target middle band
+
 
 # ══════════════════════════════════════════════════════════════
 # MOMENTUM STRATEGIES
+# Momentum works equally in both directions.
 # ══════════════════════════════════════════════════════════════
 
-# Dual Momentum
-Buy when price is above both the 10-bar and 20-bar EMA and both EMAs are rising, hold until both flatten
-Sell when price is below both the 10-bar and 20-bar EMA and both EMAs are falling
+# Dual Momentum — trend-following in both directions
+Long when price is above both the 10-bar and 20-bar EMA and both EMAs are rising, hold until both flatten
+Short when price is below both the 10-bar and 20-bar EMA and both EMAs are falling, hold until both flatten
 
-# Price Rate of Change Momentum
-Buy when 14-bar rate of change crosses above zero from below, price above 50 EMA
-Sell when 14-bar rate of change crosses below zero from above, price below 50 EMA
+# Price Rate of Change
+Long when 14-bar rate of change crosses above zero from below and price is above the 50 EMA
+Short when 14-bar rate of change crosses below zero from above and price is below the 50 EMA
 
-# Relative Strength Momentum
-Buy the asset when its 20-bar return is greater than the 20-bar return of BTC (relative outperformance)
-Sell the asset when its 20-bar return is less than the 20-bar return of BTC by more than 5 percent
+# Relative Strength vs BTC
+Long the asset when its 20-bar return is greater than the 20-bar return of BTC indicating relative outperformance
+Short the asset when its 20-bar return is less than the 20-bar return of BTC by more than 5 percent
+
 
 # ══════════════════════════════════════════════════════════════
 # CRYPTO-SPECIFIC STRATEGIES
+# Funding and OI signals have specific directional logic — handled carefully.
 # ══════════════════════════════════════════════════════════════
 
-# Funding Rate Mean Reversion
-Buy when funding rate has been negative for 3 consecutive 8-hour periods (shorts paying) and RSI is below 40
-Sell when funding rate has been positive for 3 consecutive 8-hour periods (longs paying) and RSI is above 60
+# Funding Rate Mean Reversion — RSI guards direction
+Long when funding rate has been negative for 3 consecutive 8-hour periods meaning shorts are paying longs and RSI is below 40
+Short when funding rate has been positive for 3 consecutive 8-hour periods meaning longs are paying shorts and RSI is above 60
 
-# Liquidation Cascade Reversal
-Buy immediately after a large liquidation spike where long liquidations exceed 10 million USD in 15 minutes
-Sell immediately after a large liquidation spike where short liquidations exceed 10 million USD in 15 minutes
+# Liquidation Cascade Reversal — direction set by which side was liquidated
+Long immediately after long liquidations exceed 10 million USD in 15 minutes meaning sell pressure is exhausted
+Short immediately after short liquidations exceed 10 million USD in 15 minutes meaning buy pressure is exhausted
 
-# Open Interest Divergence
-Buy when price makes new low but open interest drops significantly (shorts covering), indicates reversal
-Sell when price makes new high but open interest drops significantly (longs closing), indicates exhaustion
+# Open Interest Divergence — OI drop signals exhaustion of the prevailing move
+Long when price makes a new low but open interest drops significantly indicating shorts are covering
+Short when price makes a new high but open interest drops significantly indicating longs are closing
 
-# High Funding Carry
-Short the perpetual when funding rate exceeds 0.1 percent per 8 hours (annualised above 50 percent), hold until funding normalises below 0.05 percent
+# High Funding Carry — SHORT ONLY by design, do not add a long version
+# Logic: When funding is very high and positive, longs are paying shorts.
+# You short the perpetual to collect that payment. A long carry equivalent
+# (very negative funding) is already covered by the Funding Rate Mean
+# Reversion long entry above. Adding a long here would duplicate that idea.
+Short the perpetual when funding rate exceeds 0.1 percent per 8 hours annualised above 50 percent, hold until funding normalises below 0.05 percent per 8 hours
+
 
 # ══════════════════════════════════════════════════════════════
 # GAP TRADING STRATEGIES
+# Gaps fill in both directions.
 # ══════════════════════════════════════════════════════════════
 
 # Gap Fill
-Buy when price opens more than 1 percent below the previous close (gap down) and RSI is below 45, target previous close
-Sell when price opens more than 1 percent above the previous close (gap up) and RSI is above 55, target previous close
+Long when price opens more than 1 percent below the previous close creating a gap down and RSI is below 45, target the previous close
+Short when price opens more than 1 percent above the previous close creating a gap up and RSI is above 55, target the previous close
+
 
 # ══════════════════════════════════════════════════════════════
 # TREND FOLLOWING STRATEGIES
 # ══════════════════════════════════════════════════════════════
 
-# Classic Trend Following
-Buy when price closes above the 20-period highest high (20-bar breakout), hold with trailing stop of 10 bars
-Sell short when price closes below the 20-period lowest low, hold with trailing stop of 10 bars
+# Classic Donchian Breakout
+Long when price closes above the 20-period highest high, hold with trailing stop based on the lowest low of the prior 10 bars
+Short when price closes below the 20-period lowest low, hold with trailing stop based on the highest high of the prior 10 bars
 
-# Triple EMA Trend
-Buy when 9 EMA crosses above 21 EMA which is above 55 EMA and all three are pointing up
-Sell when 9 EMA crosses below 21 EMA which is below 55 EMA and all three are pointing down
+# Triple EMA Trend Stack
+Long when 9 EMA crosses above 21 EMA which is above 55 EMA and all three are pointing up
+Short when 9 EMA crosses below 21 EMA which is below 55 EMA and all three are pointing down
+
 
 # ══════════════════════════════════════════════════════════════
 # QUANTITATIVE STRATEGIES
+# Symmetric by construction.
 # ══════════════════════════════════════════════════════════════
 
-# Volatility Breakout
-Buy when price moves more than 1.5 ATR above the open within the first 3 bars, stop at open
-Sell when price moves more than 1.5 ATR below the open within the first 3 bars, stop at open
+# Volatility Breakout from Open
+Long when price moves more than 1.5 ATR above the open within the first 3 bars, stop at the open
+Short when price moves more than 1.5 ATR below the open within the first 3 bars, stop at the open
 
 # Mean Reversion after Extreme Move
-Buy when price drops more than 2 ATR in a single bar and then forms a bullish inside bar
-Sell when price rises more than 2 ATR in a single bar and then forms a bearish inside bar
+Long when price drops more than 2 ATR in a single bar and then forms a bullish inside bar signalling exhaustion
+Short when price rises more than 2 ATR in a single bar and then forms a bearish inside bar signalling exhaustion
 
-# Regime-Adjusted EMA Cross
-Buy when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average (low volatility trend)
-Sell when 20 EMA crosses below 50 EMA and ATR is below the 20-bar ATR average
+# Regime-Adjusted EMA Cross — only trades in low volatility trending environments
+Long when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
+Short when 20 EMA crosses below 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
