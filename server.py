@@ -34,6 +34,7 @@ CSV_FILES = {
     "ict":         DATA_DIR / "ict_scanner_log.csv",
     "ict_exec":    DATA_DIR / "ict_exec_log.csv",
     "ict_bt":      DATA_DIR / "ict_backtest" / "ict_backtest_summary.csv",
+    "forward_test": DATA_DIR / "forward_test_log.csv",
     "funding_arb":  DATA_DIR / "funding_arb_log.csv",
     "copy_bot":     DATA_DIR / "copy_bot_log.csv",
     "regime":       DATA_DIR / "regime_log.csv",

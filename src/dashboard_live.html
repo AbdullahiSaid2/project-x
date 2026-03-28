@@ -467,6 +467,10 @@ td { padding: .6rem 1rem; vertical-align: middle; }
       <span>📐</span> ICT Backtest
       <span class="nav-count" id="n-ict_bt">0</span>
     </div>
+    <div class="nav-item" onclick="switchPanel('forward_test')">
+      <span>📋</span> Forward Test
+      <span class="nav-count" id="n-forward_test">0</span>
+    </div>
     <div class="nav-item" onclick="switchPanel('funding_arb')">
       <span>💰</span> Funding Arb
       <span class="nav-count" id="n-funding_arb">0</span>
@@ -799,6 +803,29 @@ td { padding: .6rem 1rem; vertical-align: middle; }
         </div>
       </div>
     </div>
+
+    <!-- FORWARD TEST PANEL -->
+    <div class="panel" id="panel-forward_test">
+      <div class="panel-header">
+        <div class="panel-title">📋 FORWARD TEST LOG</div>
+        <div class="panel-meta">Auto-logged ICT signals · Outcomes tracked automatically · Updated <span id="age-forward_test">—</span></div>
+      </div>
+      <div style="padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);font-size:.7rem;color:var(--muted2)">
+        Run: <span style="color:var(--green);font-family:monospace">python src/agents/forward_test_logger.py</span>
+        &nbsp;|&nbsp; Scans every 5 mins · Logs A and A+ setups · Auto-checks outcomes
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Symbol</th><th>Grade</th><th>Bias</th>
+            <th>Zone</th><th>Entry</th><th>Stop Loss</th><th>Take Profit</th>
+            <th>Kill Zone</th><th>FVG</th><th>OB</th><th>CISD</th>
+            <th>Outcome</th><th>PnL %</th><th>Hours</th><th>Notes</th>
+          </tr></thead>
+          <tbody id="tbody-forward_test"><tr><td colspan="16"><div class="empty"><span class="empty-icon">📋</span>No forward test signals yet.<br/><small>python src/agents/forward_test_logger.py</small></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -1024,6 +1051,36 @@ function renderPsychology(rows) {
     '<td style="font-size:.75rem;color:var(--muted2)">' + (x.message||'—') + '</td>' +
   '</tr>').join('');
 }
+
+function renderForwardTest(rows) {
+  if(!rows.length) return '<tr><td colspan="16"><div class="empty"><span class="empty-icon">📋</span>No forward test signals yet.<br/><small>python src/agents/forward_test_logger.py</small></div></td></tr>';
+  const gradeMap = {'A+':'badge-r','A':'badge-y','B':'badge-b'};
+  const outMap   = {'WIN':'badge-g','LOSS':'badge-r','OPEN':'badge-y','EXPIRED':'badge-p'};
+  const outIcon  = {'WIN':'✅','LOSS':'❌','OPEN':'⏳','EXPIRED':'⏰'};
+  return [...rows].reverse().map(x => {
+    const out = x.outcome || 'OPEN';
+    const pnl = parseFloat(x.pnl_pct||0);
+    return '<tr>' +
+      '<td style="color:var(--muted2);font-size:.65rem">' + ts(x.timestamp) + '</td>' +
+      '<td>' + badge(x.symbol,'badge-b') + '</td>' +
+      '<td>' + badge(x.grade||'—', gradeMap[x.grade]||'badge-y') + '</td>' +
+      '<td>' + badge(x.d1_bias||'—', x.d1_bias==='BULLISH'?'badge-g':'badge-r') + '</td>' +
+      '<td style="font-size:.68rem;color:var(--muted2)">' + (x.price_zone||'—').replace(' ','\n') + '</td>' +
+      '<td class="mono">$' + parseFloat(x.entry_price||0).toLocaleString() + '</td>' +
+      '<td class="mono" style="color:var(--red)">$' + parseFloat(x.stop_loss||0).toLocaleString() + '</td>' +
+      '<td class="mono" style="color:var(--green)">$' + parseFloat(x.take_profit||0).toLocaleString() + '</td>' +
+      '<td style="font-size:.68rem;color:' + (x.kill_zone?'var(--green)':'var(--muted)') + '">' + (x.kill_zone||'Outside') + '</td>' +
+      '<td>' + badge(x.fvg_found==='True'?'YES':'NO', x.fvg_found==='True'?'badge-g':'badge-y') + '</td>' +
+      '<td>' + badge(x.ob_found==='True'?'YES':'NO', x.ob_found==='True'?'badge-g':'badge-y') + '</td>' +
+      '<td>' + badge(x.displacement||'NONE', x.displacement==='STRONG'?'badge-g':x.displacement==='MODERATE'?'badge-y':'badge-r') + '</td>' +
+      '<td>' + badge((outIcon[out]||'') + ' ' + out, outMap[out]||'badge-y') + '</td>' +
+      '<td style="color:' + (pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--muted2)') + ';font-weight:600">' + (x.pnl_pct?(pnl>=0?'+':'')+pnl.toFixed(3)+'%':'—') + '</td>' +
+      '<td style="color:var(--muted2)">' + (x.hours_to_outcome?x.hours_to_outcome+'h':'—') + '</td>' +
+      '<td style="font-size:.65rem;color:var(--muted2);max-width:180px">' + (x.ai_notes||'—').slice(0,80) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
 function renderIctBt(rows) {
   if(!rows.length) return '<tr><td colspan="13"><div class="empty"><span class="empty-icon">📐</span>No ICT backtest results yet.<br/><small>python src/agents/ict_backtester.py</small></div></td></tr>';
   return [...rows].reverse().map(x => {
@@ -1146,6 +1203,7 @@ const renderers = {
   ict:         renderICT,
   ict_exec:    renderIctExec,
   ict_bt:      renderIctBt,
+  forward_test: renderForwardTest,
   funding_arb: renderFundingArb,
   copy_bot:    renderCopyBot,
   regime:      renderRegime,
@@ -1163,7 +1221,7 @@ function render(panel) {
 }
 
 // ── fetch all data ─────────────────────────────────────────
-const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status'];
+const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','forward_test','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status'];
 
 async function fetchPanel(panel) {
   try {
