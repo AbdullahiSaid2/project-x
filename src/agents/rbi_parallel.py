@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.config        import (BACKTEST_INITIAL_CASH, BACKTEST_COMMISSION,
                                 EXCHANGE, DEFAULT_TIMEFRAME)
-from src.models.llm_router import model
+from src.models.llm_router import rbi_model as model
 from src.data.fetcher  import get_ohlcv
 
 # ── paths ─────────────────────────────────────────────────────

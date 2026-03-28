@@ -30,3 +30,6 @@ google-generativeai>=0.7.0
 # Institutional market data
 databento>=0.74.0
 pyarrow>=14.0.0     # for parquet cache files
+
+# Anthropic Claude (for RBI backtester)
+anthropic>=0.40.0

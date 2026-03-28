@@ -1,0 +1,60 @@
+{
+  "strategies": [
+    {
+      "name": "HistogramFade",
+      "symbol": "MES, MNQ, MYM",
+      "timeframe": "15m",
+      "file": "HistogramFade_15m.py",
+      "vaulted_at": "2026-03-28T22:13:24.525368",
+      "discovery": {
+        "MES": {
+          "sharpe": 2.2,
+          "return": 436.2,
+          "drawdown": -4.2,
+          "trades": 192,
+          "win_rate": 66.2
+        },
+        "MNQ": {
+          "sharpe": 1.7,
+          "return": 162.6,
+          "drawdown": -10.6,
+          "trades": 215,
+          "win_rate": 55.8
+        },
+        "MYM": {
+          "sharpe": 2.46,
+          "return": 81.2,
+          "drawdown": -4.7,
+          "trades": 186,
+          "win_rate": 51.1
+        }
+      },
+      "optimised": {
+        "optimised": false
+      },
+      "idea": "MACD histogram inflection point \u2014 long when histogram below zero and rising, short when above zero and falling.",
+      "notes": "Works across all three micro futures. Best on MES 15m (Sharpe 2.20)."
+    },
+    {
+      "name": "VolumeSpikeFade",
+      "symbol": "MES",
+      "timeframe": "15m",
+      "file": "VolumeSpikeFade_MES_15m.py",
+      "vaulted_at": "2026-03-28T22:03:03.984865",
+      "discovery": {
+        "sharpe": 1.62,
+        "return": 178.3,
+        "drawdown": -7.8,
+        "trades": 501,
+        "win_rate": 61.7
+      },
+      "optimised": {
+        "optimised": false,
+        "note": "Hand-coded \u2014 run --rerun to optimise"
+      },
+      "idea": "Short when volume is 3x the 20-bar average on an up bar and price closes in the lower 25 percent of bar range. Long when volume is 3x the 20-bar average on a down bar and price closes in the upper 25 percent of bar range.",
+      "notes": "Only confirmed on MES 15m. Blew up on MNQ 15m. Forward test MES only."
+    }
+  ],
+  "last_updated": "2026-03-28T22:13:24.525386"
+}
