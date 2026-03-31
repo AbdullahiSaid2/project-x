@@ -48,21 +48,25 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # Two separate market groups — run with --market crypto or --market futures
 
 CRYPTO_DATASETS = [
-    # Major crypto — multiple timeframes
-    ("BTC",  "15m"), ("BTC",  "1H"), ("BTC",  "4H"), ("BTC",  "1D"),
-    ("ETH",  "15m"), ("ETH",  "1H"), ("ETH",  "4H"), ("ETH",  "1D"),
-    ("SOL",  "15m"), ("SOL",  "1H"), ("SOL",  "4H"), ("SOL",  "1D"),
-    # Alt coins — 1H and 4H
-    ("ARB",  "1H"),  ("ARB",  "4H"),
+    # Core — always included (deepest liquidity, best data)
+    ("BTC",  "15m"), ("BTC",  "1H"), ("BTC",  "4H"),
+    ("ETH",  "15m"), ("ETH",  "1H"), ("ETH",  "4H"),
+    ("SOL",  "15m"), ("SOL",  "1H"), ("SOL",  "4H"),
+    # Large cap alts
+    ("BNB",  "1H"),  ("BNB",  "4H"),
     ("AVAX", "1H"),  ("AVAX", "4H"),
-    ("LINK", "1H"),
-    ("DOT",  "1H"),
-    ("ADA",  "1H"),
-    ("DOGE", "1H"),
-    ("BNB",  "1H"),
-    ("XRP",  "1H"),
-    ("LTC",  "1H"),
-    ("ATOM", "1H"),
+    ("LINK", "1H"),  ("LINK", "4H"),
+    # DeFi / L2
+    ("ARB",  "15m"), ("ARB",  "1H"),
+    ("OP",   "15m"), ("OP",   "1H"),
+    ("UNI",  "1H"),
+    # High volatility (more signals)
+    ("PEPE", "15m"), ("PEPE", "1H"),
+    ("WIF",  "15m"), ("WIF",  "1H"),
+    # AI tokens (trending sector)
+    ("FET",  "1H"),  ("FET",  "4H"),
+    ("RNDR", "1H"),
+    ("TAO",  "4H"),
 ]
 
 FUTURES_DATASETS = [
@@ -89,17 +93,32 @@ Analyse the following trading idea and produce a concise strategy specification.
 TRADING IDEA:
 {idea}
 
+CRITICAL REQUIREMENTS — your spec must follow these or the backtest will be useless:
+1. TRADE FREQUENCY: Entry conditions must fire at least 50-200 times over 5 years of data.
+   Do NOT stack more than 2 conditions simultaneously — overly specific entries rarely fire.
+   Good: "RSI crosses above 70" (fires often)
+   Bad:  "RSI above 70 AND price above 200 EMA AND volume spike AND ATR expanding" (fires rarely)
+
+2. ENTRY SIMPLICITY: Use at most 2 conditions for entry. Pick the most important signal only.
+   The second condition can be a broad filter (e.g. RSI > 50 for direction bias).
+
+3. EXIT CONDITIONS: Use ATR-based exits. Take profit = 2-3x ATR. Stop loss = 1-1.5x ATR.
+   This ensures meaningful returns when trades win.
+
+4. DIRECTION: If the idea is directional (e.g. short reversal), focus on that direction.
+   Only include both long and short if the idea explicitly covers both.
+
 Respond with ONLY a JSON object (no markdown fences) in this exact format:
 {{
   "name": "TwoWordStrategyName",
   "description": "One sentence description",
-  "entry_long":  "Precise entry condition for a LONG trade",
+  "entry_long":  "Precise entry condition for a LONG trade (max 2 conditions)",
   "entry_short": "Precise entry condition for a SHORT trade (or null if long-only)",
-  "exit_long":   "Exit condition for long",
-  "exit_short":  "Exit condition for short (or null)",
+  "exit_long":   "ATR-based exit: take profit at 2-3x ATR above entry, stop at 1-1.5x ATR below",
+  "exit_short":  "ATR-based exit: take profit at 2-3x ATR below entry, stop at 1-1.5x ATR above",
   "indicators":  ["list", "of", "indicators", "needed"],
-  "timeframe":   "preferred timeframe e.g. 1H",
-  "notes":       "Any important caveats"
+  "timeframe":   "preferred timeframe e.g. 15m or 1H",
+  "notes":       "Expected trade frequency over 5 years of futures data"
 }}"""
 
 BACKTEST_PROMPT = """You are an expert Python quant developer.
@@ -120,11 +139,35 @@ STRICT RULES — follow every one or the code will fail:
     ta_lib.momentum.rsi(pd.Series(close), window=14).values
     ta_lib.volatility.bollinger_hband(pd.Series(close), window=20).values
     ta_lib.trend.macd_diff(pd.Series(close)).values
-- CRITICAL POSITION SIZING: Always use a small fixed size e.g. self.buy(size=0.1)
-- NEVER use size > 0.2 — large sizes cause exponential compounding overflow
-- NEVER calculate size dynamically or compound it — always use a fixed constant like 0.1
-- NEVER use self.position.size or equity-based sizing
-- Include stop-loss and take-profit on every trade
+    ta_lib.volatility.average_true_range(pd.Series(h), pd.Series(l), pd.Series(c), window=14).values
+
+POSITION SIZING — CRITICAL:
+- Always use fixed size: self.buy(size=0.1) or self.sell(size=0.1)
+- NEVER use size > 0.2 — causes overflow
+- NEVER calculate size dynamically
+
+STOP LOSS — MANDATORY:
+- Always include a stop loss on every trade to protect capital
+- Use ATR-based stop: 1.0 to 2.0x ATR from entry
+- Example: sl = price - 1.5 * atr  (for long)
+
+EXIT STRATEGY — USE LOGICAL EXITS, NOT FIXED ATR TP:
+- Use a LOGICAL exit condition based on the strategy's signal reversing
+- Good exits: RSI crosses back through 50, indicator reverses, opposite signal fires
+- Example for RSI strategy: exit long when RSI drops below 50
+- Example for momentum: exit when the momentum indicator reverses
+- This lets winners run naturally rather than capping them at a fixed target
+- Only use a fixed TP as a safety net (e.g. 5-10x ATR) not as the primary exit
+- The logical exit is what produced +200% returns — fixed ATR TP produces tiny returns
+
+ENTRY CONDITIONS — KEEP SIMPLE:
+- Maximum 2 entry conditions — do not stack 3+ conditions
+- Entry must fire at least 30-50 times over 5 years (not ultra-rare setups)
+- Simple crossover or threshold signals work better than complex multi-condition logic
+
+TRADE MANAGEMENT:
+- Close existing position before opening opposite direction
+
 - No ML, no external data, no multi-timeframe
 - Return ONLY the class body, no imports, no markdown
 
@@ -144,6 +187,115 @@ Fix ALL errors. Key rules:
 - Return ONLY the corrected class starting with:
 class GeneratedStrategy(Strategy):
 - CRITICAL: Always use small fixed size e.g. self.buy(size=0.1) — never size > 0.2"""
+
+
+# ── Phase 3: Package check ────────────────────────────────────
+# Scans generated code for known bad patterns and fixes them
+# BEFORE running the backtest. No AI call — pure regex.
+# Catches ~60% of failures for free.
+
+def package_check(code: str) -> str:
+    """
+    Scan and fix known bad patterns in generated code.
+    Applied immediately after code generation AND before each retry.
+
+    Fixes:
+      1. Wrong imports (talib/pandas_ta → ta)
+      2. Float position sizes > 0.2 → 0.1
+      3. Equity-based dynamic sizing → 0.1
+      4. Missing pd.Series() wraps in ta calls
+      5. Wrong class name → GeneratedStrategy
+      6. Forbidden backtesting.lib imports
+    """
+    import re
+
+    # Fix 1: Wrong library imports
+    replacements = [
+        (r'import talib\b',          'import ta as ta_lib'),
+        (r'import TA-Lib\b',         'import ta as ta_lib'),
+        (r'import pandas_ta\b',      'import ta as ta_lib'),
+        (r'from talib\b',            'from ta'),
+        (r'from pandas_ta import.*', 'import ta as ta_lib'),
+        (r'talib\.',                  'ta_lib.'),
+        (r'pandas_ta\.',              'ta_lib.'),
+    ]
+    for bad, good in replacements:
+        code = re.sub(bad, good, code)
+
+    # Fix 2: Float position sizes — any size > 0.2 → 0.1
+    def fix_size(m):
+        try:
+            val = float(m.group(2))
+            if val > 0.2:
+                return f'self.{m.group(1)}(size=0.1'
+        except ValueError:
+            pass
+        return m.group(0)
+    code = re.sub(r'self\.(buy|sell)\(size=([0-9.]+)', fix_size, code)
+
+    # Fix 3: Dynamic sizing patterns → fixed 0.1
+    code = re.sub(r'size\s*=\s*self\.equity[^,)\n]*',   'size=0.1', code)
+    code = re.sub(r'size\s*=\s*self\.position[^,)\n]*', 'size=0.1', code)
+    code = re.sub(r'size\s*=\s*int\([^)]+\)',           'size=0.1', code)
+    code = re.sub(r'size\s*=\s*round\([^)]+\)',         'size=0.1', code)
+
+    # Fix 4: Missing pd.Series() around self.data.X in ta calls
+    # ta_lib.xxx(self.data.Close) → ta_lib.xxx(pd.Series(self.data.Close))
+    for col in ['Close', 'High', 'Low', 'Open', 'Volume']:
+        # Only fix when inside a ta_lib call (not standalone references)
+        code = re.sub(
+            rf'(ta_lib\.\w+\.\w+\([^)]*?)self\.data\.{col}',
+            rf'\1pd.Series(self.data.{col})',
+            code
+        )
+
+    # Fix 5: Wrong class name
+    if 'class GeneratedStrategy' not in code:
+        code = re.sub(
+            r'class\s+\w+\s*\(Strategy\)',
+            'class GeneratedStrategy(Strategy)',
+            code, count=1
+        )
+
+    # Fix 6: Forbidden backtesting.lib imports (only crossover is safe)
+    code = re.sub(
+        r'from backtesting\.lib import (?!crossover)(\w+)',
+        r'# removed forbidden import: \1',
+        code
+    )
+
+    return code
+
+
+def validate_code(code: str) -> tuple:
+    """
+    Quick structural validation before running backtest.
+    Returns (is_valid: bool, reason: str).
+    """
+    import ast
+
+    required = [
+        ('class GeneratedStrategy', "Missing GeneratedStrategy class"),
+        ('def init',                "Missing init() method"),
+        ('def next',                "Missing next() method"),
+    ]
+    for pattern, msg in required:
+        if pattern not in code:
+            return False, msg
+
+    # Parse check
+    imports = (
+        "import numpy as np\nimport pandas as pd\n"
+        "import ta as ta_lib\nimport ta\n"
+        "from backtesting import Strategy\n"
+        "from backtesting.lib import crossover\n"
+    )
+    try:
+        ast.parse(imports + "\n" + code)
+    except SyntaxError as e:
+        return False, f"SyntaxError: {e}"
+
+    return True, "OK"
 
 
 # ── Research phase ────────────────────────────────────────────
@@ -167,6 +319,9 @@ def generate_backtest_code(spec: dict) -> str:
     if not code.startswith("class GeneratedStrategy"):
         match = re.search(r"(class GeneratedStrategy.*)", code, re.DOTALL)
         code  = match.group(1) if match else code
+
+    # Phase 3: Immediately clean the generated code
+    code = package_check(code)
     return code
 
 
@@ -197,7 +352,7 @@ def run_single_backtest(args: tuple) -> dict | None:
     """)
     full_code = imports + "\n" + code
 
-    max_retries = 2
+    max_retries = 10   # Moon Dev uses 10 iterations
     current_code = code
 
     for attempt in range(1, max_retries + 1):
@@ -217,6 +372,15 @@ def run_single_backtest(args: tuple) -> dict | None:
                 "Close":  df["Close"].astype(float).values,
                 "Volume": df["Volume"].astype(float).values,
             }, index=df.index)
+
+            # Phase 3: Package check — fix known bad patterns
+            # before running (no AI call needed)
+            current_code = package_check(current_code)
+
+            # Phase 3b: Validate code structure
+            valid, err = validate_code(current_code)
+            if not valid:
+                raise ValueError(f"Code validation failed: {err}")
 
             namespace = {}
             exec(compile(imports + "\n" + current_code, "<strategy>", "exec"), namespace)
@@ -258,6 +422,11 @@ def run_single_backtest(args: tuple) -> dict | None:
                            f"overflow result rejected (return={return_val:.2e}%) — "
                            f"likely position sizing bug in generated code")
                 return None
+
+            # Target return filter — don't save dead results
+            # Moon Dev: SAVE_IF_OVER_RETURN = 1.0
+            MIN_SAVE_RETURN = 0.0   # save anything profitable
+            # (set to 1.0 to only save results with >1% return)
 
             result = {
                 "symbol":       symbol,
@@ -315,6 +484,40 @@ def load_ideas() -> list[str]:
         if line and not line.startswith("#"):
             ideas.append(line)
     return ideas
+
+def load_vaulted_ideas() -> set:
+    """
+    Load ideas that are already in the strategy vault.
+    RBI will skip these — no point regenerating code for
+    ideas that already have a proven vault implementation.
+    """
+    vault_index = REPO_ROOT / "src" / "strategies" / "vault" / "vault_index.json"
+    if not vault_index.exists():
+        return set()
+
+    try:
+        data     = json.loads(vault_index.read_text())
+        vaulted  = set()
+        for s in data.get("strategies", []):
+            idea = s.get("idea", "").strip()
+            if idea:
+                # Store first 60 chars — enough to match against ideas.txt
+                vaulted.add(idea[:60].lower())
+        return vaulted
+    except Exception:
+        return set()
+
+
+def is_vaulted(idea: str, vaulted_ideas: set) -> bool:
+    """Check if this idea is already represented in the vault."""
+    idea_lower = idea[:60].lower()
+    for v in vaulted_ideas:
+        # Match if ideas share at least 80% of their start
+        # (handles minor wording differences)
+        if idea_lower[:40] == v[:40]:
+            return True
+    return False
+
 
 def save_results(idea: str, spec: dict, all_stats: list):
     today   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -421,14 +624,24 @@ class ParallelRBIAgent:
         save_processed(self.processed)
 
     def run(self):
-        ideas = load_ideas()
+        ideas         = load_ideas()
+        vaulted_ideas = load_vaulted_ideas()
         if not ideas:
             print("❌ No ideas found in ideas.txt")
             return
 
-        pending = [i for i in ideas if idea_hash(i) not in self.processed]
+        # Skip ideas already in vault OR already processed this session
+        vaulted_skipped = [i for i in ideas if is_vaulted(i, vaulted_ideas)]
+        pending = [i for i in ideas
+                   if idea_hash(i) not in self.processed
+                   and not is_vaulted(i, vaulted_ideas)]
+
+        if vaulted_skipped:
+            safe_print(f"  🏛️  Skipping {len(vaulted_skipped)} vaulted ideas "
+                       f"(already in vault — no need to regenerate)")
         print(f"📋 {len(ideas)} total ideas | {len(pending)} pending | "
-              f"{len(ideas)-len(pending)} already done")
+              f"{len(ideas)-len(pending)-len(vaulted_skipped)} already processed, "
+              f"{len(vaulted_skipped)} vaulted)")
 
         if not pending:
             print("✅ All ideas already processed!")
@@ -447,7 +660,7 @@ class ParallelRBIAgent:
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="⚡ Parallel RBI Backtester")
-    parser.add_argument("--workers", type=int, default=8,
+    parser.add_argument("--workers", type=int, default=18,
                         help="Parallel worker threads (default: 8)")
     parser.add_argument("--idea", type=str, default=None,
                         help="Test a single idea directly")

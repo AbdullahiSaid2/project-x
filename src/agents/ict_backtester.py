@@ -50,10 +50,24 @@ CISD_STRENGTH_REQUIRED = "STRONG"   # "STRONG" | "MODERATE"
 REQUIRE_KILL_ZONE     = True
 MAX_TRADES_PER_SESSION = 2
 
-# Kill Zone hours (EST)
+# Kill Zone hours (EST) — all times in decimal hours
+# e.g. 8.5 = 08:30, 11.0 = 11:00
 KILL_ZONES = {
-    "London Open": (2,  5),
-    "New York AM": (7, 10),
+    "Asian KZ":     (20.0, 24.0),   # 20:00 - 00:00 EST
+    "London KZ":    (2.0,  5.0),    # 02:00 - 05:00 EST
+    "New York AM":  (8.5,  11.0),   # 08:30 - 11:00 EST
+    "New York PM":  (13.5, 16.0),   # 13:30 - 16:00 EST
+}
+
+# Macros — 20 min windows straddling hour turns (decimal hours)
+# Last 10 mins of hour + first 10 mins of next hour
+MACROS = {
+    "Macro 09:50": (9.833,  10.167),  # 09:50 - 10:10 ← MOST IMPORTANT (4H open/PO3)
+    "Macro 10:50": (10.833, 11.167),  # 10:50 - 11:10
+    "Macro 13:50": (13.833, 14.167),  # 13:50 - 14:10
+    "Macro 15:50": (15.833, 16.167),  # 15:50 - 16:10
+    "Macro 02:50": (2.833,  3.167),   # 02:50 - 03:10 (London)
+    "Macro 03:50": (3.833,  4.167),   # 03:50 - 04:10 (London)
 }
 
 
@@ -365,15 +379,32 @@ def check_m15_cisd(m15_slice: pd.DataFrame, bias: str) -> dict:
 
 
 def in_kill_zone(ts: pd.Timestamp) -> str | None:
-    """Returns Kill Zone name if timestamp is in one, else None."""
+    """
+    Returns the name of the kill zone or macro if ts falls within one,
+    otherwise returns None.
+
+    Checks both kill zones AND macros (macros take priority in naming).
+    """
     try:
         ts_est = ts.tz_localize("UTC").astimezone(EST)
-        hour   = ts_est.hour
-        for name, (start, end) in KILL_ZONES.items():
-            if start <= hour < end:
-                return name
     except Exception:
-        pass
+        try:
+            ts_est = ts.tz_convert(EST)
+        except Exception:
+            return None
+
+    h = ts_est.hour + ts_est.minute / 60
+
+    # Check macros first (more specific — subset of kill zones)
+    for name, (start, end) in MACROS.items():
+        if start <= h < end:
+            return name
+
+    # Check kill zones
+    for name, (start, end) in KILL_ZONES.items():
+        if start <= h < end:
+            return name
+
     return None
 
 

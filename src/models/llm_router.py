@@ -66,7 +66,7 @@ OAI_PROVIDERS = [
     },
 ]
 
-FALLBACK_STATUS_CODES = {402, 429, 500, 502, 503, 504}
+FALLBACK_STATUS_CODES = {400, 402, 429, 500, 502, 503, 504}  # 400 = Claude credit error
 
 
 class LLMRouter:
@@ -204,6 +204,10 @@ class LLMRouter:
                     or "timeout"      in err_str.lower()
                     or "connection"   in err_str.lower()
                     or "overloaded"   in err_str.lower()
+                    or "credit balance" in err_str.lower()
+                    or "too low"      in err_str.lower()
+                    or "billing"      in err_str.lower()
+                    or "400" in err_str
                     or "402" in err_str
                     or "429" in err_str
                 )

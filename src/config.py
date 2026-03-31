@@ -21,8 +21,24 @@ STOP_LOSS_PCT          = 0.03    # 3% stop loss
 TAKE_PROFIT_PCT        = 0.06    # 6% take profit
 
 # ── Tokens to trade ─────────────────────────────────────────
-HYPERLIQUID_TOKENS = ["BTC", "ETH", "SOL", "ARB", "AVAX"]
-COINBASE_TOKENS    = ["BTC-USD", "ETH-USD", "SOL-USD"]
+# ── Crypto tokens — expanded to match Moon Dev universe ──────
+# Tier 1: Major liquid tokens (always trade)
+HYPERLIQUID_TOKENS = [
+    "BTC", "ETH", "SOL",           # Core
+    "BNB", "XRP", "DOGE",          # Large cap
+    "AVAX", "LINK", "ARB", "OP",   # L1/L2
+]
+
+# Tier 2: Higher volatility (RBI backtester)
+CRYPTO_BACKTEST_TOKENS = [
+    "BTC", "ETH", "SOL",           # Core — always included
+    "BNB", "AVAX", "LINK",         # Large cap alts
+    "ARB", "OP", "UNI",            # DeFi/L2
+    "PEPE", "WIF",                 # Meme (high volatility = more signals)
+    "FET", "RNDR", "TAO",          # AI tokens (trending sector)
+]
+
+COINBASE_TOKENS = ["BTC-USD", "ETH-USD", "SOL-USD"]
 
 # ── Futures (Tradovate) ──────────────────────────────────────
 TRADOVATE_TOKENS   = ["MNQ", "MES", "MYM"]   # Micro contracts

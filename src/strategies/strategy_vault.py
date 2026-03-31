@@ -60,11 +60,28 @@ VAULT_INDEX    = VAULT_DIR / "vault_index.json"
 VAULT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Quality gate ──────────────────────────────────────────────
-MIN_SHARPE     = 1.5     # minimum Sharpe ratio
+# Futures (prop firm): higher bar — one bad week ends an evaluation
+MIN_SHARPE_FUTURES  = 1.5
+MIN_RETURN_FUTURES  = 5.0
+# Crypto (Hyperliquid): lower bar — own capital, no drawdown limits
+MIN_SHARPE_CRYPTO   = 1.0
+MIN_RETURN_CRYPTO   = 0.0
+
+# Shared thresholds
 MIN_TRADES     = 10      # minimum number of trades
 MAX_DRAWDOWN   = -20.0   # maximum acceptable drawdown %
-MIN_RETURN     = 5.0     # minimum return %
 MIN_WIN_RATE   = 40.0    # minimum win rate %
+
+# Backward compat
+FUTURES_SYMBOLS = {'MES','MNQ','MYM','ES','NQ','YM','CL','GC','ZB'}
+
+def get_thresholds(symbol: str):
+    """Return (min_sharpe, min_return) based on market."""
+    if symbol.upper() in FUTURES_SYMBOLS:
+        return MIN_SHARPE_FUTURES, MIN_RETURN_FUTURES
+    return MIN_SHARPE_CRYPTO, MIN_RETURN_CRYPTO
+
+MIN_SHARPE = MIN_SHARPE_FUTURES   # default for backward compat
 
 # ── Optimisation ──────────────────────────────────────────────
 RUN_OPTIMISE   = True    # set False to skip parameter optimisation
@@ -144,14 +161,18 @@ def passes_quality_gate(row: dict) -> tuple[bool, str]:
     except (ValueError, TypeError):
         return False, "Invalid numeric data"
 
-    if sharpe < MIN_SHARPE:
-        return False, f"Sharpe {sharpe:.2f} < {MIN_SHARPE}"
+    symbol        = str(row.get("symbol", "")).upper()
+    min_sh, min_ret = get_thresholds(symbol)
+    market        = "FUTURES" if symbol in FUTURES_SYMBOLS else "CRYPTO"
+
+    if sharpe < min_sh:
+        return False, f"Sharpe {sharpe:.2f} < {min_sh} ({market} threshold)"
     if trades < MIN_TRADES:
         return False, f"Only {trades} trades < {MIN_TRADES}"
     if drawdown < MAX_DRAWDOWN:
         return False, f"Drawdown {drawdown:.1f}% < {MAX_DRAWDOWN}%"
-    if ret < MIN_RETURN:
-        return False, f"Return {ret:.1f}% < {MIN_RETURN}%"
+    if ret < min_ret:
+        return False, f"Return {ret:.1f}% < {min_ret}% ({market} threshold)"
     if winrate < MIN_WIN_RATE:
         return False, f"Win rate {winrate:.1f}% < {MIN_WIN_RATE}%"
 
@@ -491,7 +512,7 @@ def run_vault(csv_path: Path = None, force: bool = False):
     print(f"   Results file: {path.name}")
     print(f"   Total results: {total}")
     print(f"\n   Quality gate:")
-    print(f"   Sharpe   > {MIN_SHARPE}")
+    print(f"   Sharpe   > 1.5 (futures) / > 1.0 (crypto)")
     print(f"   Trades   ≥ {MIN_TRADES}")
     print(f"   Drawdown > {MAX_DRAWDOWN}%")
     print(f"   Return   > {MIN_RETURN}%")

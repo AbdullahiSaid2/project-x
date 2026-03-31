@@ -33,3 +33,9 @@ pyarrow>=14.0.0     # for parquet cache files
 
 # Anthropic Claude (for RBI backtester)
 anthropic>=0.40.0
+
+# Crypto data (reliable, multi-exchange)
+ccxt>=4.0.0
+
+# Web search
+googlesearch-python>=1.2.3
