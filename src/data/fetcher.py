@@ -100,7 +100,17 @@ def get_ohlcv(symbol: str, exchange: str = "hyperliquid",
         if "credits" not in str(e).lower():
             pass   # silent fallback for non-credit errors
 
-    # 2. Try TradingView CSV
+    # 2. Try CCXT for crypto symbols (Binance — reliable, 3+ years)
+    try:
+        from src.data.ccxt_fetcher import get_crypto_ohlcv, BINANCE_PAIRS
+        if symbol.upper() in BINANCE_PAIRS:
+            return get_crypto_ohlcv(symbol, timeframe, days_back)
+    except ImportError:
+        pass   # ccxt not installed
+    except Exception:
+        pass   # fall through to TradingView
+
+    # 3. Try TradingView CSV
     try:
         from src.data.tradingview_fetcher import get_tv_ohlcv
         df = get_tv_ohlcv(symbol, timeframe)
@@ -109,7 +119,7 @@ def get_ohlcv(symbol: str, exchange: str = "hyperliquid",
     except Exception:
         pass
 
-    # 3. Fall back to yfinance
+    # 4. Fall back to yfinance
     yf_symbol  = _get_yf_symbol(symbol, exchange)
     interval   = YF_INTERVAL_MAP.get(timeframe, "1h")
     end_date   = datetime.now()

@@ -13,6 +13,127 @@
 
 
 # ══════════════════════════════════════════════════════════════
+# HYPOMENO MODEL STRATEGIES
+# Based on the 2Quartersin framework: Sweep → Time → Entry (IFVG)
+# All concepts translated into measurable code-able conditions
+# ══════════════════════════════════════════════════════════════
+
+# ── Inverse Fair Value Gap (IFVG) ─────────────────────────────
+# Core entry mechanic of the Hypomeno Model.
+# A bearish FVG that gets closed above becomes a bullish IFVG.
+# A bullish FVG that gets closed below becomes a bearish IFVG.
+# Price returns to that zone for the entry.
+
+Long when price drops at least 1.5 ATR over 3 consecutive bars creating a downward imbalance then a candle closes above the high of that 3-bar down move inverting the gap, enter long when price pulls back to the midpoint of the original 3-bar range with stop below the lowest point of the 3-bar move
+Short when price rises at least 1.5 ATR over 3 consecutive bars creating an upward imbalance then a candle closes below the low of that 3-bar up move inverting the gap, enter short when price pulls back to the midpoint of the original 3-bar range with stop above the highest point of the 3-bar move
+
+# ── Breaker Block ─────────────────────────────────────────────
+# Forms after a liquidity sweep followed by strong displacement.
+# The last opposing candle before the strong move is the breaker.
+# Smart money returns to that candle body to mitigate positions.
+
+Long when price makes a new 20-bar low sweeping liquidity then reverses upward by at least 1.5 ATR within the next 3 bars, enter long when price retraces to the open of the first bullish candle in that reversal with stop below the 20-bar low
+Short when price makes a new 20-bar high sweeping liquidity then reverses downward by at least 1.5 ATR within the next 3 bars, enter short when price retraces to the open of the first bearish candle in that reversal with stop above the 20-bar high
+
+# ── Session Sweep Reversal ────────────────────────────────────
+# Asia/London/NY sessions sweep liquidity then reverse.
+# Approximated as: early move sweeps an extreme then reverses
+# to close back through the opening price of the last 8 bars.
+
+Long when price makes a new 15-bar low then within the next 5 bars closes above the high of the candle that made the 15-bar low indicating a failed sweep and reversal, enter long at the close with stop at the 15-bar low
+Short when price makes a new 15-bar high then within the next 5 bars closes below the low of the candle that made the 15-bar high indicating a failed sweep and reversal, enter short at the close with stop at the 15-bar high
+
+# ── CISD+ / CISD- (Change in State of Delivery) ──────────────
+# A sequence of directional candles followed by a candle that
+# closes beyond the entire sequence — confirming the shift.
+
+Long when at least 3 consecutive candles each close lower than the previous forming a down sequence then a bullish candle closes above the open of the first candle in that down sequence confirming a change in delivery, enter long at that candle close with stop below the lowest low of the sequence
+Short when at least 3 consecutive candles each close higher than the previous forming an up sequence then a bearish candle closes below the open of the first candle in that up sequence confirming a change in delivery, enter short at that candle close with stop above the highest high of the sequence
+
+# ── Premium Wicks (PW+ / PW-) ────────────────────────────────
+# A candle wick that pierces beyond the 50% equilibrium of the
+# 20-bar range but the candle body closes back inside — signals
+# a liquidity sweep and likely reversal.
+
+Long when a candle low extends below the midpoint of the 20-bar high-low range but the candle closes above that midpoint indicating the lower wick swept discount liquidity and rejected, enter long at the candle close with stop at the candle low
+Short when a candle high extends above the midpoint of the 20-bar high-low range but the candle closes below that midpoint indicating the upper wick swept premium liquidity and rejected, enter short at the candle close with stop at the candle high
+
+# ── Unicorn Model ─────────────────────────────────────────────
+# Highest probability Hypomeno setup: sweep + strong displacement
+# + FVG forming inside the reversal = triple confluence.
+# Simplified: sweep of extreme + displacement candle body > 70%
+# of its range + retracement to displacement candle midpoint.
+
+Long when price sweeps the 20-bar low then the very next candle is a strong bullish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter long when price retraces to the midpoint of that strong bullish candle with stop below the sweep low
+Short when price sweeps the 20-bar high then the very next candle is a strong bearish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter short when price retraces to the midpoint of that strong bearish candle with stop above the sweep high
+
+# ── Protected Swing Double Test ───────────────────────────────
+# A Protected Low/High is a swing extreme that gets tested twice
+# but holds both times — confirming strong support or resistance.
+# Stop goes just beyond the protected level.
+
+Long when the lowest low of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that low again but closes above it on both tests, enter long on the second successful hold with stop 0.5 ATR below the protected low
+Short when the highest high of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that high again but closes below it on both tests, enter short on the second successful hold with stop 0.5 ATR above the protected high
+
+# ── IRL to ERL / ERL to IRL ──────────────────────────────────
+# Market moves from internal liquidity (FVG) to external
+# liquidity (swing high/low) and back. Trade the transition.
+
+Long when price retraces into the midpoint of the lowest gap in the past 20 bars where no candle body has closed inside that gap, enter long at the midpoint targeting the 20-bar high as the ERL target with stop below the gap low
+Short when price retraces into the midpoint of the highest gap in the past 20 bars where no candle body has closed inside that gap, enter short at the midpoint targeting the 20-bar low as the ERL target with stop above the gap high
+
+# ── Macro Momentum Entry ──────────────────────────────────────
+# Macros are 20-minute windows around each hour turn.
+# 9:50-10:10 AM EST is most important — start of 4H candle.
+# Approximated as: strong directional move at the open of a new
+# 4-bar cycle that breaks the prior 4-bar range high or low.
+
+Long when price breaks above the highest high of the prior 4 bars with a bullish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter long at the break with stop below the prior 4-bar low target prior 4-bar range projected upward
+Short when price breaks below the lowest low of the prior 4 bars with a bearish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter short at the break with stop above the prior 4-bar high target prior 4-bar range projected downward
+
+
+# ══════════════════════════════════════════════════════════════
+# TOPTICK TYPE 1 — ICT SESSION SWEEP + REJECTION BLOCK
+# 6-step model: ERL Sweep → Rejection Block → C.E refinement
+# → SIBI entry → COS confirmation → STDV targets
+# ══════════════════════════════════════════════════════════════
+
+# ── Step 1-3: Session Sweep + Rejection Block at C.E ─────────
+# Price sweeps a 20-bar high (ERL), the sweep candle then
+# closes back below the prior candle high (rejection).
+# Price retraces to the 50% C.E of that sweep candle body.
+# Entry at C.E with stop above the sweep high.
+
+Short when price makes a new 20-bar high and the candle that makes the high closes below the high of the previous candle indicating a rejection of the sweep, then price retraces back up to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter short at that midpoint with stop above the 20-bar high targeting the 20-bar low
+Long when price makes a new 20-bar low and the candle that makes the low closes above the low of the previous candle indicating a rejection of the sweep, then price retraces back down to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter long at that midpoint with stop below the 20-bar low targeting the 20-bar high
+
+# ── Step 4: SIBI Entry (Volume Imbalance within Rejection Block)
+# A SIBI is a gap between consecutive candle closes and opens
+# with no overlap — similar to an FVG but specific to the
+# sell-side imbalance. Entry at the 50% of the imbalance gap.
+
+Short when price sweeps a 20-bar high then within 3 bars forms a gap where consecutive bearish candle closes are lower than the next candle opens leaving a visible imbalance, then price retraces up into the midpoint of that gap, enter short at the midpoint of the gap with stop above the top of the gap
+Long when price sweeps a 20-bar low then within 3 bars forms a gap where consecutive bullish candle closes are higher than the next candle opens leaving a visible imbalance, then price retraces down into the midpoint of that gap, enter long at the midpoint of the gap with stop below the bottom of the gap
+
+# ── Step 5: Change of Structure Confirmation ─────────────────
+# After price reaches the entry zone, wait for COS:
+# a candle that closes beyond the most recent opposing swing.
+# This confirms the reversal before committing to the trade.
+
+Short when price makes a new 20-bar high then forms 3 or more lower highs in a row and a candle closes below the lowest low of those lower highs confirming a change of structure, enter short at the break close with stop above the 20-bar high targeting the 20-bar low
+Long when price makes a new 20-bar low then forms 3 or more higher lows in a row and a candle closes above the highest high of those higher lows confirming a change of structure, enter long at the break close with stop below the 20-bar low targeting the 20-bar high
+
+# ── Step 6: STDV Extension Targets ───────────────────────────
+# Targets align with standard deviation extensions of 2-2.5
+# and 4-4.5 from the entry. Approximated as ATR multiples:
+# STDV 2-2.5 ≈ 2x ATR from entry (first target)
+# STDV 4-4.5 ≈ 4x ATR from entry (full target)
+
+Short when price sweeps a 20-bar high and the sweep candle closes in the lower 25 percent of its range indicating strong rejection, enter short on the next candle close with stop above the sweep high and target exit at 3 ATR below entry representing the standard deviation extension zone
+Long when price sweeps a 20-bar low and the sweep candle closes in the upper 25 percent of its range indicating strong rejection, enter long on the next candle close with stop below the sweep low and target exit at 3 ATR above entry representing the standard deviation extension zone
+
+
+# ══════════════════════════════════════════════════════════════
 # ORIGINAL CORE STRATEGIES
 # Fixed: was missing short counterparts and had ambiguous direction.
 # ══════════════════════════════════════════════════════════════
@@ -242,122 +363,152 @@ Long when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average in
 Short when 20 EMA crosses below 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
 
 
-# ══════════════════════════════════════════════════════════════
-# HYPOMENO MODEL STRATEGIES
-# Based on the 2Quartersin framework: Sweep → Time → Entry (IFVG)
-# All concepts translated into measurable code-able conditions
-# ══════════════════════════════════════════════════════════════
 
-# ── Inverse Fair Value Gap (IFVG) ─────────────────────────────
-# Core entry mechanic of the Hypomeno Model.
-# A bearish FVG that gets closed above becomes a bullish IFVG.
-# A bullish FVG that gets closed below becomes a bearish IFVG.
-# Price returns to that zone for the entry.
+# ── Websearch Agent [auto-20q] — 2026-03-31 15:48 ──
+Long when price gaps down (open below previous day's low) and RSI is below 30, exit when price reaches the previous day's low (gap filled) or RSI crosses above 50
+Short when price gaps up (open above previous day's high) and RSI is above 70, exit when price reaches the previous day's high (gap filled) or RSI crosses below 50
+Long when price gaps down and the gap size (previous low - current open) is greater than 1 ATR, exit when price closes above the 20-period EMA or the gap is 90% filled
+Short when price gaps up and volume on the gap day is below its 20-day SMA, exit when price closes below the 20-period EMA or the gap is 90% filled
+Long when a down gap occurs and price finds support at the lower Bollinger Band (20,2), exit when price touches the middle Bollinger Band (20-period SMA)
+Long when price gaps down at open below previous day's low and 5-minute candle closes above VWAP with volume > 1.5x 20-period average, exit when price reaches previous day's close or RSI(14) on 5-minute chart crosses above 70
+Short when price gaps up at open above previous day's high and 5-minute candle closes below VWAP with volume > 1.5x 20-period average, exit when price reaches previous day's close or RSI(14) on 5-minute chart crosses below 30
+Long when price gaps down at open, 15-minute RSI(14) is below 30, and price holds above previous day's low, exit when price fills gap to previous day's close or 15-minute RSI(14) crosses above 50
+Short when price gaps up at open, 15-minute RSI(14) is above 70, and price holds below previous day's high, exit when price fills gap to previous day's close or 15-minute RSI(14) crosses below 50
+Long when price gaps down at open below 20 EMA on daily chart and 5-minute momentum (close vs. 5-period ago) turns positive with volume spike, exit when price touches 20 EMA on 5-minute chart or ATR(14) stop-loss of 2x is hit
+Short when price gaps up at open above 20 EMA on daily chart and 5-minute momentum (close vs. 5-period ago) turns negative with volume spike, exit when price touches 20 EMA on 5-minute chart or ATR(14) stop-loss of 2x is hit
+Long when price crosses above 20-period SMA and RSI crosses above 50 from below, exit when price closes below 10-period SMA or RSI crosses above 70
+Short when price crosses below 50-period EMA and MACD histogram turns negative, exit when price closes above 20-period EMA or MACD histogram turns positive
+Long when 9-period EMA crosses above 21-period EMA on a closing basis, exit when 9-period EMA crosses below 21-period EMA on a closing basis or a fixed ATR-based stop-loss is hit
+Short when volume is 150% above its 20-period average and price closes below the VWAP, exit when price closes above the VWAP or volume drops below its 20-period average
+Long when RSI crosses below 30 and close is above 20 EMA, exit when RSI crosses above 50
+Short when RSI crosses above 70 and close is below 20 EMA, exit when RSI crosses below 50
+Long when price crosses above 50 SMA and volume is above 20-day average, exit when price crosses below 50 SMA
+Short when price crosses below 200 EMA and MACD histogram turns negative, exit when MACD histogram turns positive
+Long when Stochastic %K crosses above %D from below 20, exit when %K crosses below %D from above 80
+Short when price touches upper Bollinger Band and RSI is above 70, exit when price touches lower Bollinger Band
+Long Binance BTC funding rate when 7-day MA spread vs OKX is below -2% and spread is below its 30-day average, exit when spread crosses above 0%
+Short OKX BTC funding rate when 7-day MA spread vs Binance is above 3% and spread is above its 30-day average, exit when spread crosses below 1%
+Long Binance BTC funding rate when its 7-day MA is below 10% and its rate is below its 20-day SMA, exit when rate crosses above its 20-day SMA
+Short OKX BTC funding rate when its 7-day MA is above 20% and its rate is above its 20-day SMA, exit when rate crosses below its 20-day SMA
+Long Binance BTC funding rate when spread vs OKX (7-day MA) is below -1.5% and Binance rate momentum (5-day change) is positive, exit when spread reaches 1%
+Short OKX BTC funding rate when spread vs Binance (7-day MA) is above 4% and OKX rate momentum (5-day change) is negative, exit when spread reaches 2%
+Long when price retraces to the body (open to close range) of a bullish order block candle formed on H4 chart between Tuesday and Thursday, and the order block candle took sell-side liquidity from a previous swing high, exit when price reaches the previous swing high where liquidity was taken
+Short when price retraces to the body (open to close range) of a bearish order block candle formed on H4 chart between Tuesday and Thursday, and the order block candle took buy-side liquidity from a previous swing low, exit when price reaches the previous swing low where liquidity was taken
+Long when price retraces to the wick (low) of a bullish order block candle that left a Fair Value Gap after its formation, and the order block candle formed above the 50% level of a previous Fair Value Gap, exit when price closes below the 50% level of the order block candle
+Short when price retraces to the wick (high) of a bearish order block candle that left a Fair Value Gap after its formation, and the order block candle formed below the 50% level of a previous Fair Value Gap, exit when price closes above the 50% level of the order block candle
+Long when price crosses above VWAP and volume is above 20-period average, exit when price crosses below VWAP
+Short when price crosses below VWAP and RSI is above 70, exit when price crosses above VWAP
+Long when price is below VWAP and RSI crosses below 30, exit when price touches VWAP from below
+Short when price is above VWAP and RSI crosses above 70, exit when price touches VWAP from above
+Long when price pulls back to VWAP and 5 EMA is above 20 EMA, exit when price closes 2 ATR below entry price
+Short when price rallies to VWAP and 5 EMA is below 20 EMA, exit when price closes 2 ATR above entry price
+Long when price is above VWAP and RSI crosses above 50 from below, exit when RSI crosses below 50 or price crosses below VWAP
+Short when price is below VWAP and RSI crosses below 50 from above, exit when RSI crosses above 50 or price crosses above VWAP
+Long when price bounces off VWAP (price touches VWAP then closes above it) and MACD histogram turns positive, exit when MACD histogram turns negative
+Short when price rejects at VWAP (price touches VWAP then closes below it) and MACD histogram turns negative, exit when MACD histogram turns positive
+Long when %b (Bollinger Band) is below 0 and close is below the lower Bollinger Band (oversold), exit when %b crosses above 0.5
+Long when %b (Bollinger Band) is below 0 and close is below the lower Bollinger Band (oversold), exit when %b crosses above 0.8
+Short when %b (Bollinger Band) is above 1 and close is above the upper Bollinger Band (overbought), exit when %b crosses below 0.5
+Short when %b (Bollinger Band) is above 1 and close is above the upper Bollinger Band (overbought), exit when %b crosses below 0.2
+Long when price touches lower Bollinger Band and MACD line crosses above signal line, exit when price touches upper Bollinger Band
+Long when price touches lower Bollinger Band and MACD histogram moves above zero, exit when MACD line crosses below signal line
+Long when Bollinger Bands expand and MACD histogram is above zero and rising, exit when MACD histogram peaks and turns down
+Short when Bollinger Bands expand and MACD histogram is below zero and falling, exit when MACD histogram troughs and turns up
+Long when price closes above 20-day SMA and volume is greater than 1.5 times 20-day average volume, exit when price closes below 10-day EMA
+Short when price closes below 20-day SMA and ATR(14) is above its 20-period average, exit when price closes above 10-day EMA
+Long when price breaks above upper Bollinger Band (20,2) and RSI(14) is above 50, exit when RSI(14) crosses below 50
+Short when price breaks below lower Bollinger Band (20,2) and RSI(14) is below 50, exit when RSI(14) crosses above 50
+Long when price closes above previous 20-day high and MACD histogram turns positive, exit when MACD histogram turns negative
+Short when price closes below previous 20-day low and MACD histogram turns negative, exit when MACD histogram turns positive
+Long when price breaks above previous day's high with volume greater than 20-period SMA of volume, exit when price closes below 10-period EMA
+Short when price breaks below previous day's low with volume greater than 20-period SMA of volume, exit when price closes above 10-period EMA
+Long when price breaks above a 20-period Bollinger Band upper band with volume greater than 1.5 times the 20-period average volume, exit when price closes back inside the Bollinger Bands
+Short when price breaks below a 20-period Bollinger Band lower band with volume greater than 1.5 times the 20-period average volume, exit when price closes back inside the Bollinger Bands
+Long when price makes a new 20-day high and the day's volume is the highest in the last 5 days, exit when the 5-period RSI crosses below 70
+Short when price makes a new 20-day low and the day's volume is the highest in the last 5 days, exit when the 5-period RSI crosses above 30
+Long when MACD histogram turns positive and RSI crosses above 30 from below, exit when MACD histogram turns negative
+Long when RSI crosses above 50 and price is above 200-day SMA, exit when RSI crosses below 50
+Long when MACD histogram is above zero and RSI is below 30, exit when RSI crosses above 70
+Short when RSI crosses below 50 and price is below 20-day EMA, exit when RSI crosses above 50
+Long when MACD line crosses above signal line and RSI crosses above 30, exit when price closes below 10-day SMA
+Long when a stock is in the top third of stocks sorted by price momentum over a formation period (typically 2-12 months, implied by standard momentum literature), exit when it is no longer in the top third or at the end of the holding period (typically 1-12 months, implied).
+Short when a stock is in the bottom third of stocks sorted by price momentum over a formation period, exit when it is no longer in the bottom third or at the end of the holding period.
+Long when the price crosses above the moving average, exit when the price crosses below the moving average
+Short when the price crosses below the moving average, exit when the price crosses above the moving average
+Long when the short-term moving average crosses above the long-term moving average (Golden Cross), exit when the short-term moving average crosses below the long-term moving average
+Short when the short-term moving average crosses below the long-term moving average (Death Cross), exit when the short-term moving average crosses above the long-term moving average
+Long when the price breaks above a resistance level (channel breakout), exit when the price falls below a support level or a trailing stop
+Short when the price breaks below a support level (channel breakout), exit when the price rises above a resistance level or a trailing stop
+Long when an oscillator (e.g., RSI) moves above a lower threshold (e.g., 30) from below, exit when the oscillator moves below an upper threshold (e.g., 70) from above or a trailing stop
+Short when an oscillator (e.g., RSI) moves below an upper threshold (e.g., 70) from above, exit when the oscillator moves above a lower threshold (e.g., 30) from below or a trailing stop
+Long when the price exhibits a pattern breakout (e.g., head and shoulders bottom), exit when a reversal pattern forms or a trailing stop is hit
+Short when the price exhibits a pattern breakout (e.g., head and shoulders top), exit when a reversal pattern forms or a trailing stop is hit
+Short when a quick move higher in expected volatility occurs, exit when not specified
+Short when the front-month VSTOXX® future is at a premium to the spot VSTOXX® Index and there are a specific number of days remaining until expiration (filter applied), exit when not specified
+Short the front-month VSTOXX® future and buy the second-month VSTOXX® future (calendar spread) when the front-month future is at a premium to the spot VSTOXX® Index and there are a specific number of days remaining until expiration (filter applied), exit when not specified
+Short the second-month VSTOXX® future using the front-month day count for trades when the future is at a premium to the spot VSTOXX® Index and there are a specific number of days remaining until expiration (filter applied), exit when not specified
+Long when the closing price crosses above the upper Bollinger Band, exit when the closing price crosses below the moving average (the middle band).
+Long when price breaks above the previous day's high during the London session (08:00-12:00 London time) and a bullish order block is present on the 15-minute chart, exit when price reaches the previous day's low as a target or if price closes below the entry candle low as a stop loss.
+Short when price breaks below the previous day's low during the London session (08:00-12:00 London time) and a bearish order block is present on the 15-minute chart, exit when price reaches the previous day's high as a target or if price closes above the entry candle high as a stop loss.
+Long when price is above the 200-period moving average and pulls back to a key support level, exit when price reaches the next resistance level or breaks below the recent swing low.
+Short when price is below the 200-period moving average and rallies to a key resistance level, exit when price reaches the next support level or breaks above the recent swing high.
+Long when the price is below the 20-day SMA and the 14-day RSI is below 30, exit when the price closes above the 20-day SMA or the RSI moves above 50.
+Short when the price is above the 20-day SMA and the 14-day RSI is above 70, exit when the price closes below the 20-day SMA or the RSI moves below 50.
+Short when price rallies to the value area high (VAH) or point of control (POC) with a bearish order flow imbalance on lower timeframes, and exit when price reaches the value area low (VAL) or shows signs of rejection.
 
-Long when price drops at least 1.5 ATR over 3 consecutive bars creating a downward imbalance then a candle closes above the high of that 3-bar down move inverting the gap, enter long when price pulls back to the midpoint of the original 3-bar range with stop below the lowest point of the 3-bar move
-Short when price rises at least 1.5 ATR over 3 consecutive bars creating an upward imbalance then a candle closes below the low of that 3-bar up move inverting the gap, enter short when price pulls back to the midpoint of the original 3-bar range with stop above the highest point of the 3-bar move
 
-# ── Breaker Block ─────────────────────────────────────────────
-# Forms after a liquidity sweep followed by strong displacement.
-# The last opposing candle before the strong move is the breaker.
-# Smart money returns to that candle body to mitigate positions.
-
-Long when price makes a new 20-bar low sweeping liquidity then reverses upward by at least 1.5 ATR within the next 3 bars, enter long when price retraces to the open of the first bullish candle in that reversal with stop below the 20-bar low
-Short when price makes a new 20-bar high sweeping liquidity then reverses downward by at least 1.5 ATR within the next 3 bars, enter short when price retraces to the open of the first bearish candle in that reversal with stop above the 20-bar high
-
-# ── Session Sweep Reversal ────────────────────────────────────
-# Asia/London/NY sessions sweep liquidity then reverse.
-# Approximated as: early move sweeps an extreme then reverses
-# to close back through the opening price of the last 8 bars.
-
-Long when price makes a new 15-bar low then within the next 5 bars closes above the high of the candle that made the 15-bar low indicating a failed sweep and reversal, enter long at the close with stop at the 15-bar low
-Short when price makes a new 15-bar high then within the next 5 bars closes below the low of the candle that made the 15-bar high indicating a failed sweep and reversal, enter short at the close with stop at the 15-bar high
-
-# ── CISD+ / CISD- (Change in State of Delivery) ──────────────
-# A sequence of directional candles followed by a candle that
-# closes beyond the entire sequence — confirming the shift.
-
-Long when at least 3 consecutive candles each close lower than the previous forming a down sequence then a bullish candle closes above the open of the first candle in that down sequence confirming a change in delivery, enter long at that candle close with stop below the lowest low of the sequence
-Short when at least 3 consecutive candles each close higher than the previous forming an up sequence then a bearish candle closes below the open of the first candle in that up sequence confirming a change in delivery, enter short at that candle close with stop above the highest high of the sequence
-
-# ── Premium Wicks (PW+ / PW-) ────────────────────────────────
-# A candle wick that pierces beyond the 50% equilibrium of the
-# 20-bar range but the candle body closes back inside — signals
-# a liquidity sweep and likely reversal.
-
-Long when a candle low extends below the midpoint of the 20-bar high-low range but the candle closes above that midpoint indicating the lower wick swept discount liquidity and rejected, enter long at the candle close with stop at the candle low
-Short when a candle high extends above the midpoint of the 20-bar high-low range but the candle closes below that midpoint indicating the upper wick swept premium liquidity and rejected, enter short at the candle close with stop at the candle high
-
-# ── Unicorn Model ─────────────────────────────────────────────
-# Highest probability Hypomeno setup: sweep + strong displacement
-# + FVG forming inside the reversal = triple confluence.
-# Simplified: sweep of extreme + displacement candle body > 70%
-# of its range + retracement to displacement candle midpoint.
-
-Long when price sweeps the 20-bar low then the very next candle is a strong bullish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter long when price retraces to the midpoint of that strong bullish candle with stop below the sweep low
-Short when price sweeps the 20-bar high then the very next candle is a strong bearish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter short when price retraces to the midpoint of that strong bearish candle with stop above the sweep high
-
-# ── Protected Swing Double Test ───────────────────────────────
-# A Protected Low/High is a swing extreme that gets tested twice
-# but holds both times — confirming strong support or resistance.
-# Stop goes just beyond the protected level.
-
-Long when the lowest low of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that low again but closes above it on both tests, enter long on the second successful hold with stop 0.5 ATR below the protected low
-Short when the highest high of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that high again but closes below it on both tests, enter short on the second successful hold with stop 0.5 ATR above the protected high
-
-# ── IRL to ERL / ERL to IRL ──────────────────────────────────
-# Market moves from internal liquidity (FVG) to external
-# liquidity (swing high/low) and back. Trade the transition.
-
-Long when price retraces into the midpoint of the lowest gap in the past 20 bars where no candle body has closed inside that gap, enter long at the midpoint targeting the 20-bar high as the ERL target with stop below the gap low
-Short when price retraces into the midpoint of the highest gap in the past 20 bars where no candle body has closed inside that gap, enter short at the midpoint targeting the 20-bar low as the ERL target with stop above the gap high
-
-# ── Macro Momentum Entry ──────────────────────────────────────
-# Macros are 20-minute windows around each hour turn.
-# 9:50-10:10 AM EST is most important — start of 4H candle.
-# Approximated as: strong directional move at the open of a new
-# 4-bar cycle that breaks the prior 4-bar range high or low.
-
-Long when price breaks above the highest high of the prior 4 bars with a bullish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter long at the break with stop below the prior 4-bar low target prior 4-bar range projected upward
-Short when price breaks below the lowest low of the prior 4 bars with a bearish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter short at the break with stop above the prior 4-bar high target prior 4-bar range projected downward
-
-
-# ══════════════════════════════════════════════════════════════
-# TOPTICK TYPE 1 — ICT SESSION SWEEP + REJECTION BLOCK
-# 6-step model: ERL Sweep → Rejection Block → C.E refinement
-# → SIBI entry → COS confirmation → STDV targets
-# ══════════════════════════════════════════════════════════════
-
-# ── Step 1-3: Session Sweep + Rejection Block at C.E ─────────
-# Price sweeps a 20-bar high (ERL), the sweep candle then
-# closes back below the prior candle high (rejection).
-# Price retraces to the 50% C.E of that sweep candle body.
-# Entry at C.E with stop above the sweep high.
-
-Short when price makes a new 20-bar high and the candle that makes the high closes below the high of the previous candle indicating a rejection of the sweep, then price retraces back up to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter short at that midpoint with stop above the 20-bar high targeting the 20-bar low
-Long when price makes a new 20-bar low and the candle that makes the low closes above the low of the previous candle indicating a rejection of the sweep, then price retraces back down to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter long at that midpoint with stop below the 20-bar low targeting the 20-bar high
-
-# ── Step 4: SIBI Entry (Volume Imbalance within Rejection Block)
-# A SIBI is a gap between consecutive candle closes and opens
-# with no overlap — similar to an FVG but specific to the
-# sell-side imbalance. Entry at the 50% of the imbalance gap.
-
-Short when price sweeps a 20-bar high then within 3 bars forms a gap where consecutive bearish candle closes are lower than the next candle opens leaving a visible imbalance, then price retraces up into the midpoint of that gap, enter short at the midpoint of the gap with stop above the top of the gap
-Long when price sweeps a 20-bar low then within 3 bars forms a gap where consecutive bullish candle closes are higher than the next candle opens leaving a visible imbalance, then price retraces down into the midpoint of that gap, enter long at the midpoint of the gap with stop below the bottom of the gap
-
-# ── Step 5: Change of Structure Confirmation ─────────────────
-# After price reaches the entry zone, wait for COS:
-# a candle that closes beyond the most recent opposing swing.
-# This confirms the reversal before committing to the trade.
-
-Short when price makes a new 20-bar high then forms 3 or more lower highs in a row and a candle closes below the lowest low of those lower highs confirming a change of structure, enter short at the break close with stop above the 20-bar high targeting the 20-bar low
-Long when price makes a new 20-bar low then forms 3 or more higher lows in a row and a candle closes above the highest high of those higher lows confirming a change of structure, enter long at the break close with stop below the 20-bar low targeting the 20-bar high
-
-# ── Step 6: STDV Extension Targets ───────────────────────────
-# Targets align with standard deviation extensions of 2-2.5
-# and 4-4.5 from the entry. Approximated as ATR multiples:
-# STDV 2-2.5 ≈ 2x ATR from entry (first target)
-# STDV 4-4.5 ≈ 4x ATR from entry (full target)
-
-Short when price sweeps a 20-bar high and the sweep candle closes in the lower 25 percent of its range indicating strong rejection, enter short on the next candle close with stop above the sweep high and target exit at 3 ATR below entry representing the standard deviation extension zone
-Long when price sweeps a 20-bar low and the sweep candle closes in the upper 25 percent of its range indicating strong rejection, enter long on the next candle close with stop below the sweep low and target exit at 3 ATR above entry representing the standard deviation extension zone
+# ── Websearch Agent [reprocess-150] — 2026-03-31 19:47 ──
+Long when price closes above a defined resistance level (e.g., 50-day SMA) and volume is greater than the 50-day average volume, exit when price closes below that same resistance-turned-support level
+Short when price closes below a defined support level (e.g., 50-day SMA) and volume is greater than the 50-day average volume, exit when price closes above that same support-turned-resistance level
+Long when MACD shows bullish divergence (price makes lower low, MACD makes higher low) AND RSI shows bullish divergence (price makes lower low, RSI makes higher low), exit when RSI crosses above 70
+Short when MACD shows bearish divergence (price makes higher high, MACD makes lower high) AND RSI shows bearish divergence (price makes higher high, RSI makes lower high), exit when RSI crosses below 30
+Long when MACD bullish divergence AND RSI bullish divergence are confirmed AND a bullish engulfing candle closes above the prior candle's high, exit when price closes below the 20-period SMA
+Short when MACD bearish divergence AND RSI bearish divergence are confirmed AND a bearish engulfing candle closes below the prior candle's low, exit when price closes above the 20-period SMA
+Long when MACD bullish divergence AND RSI bullish divergence exist AND price makes a new swing low, exit when the MACD line crosses below its signal line
+Short when MACD bearish divergence AND RSI bearish divergence exist AND price makes a new swing high, exit when the MACD line crosses above its signal line
+Long when the Stochastic Oscillator (e.g., %K line) crosses above the %D line (signal line) from below the oversold threshold (typically 20), exit when the %K line crosses below the %D line from above the overbought threshold (typically 80).
+Short when the Stochastic Oscillator (e.g., %K line) crosses below the %D line (signal line) from above the overbought threshold (typically 80), exit when the %K line crosses above the %D line from below the oversold threshold (typically 20).
+Short when Stochastic %K crosses below %D and both are above 80, exit when Stochastic %K crosses above %D or %K crosses below 20
+Long when price makes a higher low and Stochastic makes a higher low while in oversold zone (below 20), exit when Stochastic %K crosses below %D after rising above 20
+Short when price makes a lower high and Stochastic makes a lower high while in overbought zone (above 80), exit when Stochastic %K crosses above %D after falling below 80
+Long when price touches or crosses below the lower VWAP standard deviation band and RSI is below 30, exit when price touches the VWAP
+Short when price touches or crosses above the upper VWAP standard deviation band and RSI is above 70, exit when price touches the VWAP
+Long when price is above an anchored VWAP (from a prior significant low) and the current daily VWAP slope is positive, exit when price closes below the anchored VWAP
+Short when price is below an anchored VWAP (from a prior significant high) and the current daily VWAP slope is negative, exit when price closes above the anchored VWAP
+Long when price breaks above 20-day resistance level and volume is above 20-day average volume, exit when price closes below 10-day EMA
+Short when price breaks below 20-day support level and volume is above 20-day average volume, exit when price closes above 10-day EMA
+Long when price breaks above consolidation resistance with volume spike (volume > 1.5 * 20-day average), exit when volume on up days falls below 20-day average volume for 3 consecutive days
+Short when price breaks below consolidation support with volume spike (volume > 1.5 * 20-day average), exit when volume on down days falls below 20-day average volume for 3 consecutive days
+Long when price is in downtrend (close below 50-day SMA) and reverses upward with volume surge (volume > 2 * 20-day average), exit when RSI crosses above 70
+Long when a bullish divergence occurs: price makes a lower low but RSI or MACD makes a higher low, indicating weakening downward momentum. Exit when the divergence signal fails (e.g., price breaks below the prior low) or when taking profit at a predetermined resistance level.
+Short when a bearish divergence occurs: price makes a higher high but RSI or MACD makes a lower high, indicating weakening upward momentum. Exit when the divergence signal fails (e.g., price breaks above the prior high) or when taking profit at a predetermined support level.
+Long when MACD line is above zero line and RSI crosses above 30 from below, exit when RSI crosses above 70
+Short when MACD line is below zero line and RSI crosses below 70 from above, exit when RSI crosses below 30
+Long when price closes below lower Bollinger Band and 14-period RSI is below 30, exit when price closes above middle Bollinger Band (20 SMA)
+Short when price closes above upper Bollinger Band and 14-period RSI is above 70, exit when price closes below middle Bollinger Band (20 SMA)
+Long when price forms a 'W' bottom pattern touching or crossing lower Bollinger Band twice and 14-period RSI shows bullish divergence, exit when price closes above upper Bollinger Band
+Short when price forms an 'M' top pattern touching or crossing upper Bollinger Band twice and 14-period RSI shows bearish divergence, exit when price closes below lower Bollinger Band
+Long when price closes above upper Bollinger Band (volatility breakout) and volume is above 20-period average, exit when price closes below 10-period EMA
+Short when price closes below lower Bollinger Band (volatility breakout) and volume is above 20-period average, exit when price closes above 10-period EMA
+Long when %b is below 0 and 14-period Stochastic %K crosses above %D, exit when %b crosses above 0.8
+Short when %b is above 1 and 14-period Stochastic %K crosses below %D, exit when %b crosses below 0.2
+Long when an asset is oversold relative to its mean, indicated by a technical indicator (e.g., RSI below a threshold like 30), and the primary trend is bullish; exit when the price reverts toward the mean, such as RSI rising above a threshold like 50 or reaching a predefined profit target.
+Short when an asset is overbought relative to its mean, indicated by a technical indicator (e.g., RSI above a threshold like 70), and the primary trend is bearish; exit when the price reverts toward the mean, such as RSI falling below a threshold like 50 or reaching a predefined profit target.
+Long when the 9 EMA crosses above the 20 EMA, exit when the 9 EMA crosses below the 20 EMA or use a trailing stop.
+Short when the 9 EMA crosses below the 20 EMA, exit when the 9 EMA crosses above the 20 EMA or use a trailing stop.
+Long when price retraces to a 50% Fibonacci level after a bullish imbalance (Fair Value Gap), exit when price reaches the next resistance level or shows bearish reversal patterns.
+Short when price retraces to a 50% Fibonacci level after a bearish imbalance (Fair Value Gap), exit when price reaches the next support level or shows bullish reversal patterns.
+Long when price returns to fill a 'liquidity void' (Inversion Fair Value Gap) from below in an uptrend, exit at the next swing high or upon a new bearish FVG forming.
+Short when price returns to fill a 'liquidity void' (Inversion Fair Value Gap) from above in a downtrend, exit at the next swing low or upon a new bullish FVG forming.
+Long when a 'Turtle Soup' setup occurs (price breaks a recent swing low then reverses back above it), confirming with bullish momentum, exit at the previous swing high or resistance.
+Short when a 'Turtle Soup' setup occurs (price breaks a recent swing high then reverses back below it), confirming with bearish momentum, exit at the previous swing low or support.
+Long when a large bullish candle forms and subsequent candles trade within its range, then price breaks above the high of that range candle, exit at a 1:1 or 1:2 risk-reward target or below the range low.
+Short when a large bearish candle forms and subsequent candles trade within its range, then price breaks below the low of that range candle, exit at a 1:1 or 1:2 risk-reward target or above the range high.
+Long when price retraces 62-79% of a prior move (Optimal Trade Entry) into a bullish order block or Fair Value Gap, exit at the swing high or a predetermined risk-reward ratio.
+Short when price retraces 62-79% of a prior move (Optimal Trade Entry) into a bearish order block or Fair Value Gap, exit at the swing low or a predetermined risk-reward ratio.
+Long when a 'Change in State of Delivery' occurs (price breaks a high after a consolidation, indicating a shift from distribution to accumulation), exit at the next major resistance or signs of distribution.
+Short when a 'Change in State of Delivery' occurs (price breaks a low after a consolidation, indicating a shift from accumulation to distribution), exit at the next major support or signs of accumulation.
+Long when price retraces to a previous bullish order block (consolidation zone before a sharp upward move) and RSI is below 40, exit when price reaches the recent swing high or RSI crosses above 70
+Short when price retraces to a previous bearish order block (consolidation zone before a sharp downward move) and RSI is above 60, exit when price reaches the recent swing low or RSI crosses below 30
+Long when a break of structure (price makes a higher high) occurs and then retraces to the nearest bullish order block with increasing volume, exit on a new change of character (lower low) or when ATR-based trailing stop is triggered (e.g., close below 2*ATR from entry high)
+Short when a break of structure (price makes a lower low) occurs and then retraces to the nearest bearish order block with increasing volume, exit on a new change of character (higher high) or when ATR-based trailing stop is triggered (e.g., close above 2*ATR from entry low)

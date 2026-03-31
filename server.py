@@ -1,202 +1,286 @@
 # ============================================================
-# 🌙 Live Dashboard Server
-#
-# Serves the live auto-refreshing dashboard at http://algotectrading
-# Reads CSV log files in real-time as agents write to them.
-#
-# HOW TO RUN:
-#   pip install flask
-#   python server.py
-#   Then open: http://algotectrading
+# 🌙 Algotec Dashboard Server
 # ============================================================
 
-import csv
-import json
-import time
-import subprocess
-import threading
+import csv, json, time, subprocess, threading, os, signal
 from pathlib import Path
 from datetime import datetime
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, request
 
-# ── paths ─────────────────────────────────────────────────────
-ROOT      = Path(__file__).parent
-DATA_DIR  = ROOT / "src" / "data"
+ROOT     = Path(__file__).parent
+DATA_DIR = ROOT / "src" / "data"
 
 CSV_FILES = {
-    "backtest":    DATA_DIR / "rbi_results" / "backtest_stats.csv",
-    "trades":      DATA_DIR / "trade_log.csv",
-    "whale":       DATA_DIR / "whale_log.csv",
-    "liquidation": DATA_DIR / "liquidation_log.csv",
-    "sentiment":   DATA_DIR / "sentiment_log.csv",
-    "risk":        DATA_DIR / "risk_log.csv",
-    "swarm":       DATA_DIR / "swarm_log.csv",
-    "ict":         DATA_DIR / "ict_scanner_log.csv",
-    "ict_exec":    DATA_DIR / "ict_exec_log.csv",
-    "ict_bt":      DATA_DIR / "ict_backtest" / "ict_backtest_summary.csv",
-    "forward_test": DATA_DIR / "forward_test_log.csv",
-    "prop_firm":    DATA_DIR / "prop_firm_log.csv",
-    "signal_log":   DATA_DIR / "signal_log.csv",
-    "funding_arb":  DATA_DIR / "funding_arb_log.csv",
-    "copy_bot":     DATA_DIR / "copy_bot_log.csv",
-    "regime":       DATA_DIR / "regime_log.csv",
-    "monte_carlo":  DATA_DIR / "monte_carlo_results.csv",
-    "vwap":         DATA_DIR / "vwap_log.csv",
-    "psychology":   DATA_DIR / "psychology_log.csv",
+    "backtest":      DATA_DIR / "rbi_results" / "backtest_stats.csv",
+    "trades":        DATA_DIR / "trade_log.csv",
+    "signals":       DATA_DIR / "signal_log.csv",
+    "chart":         DATA_DIR / "chart_analysis_log.csv",
+    "listing_arb":   DATA_DIR / "listing_arb_log.csv",
+    "websearch":     DATA_DIR / "websearch_log.json",
+    "research":      DATA_DIR / "research_agent_log.json",
+    "prop_firm":     DATA_DIR / "prop_firm_log.csv",
+    "forward_test":  DATA_DIR / "forward_test_log.csv",
+    "chart":         DATA_DIR / "chart_analysis_log.csv",
+    "websearch":     DATA_DIR / "websearch_log.json",
+    "listing_arb":   DATA_DIR / "listing_arb_log.csv",
 }
+
+VAULT_INDEX  = ROOT / "src" / "strategies" / "vault" / "vault_index.json"
+IDEAS_FILE   = DATA_DIR / "ideas.txt"
 
 app = Flask(__name__)
 
-# Register TradingView webhook
+# ── Process manager ───────────────────────────────────────────
+# Tracks running background processes so we can stop them
+PROCESSES    = {}   # name → subprocess.Popen
+PROCESS_LOCK = threading.Lock()
+
+def run_process(name: str, cmd: list, cwd: str = None):
+    """Start a background process. Kills existing one with same name first."""
+    with PROCESS_LOCK:
+        # Kill existing process with same name
+        if name in PROCESSES:
+            try:
+                PROCESSES[name].terminate()
+                PROCESSES[name].wait(timeout=3)
+            except Exception:
+                try: PROCESSES[name].kill()
+                except: pass
+            del PROCESSES[name]
+
+        env = os.environ.copy()
+        proc = subprocess.Popen(
+            cmd,
+            cwd=cwd or str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env
+        )
+        PROCESSES[name] = proc
+        return proc.pid
+
+def stop_process(name: str) -> bool:
+    """Stop a named background process."""
+    with PROCESS_LOCK:
+        if name not in PROCESSES:
+            return False
+        try:
+            PROCESSES[name].terminate()
+            PROCESSES[name].wait(timeout=5)
+        except Exception:
+            try: PROCESSES[name].kill()
+            except: pass
+        del PROCESSES[name]
+        return True
+
+def process_status(name: str) -> str:
+    """Return 'running', 'stopped', or 'finished'."""
+    with PROCESS_LOCK:
+        if name not in PROCESSES:
+            return "stopped"
+        poll = PROCESSES[name].poll()
+        if poll is None:
+            return "running"
+        del PROCESSES[name]
+        return "finished"
+
+PYTHON = "python3"   # python executable
+
 try:
     from src.webhooks.tradingview_webhook import webhook_bp
     app.register_blueprint(webhook_bp)
-    print("📡 TradingView webhook registered at /webhook/tradingview")
-except Exception as e:
-    print(f"⚠️  Webhook not loaded: {e}")
+except Exception:
+    pass
 
-
-# ── CSV reader ────────────────────────────────────────────────
-def read_csv(path: Path, max_rows: int = 500) -> list[dict]:
-    if not path.exists():
-        return []
+def read_csv(path, max_rows=500):
+    if not path.exists(): return []
     try:
         with open(path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows   = list(reader)
-        return rows[-max_rows:]   # return most recent rows
-    except Exception as e:
-        return []
+            rows = list(csv.DictReader(f))
+        return rows[-max_rows:]
+    except: return []
 
-
-def get_file_age(path: Path) -> str:
-    """Return human-readable age of a file."""
-    if not path.exists():
-        return "never"
-    age_sec = time.time() - path.stat().st_mtime
-    if age_sec < 60:
-        return f"{int(age_sec)}s ago"
-    if age_sec < 3600:
-        return f"{int(age_sec/60)}m ago"
-    return f"{int(age_sec/3600)}h ago"
-
-
-# ── API endpoints ─────────────────────────────────────────────
-@app.route("/api/data/<panel>")
-def api_data(panel):
-    path = CSV_FILES.get(panel)
-    if not path:
-        return jsonify({"error": "Unknown panel"}), 404
-    rows = read_csv(path)
-    return jsonify({
-        "rows":      rows,
-        "count":     len(rows),
-        "last_update": get_file_age(path),
-        "timestamp": datetime.now().isoformat(),
-    })
-
-
-@app.route("/api/status")
-def api_status():
-    status = {}
-    for name, path in CSV_FILES.items():
-        rows = read_csv(path, max_rows=1)
-        status[name] = {
-            "exists":      path.exists(),
-            "rows":        read_csv(path).__len__() if path.exists() else 0,
-            "last_update": get_file_age(path),
-        }
-    return jsonify(status)
-
-
-@app.route("/api/summary")
-def api_summary():
-    """Key metrics for the header stat bar."""
-    bt_rows  = read_csv(CSV_FILES["backtest"])
-    tr_rows  = read_csv(CSV_FILES["trades"])
-    wh_rows  = read_csv(CSV_FILES["whale"])
-    lq_rows  = read_csv(CSV_FILES["liquidation"])
-    se_rows  = read_csv(CSV_FILES["sentiment"])
-
-    # Best backtest return
-    returns = [float(r.get("return_pct", 0) or 0) for r in bt_rows]
-    best_return = max(returns) if returns else 0
-
-    # Latest sentiment
-    latest_sentiment = se_rows[-1].get("sentiment", "—") if se_rows else "—"
-    latest_score     = float(se_rows[-1].get("score", 0) or 0) if se_rows else 0
-
-    # High whale alerts
-    high_whale = sum(1 for r in wh_rows if r.get("alert_level") == "HIGH")
-
-    # Recent trades
-    recent_trades = len(tr_rows)
-
-    return jsonify({
-        "strategies_tested": len(bt_rows),
-        "best_return":       round(best_return, 1),
-        "total_trades":      recent_trades,
-        "whale_alerts_high": high_whale,
-        "liq_alerts":        len(lq_rows),
-        "sentiment":         latest_sentiment,
-        "sentiment_score":   round(latest_score, 2),
-    })
-
-
-# ── Main HTML page ────────────────────────────────────────────
-HTML = open(ROOT / "src" / "dashboard_live.html").read()
+def file_age(path):
+    if not path.exists(): return "never"
+    s = time.time() - path.stat().st_mtime
+    if s < 60: return f"{int(s)}s ago"
+    if s < 3600: return f"{int(s/60)}m ago"
+    return f"{int(s/3600)}h ago"
 
 @app.route("/")
 def index():
-    return HTML
+    return open(ROOT / "src" / "dashboard_live.html").read()
 
+@app.route("/api/data/<panel>")
+def api_data(panel):
+    path = CSV_FILES.get(panel)
+    if not path: return jsonify({"error": "unknown"}), 404
+    # JSON log files
+    if str(path).endswith(".json"):
+        if not path.exists(): return jsonify({"rows": [], "count": 0})
+        try:
+            data = json.loads(path.read_text())
+            return jsonify({"rows": data[-100:] if isinstance(data, list) else [data],
+                            "count": len(data) if isinstance(data, list) else 1})
+        except: return jsonify({"rows": [], "count": 0})
+    rows = read_csv(path)
+    return jsonify({"rows": rows, "count": len(rows), "last_update": file_age(path)})
+
+@app.route("/api/vault")
+def api_vault():
+    if not VAULT_INDEX.exists():
+        return jsonify({"strategies": []})
+    try:
+        return jsonify(json.loads(VAULT_INDEX.read_text()))
+    except: return jsonify({"strategies": []})
+
+@app.route("/api/system")
+def api_system():
+    # Ideas count
+    idea_count = 0
+    if IDEAS_FILE.exists():
+        idea_count = sum(1 for l in IDEAS_FILE.read_text().splitlines()
+                        if l.strip() and not l.startswith("#"))
+    # Vault count
+    vault_count = 0
+    if VAULT_INDEX.exists():
+        try:
+            data = json.loads(VAULT_INDEX.read_text())
+            vault_count = len(data.get("strategies", []))
+        except: pass
+    # Backtest results
+    bt_rows  = read_csv(CSV_FILES["backtest"])
+    returns  = [float(r.get("return_pct", 0) or 0) for r in bt_rows]
+    sharpes  = [float(r.get("sharpe", 0) or 0) for r in bt_rows
+                if float(r.get("sharpe", 0) or 0) > 0]
+    best_return  = max(returns) if returns else 0
+    avg_sharpe   = sum(sharpes)/len(sharpes) if sharpes else 0
+    # Pending signals
+    pending = []
+    try:
+        pf = DATA_DIR / "pending_signals.json"
+        if pf.exists():
+            pending = json.loads(pf.read_text())
+    except: pass
+    # Listing arb
+    arb_rows = read_csv(CSV_FILES["listing_arb"])
+    # Chart analyses
+    chart_rows = read_csv(CSV_FILES["chart"])
+    long_sigs  = sum(1 for r in chart_rows if r.get("signal") == "LONG")
+    short_sigs = sum(1 for r in chart_rows if r.get("signal") == "SHORT")
+    return jsonify({
+        "idea_count":       idea_count,
+        "vault_count":      vault_count,
+        "backtest_count":   len(bt_rows),
+        "best_return":      round(best_return, 1),
+        "avg_sharpe":       round(avg_sharpe, 2),
+        "pending_signals":  len(pending),
+        "arb_candidates":   len(arb_rows),
+        "chart_analyses":   len(chart_rows),
+        "chart_longs":      long_sigs,
+        "chart_shorts":     short_sigs,
+        "last_backtest":    file_age(CSV_FILES["backtest"]),
+        "last_signal":      file_age(CSV_FILES["signals"]),
+        "last_chart":       file_age(CSV_FILES["chart"]),
+        "last_arb":         file_age(CSV_FILES["listing_arb"]),
+    })
 
 @app.route("/api/signals/pending")
-def get_pending_signals():
-    """Return all pending signals for dashboard."""
+def pending_signals():
     try:
-        pending_file = DATA_DIR / "pending_signals.json"
-        if not pending_file.exists():
-            return jsonify([])
-        signals = json.loads(pending_file.read_text())
-        return jsonify(signals[-100:])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        pf = DATA_DIR / "pending_signals.json"
+        if not pf.exists(): return jsonify([])
+        return jsonify(json.loads(pf.read_text())[-100:])
+    except: return jsonify([])
 
 @app.route("/api/signals/approve/<sig_id>", methods=["POST"])
-def approve_signal(sig_id):
-    """Approve a pending signal for execution."""
+def approve(sig_id):
     try:
-        from src.agents.signal_notifier import approve_signal as _approve, execute_signal
-        signal = _approve(sig_id)
-        if not signal:
-            return jsonify({"error": "Signal not found"}), 404
-        # Execute the trade
-        result = execute_signal(signal)
-        return jsonify({"status": "approved", "signal": result})
+        from src.agents.signal_notifier import approve_signal, execute_signal
+        sig = approve_signal(sig_id)
+        if not sig: return jsonify({"error": "not found"}), 404
+        return jsonify({"status": "approved", "result": execute_signal(sig)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/api/signals/reject/<sig_id>", methods=["POST"])
-def reject_signal_route(sig_id):
-    """Reject a pending signal."""
+def reject(sig_id):
     try:
         from src.agents.signal_notifier import reject_signal
-        ok = reject_signal(sig_id)
-        if not ok:
-            return jsonify({"error": "Signal not found"}), 404
-        return jsonify({"status": "rejected", "id": sig_id})
+        return jsonify({"status": "rejected" if reject_signal(sig_id) else "not_found"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ── Control endpoints ─────────────────────────────────────────
+AGENT_COMMANDS = {
+    # name → [command, description]
+    "rbi_futures":   (["python3","src/agents/rbi_parallel.py","--market","futures"],
+                      "RBI Backtester — Futures"),
+    "rbi_crypto":    (["python3","src/agents/rbi_parallel.py","--market","crypto"],
+                      "RBI Backtester — Crypto"),
+    "rbi_all":       (["python3","src/agents/rbi_parallel.py","--market","all"],
+                      "RBI Backtester — All Markets"),
+    "websearch":     (["python3","src/agents/websearch_agent.py","--queries","5"],
+                      "Websearch Agent"),
+    "notify":        (["python3","src/agents/signal_notifier.py","--mode","notify"],
+                      "Signal Notifier (notify)"),
+    "manual":        (["python3","src/agents/signal_notifier.py","--mode","manual"],
+                      "Signal Notifier (manual)"),
+    "listing_arb":   (["python3","src/agents/listing_arb_agent.py","--once"],
+                      "Listing Arb Agent"),
+    "vault_list":    (["python3","src/agents/vault_strategy.py","--list"],
+                      "List Vault Candidates"),
+    "clear_cache":   (None, "Clear processed_ideas.json"),
+}
+
+
+@app.route("/api/control/run/<agent>", methods=["POST"])
+def control_run(agent):
+    if agent not in AGENT_COMMANDS:
+        return jsonify({"error": f"Unknown agent: {agent}"}), 404
+
+    cmd, desc = AGENT_COMMANDS[agent]
+
+    # Special case: clear cache
+    if cmd is None:
+        cache = ROOT / "src" / "data" / "processed_ideas.json"
+        if cache.exists():
+            cache.unlink()
+            return jsonify({"status": "ok", "message": "Cache cleared — next RBI run will reprocess all ideas"})
+        return jsonify({"status": "ok", "message": "Cache already empty"})
+
+    try:
+        pid = run_process(agent, cmd, cwd=str(ROOT))
+        return jsonify({"status": "started", "agent": agent,
+                        "desc": desc, "pid": pid})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/control/stop/<agent>", methods=["POST"])
+def control_stop(agent):
+    stopped = stop_process(agent)
+    return jsonify({"status": "stopped" if stopped else "not_running", "agent": agent})
+
+
+@app.route("/api/control/status")
+def control_status():
+    return jsonify({
+        name: process_status(name)
+        for name in AGENT_COMMANDS
+    })
+
+
+@app.route("/api/control/stop_all", methods=["POST"])
+def control_stop_all():
+    stopped = []
+    for name in list(PROCESSES.keys()):
+        if stop_process(name):
+            stopped.append(name)
+    return jsonify({"stopped": stopped})
 
 
 if __name__ == "__main__":
-    print("""
-🌙 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Algotec Trading Dashboard
-   Open: http://algotectrading
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""")
+    print("\n🌙 Algotec Dashboard → http://algotectrading\n")
     app.run(host="0.0.0.0", port=8080, debug=False)

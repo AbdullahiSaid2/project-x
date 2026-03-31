@@ -348,6 +348,42 @@ td { padding: .6rem 1rem; vertical-align: middle; }
 }
 .new-row { animation: rowflash 1.5s ease-out; }
 
+/* ── control buttons ── */
+.ctrl-btn {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 4px;
+  padding: .3rem .8rem;
+  font-size: .7rem;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: all .15s;
+  font-weight: 600;
+}
+.ctrl-btn:hover { background: var(--green); color: #000; }
+.ctrl-btn.running {
+  background: rgba(255,204,0,.15);
+  color: var(--yellow);
+  border-color: var(--yellow);
+  animation: ctrlpulse 1.5s ease-in-out infinite;
+}
+.ctrl-btn.finished { opacity: .5; }
+.ctrl-danger { background: var(--red-dim) !important; color: var(--red) !important; border-color: var(--red) !important; }
+.ctrl-danger:hover { background: var(--red) !important; color: #fff !important; }
+.ctrl-stop {
+  background: transparent;
+  color: var(--muted2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: .3rem .7rem;
+  font-size: .7rem;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+}
+.ctrl-stop:hover { border-color: var(--red); color: var(--red); }
+@keyframes ctrlpulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
 /* ── loading spinner ── */
 .spinner {
   display: inline-block;
@@ -399,7 +435,7 @@ td { padding: .6rem 1rem; vertical-align: middle; }
     <div class="logo-icon"><img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAHeAeADASIAAhEBAxEB/8QAHQABAAAHAQEAAAAAAAAAAAAAAAECAwYHCAkEBf/EAEQQAQABAwIDBAYIBQEECwAAAAABAgMEBREGByEIEjFBIlFxgZHRExUWMlZhk5QUF0JUoSMzUlOxNDZEYmNygoOi4fD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8A0yAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT00TVtt5pFS3Pozvv1jaAQ7kzPT1o/ReMb9Y/wAslcnuU+t8xMXV8jTt6bWm483Zq26VTHlCwMvFuYeZcx8imbdy3VNFVExtNMwDw1R3Z23QRr+9KAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI0xEztM7Ag+noGn5Wrani6bh25uXsi5FuiimN5mqf/p4PovS239ra7sIcr41HW7nG+r4s1Y+J/wBCiqnpNfT0490zANnuQPLzG5fcu8PRIt0xl1URXmVx/XcmOvu8Go/bc5YVcL8Y/a3Tcfu6bqlX+ptH3L2/WZ9s1Q36on0Kd5mYnw2haHN/g3T+OeB9T0HOtfSV12Zrs1TH3LkRM0zHv2ByeuTvXPr80r7fF3D2dw7xFm6Nn26reRjXZpmKo23jedp98dXx6qYiImKtwSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJrf3usbx5pVSxTNVW0eYLn5Y8I53G3Gen8O6fTP02Xdinvf8Onf70/lDqXwFwzgcJ8J6doGBapt2sOzFHSNpqnxmZ98y177DXLCnQ9Aq401bD+izs70MWmuOtFvwn47RLaWnrG4KcR59ad/JDuxtNM9Ij4yrANPO3hyt+mx7fMDS7EUxbiLWdRRG28bejX7opn4tL642pnpO/lP5Ov3FOj4Ov6FmaPqNqLmNl25tV0zG+8TDlzzt4HzeAePNQ0PKt1U26Lk1WLm3S5RPWNvZvt7gWEIz4oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnpomqN/CGT+zby7v8wuYuHg126v4DHqi9k17dNonfu+/qxviWbmRXbsWaJrvXK6aKaY/qmZ2iPi6Rdk3ljb4B5e2MnKtRGrajTTev1edMTG8U+7eQZd0zCs6dp9rCxaPo7OPbpt00x5REbQ91P3YSbRHo7TvV4yqR4AAAp1xM3IiGvPbQ5YU8YcDTr+nWInUtLomuNo3quUdd6fjLYivpPe8dlHJsW79iuzdoiq1ciYqpnwmJBx0rtVU3O5VG1UTtMT5JLlPdrmN99vP1s19rHlld5fcwb13Fs7aTqVc3caqI6U77+h7em7ClzpVtvvt03BKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACNPiq0x3qtppj0vD8lO3MxXExG8x5PRiUUXMm1RXdiimu5EVT/ALsAz/2L+V88Y8b/AF/qWP3tL0qYr3mnpcueUR7J2l0KsxTTMUU0xTTEejEdIY57OPD+jcP8o9EsaLXauWr1im9cvUeNdcxG8z8GR7VMbzO+/XeAVAAAAEK9u7O87QiTETG0gxZ2kOXePzF5dZWBNuIz8amb+Jc2601RHWN/zjePe5k6lhZOnZ17EzLM272PXNFy3VG001eqXYSbU92Ymd4md5ifP8mi3br5X16JxDHHGmY8U4WoVd3Ki3HSi5v1qn296PgDVmveKZiYiPNTVatqd6J9u8qQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJ7U7VxPqT0TMTNMx033lSiZjwJqmfGdwbm9hHmlNdFzl/qmRtFEfSYFVyfH/eo90U/5bjW+s7+G3hDkLwpr2bw7r+Bq+BerovYl2m7E0ztPSYmY98Q6kcmuNcPj3gbB4gxblE13bcU36InrTciOv8AncF7CG6MeHUAAAACfBa3M7hTB404QzuH9QtxXaybVUUzMfdriPRn47LpSXPGI+AORnMHhrP4S4qztD1GzVRdxr1Vumav6qYmYir3wt1vF27eV9OpaZRx3peN38vFiLeb3KetVHlV7oiWkdNMRVtVT6PnPnsCiJq42228JSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnpmIjffq2P7EnNKeFeMaeFtQvdzTNSnaiap6U3f6Y98y1tejAyb2Jl2snHrqt3rVUV0V0z1pmPCQdi6blNdFNXrjeNvNVhhzss8ybPMLl7Z+mu0/WuBTTZy6Jnr0j0avfEbsxUfcgEQAAAElcTNUTERMx4JwHzta0vH1bScrTc21Rcxsm3VbuU1RvExMbS5g9oHgPK5fcxc3Rq7UxiVVzexbm3SqiesxHs32dTqttp3YG7YPLO3xxy/uapp+P3tV0umbluYp9KqjrvT752Bzkux6e3jt5pdlbKt12bs266ZpqpmaZ38d4lSkEoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACa3MRXEzEzHqSprcxFW879PDb1gy52YeYtzl7zHxMrJyKo0vJri3mW4npFEzHpe2NnS/AzLOdh2crGuxVZvW4rt1R5xPVx571MRHXrvvPtb6diDmj9pOEquEtUye/qGmdLHfn0rlv1/Grb3A2biZmenrTJLc79fWnAAAAAUb1NE2qvpKYqp8426SrT4JJpnvb+U+MA5y9sTlfVwPx9c1XCs1RpWrVTdtd2PRt1edP+Jn3sEVUzG+8bTHjDqdz/4AxuYHLrP0e9TTOVTbm5iVbdaLkefw3hy/17Tc3SNWydM1C1XayrFybd2iqNpiYB80AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVO5HdmraZ2nrt4bL74a5Rcf8R6Ta1bROGM3Nwr8b2rtFFUxVHugFgDKP8heav4K1L9Or5IfyF5rfgrU/0avkDF4yh/IXmt+CtT/Rq+R/IXmt+CtT/Rq+QMXox4sn/wAhea34K1P9Gr5H8hea34K1P9Gr5Axiu7lPxjn8D8aafr2Dcqiqzdj6SiJ6V0ecSuD+QvNf8F6n+jV8kaeRHNamP+pupRVv/wAKrw+AOlfA+v4HFHDGBrem3abuNlWYuUTE77RPr/N9xq32PZ474IsZHCfGui5em6ZVPfwb1+mYiK56TREzHhtHh+bZ+muqaImOs7b+0FUQonendEAAAAFO9+W35z+TSPt28rv4DULfH2l48/QZdXdz4iPuV/73vmYhu9VTFVUbx4Pg8e8M4PFnCuoaFqFmm7ZyrM07VeVW3oz7p2ByIqjaUF18zeD8zgjjTUeHtQoqivFuTFMz071EzMU1e/Za1cRFW0TuCUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEYiZnaCaZjyRo/LxVbVNUxO29W/TaPHcF8ckeBczmDx9p2hWKa4s1XIqyLtMdLdEec/lvtHvdROF9IxNC0XF0nAtxbx8W3FummKYiI2YK7F/K+ODuCI17ULXc1TV7ffnvR6Vq3v93/4xPvbD2piesTM9ATbIdyPUmAS9yPV/k7ker/KYBL3I9X+TuR6kwCXuR6v8qV2Zonrt3I61exXnoxP2mOY+Ly95f5eXTVH1plUTawaN+s1THj8Nwa1dsTnHl5HMLC0Lh/Mqt4+h5MXLk26ulVyJ6xP5dIbU8iOPcbmFwBg65auUfxFVP0eTRE/duREd73by5cahlX87LuZeTequX71c1V11dZmZ9bOnY05m/YrjmnRtRvVRpOp7W6t56UXf6Zj3yDorRt3ekbJlLFuU3LNFdH3aoiqJ9cT5qoAAAACHj5Ik+Eg1a7cXK+dd4Zp4z0mxFWoYEzTkRRT1uWunj/5YiWiF2naYj1ebsLquHj6jgZGFkxFyzetVW7lEx0mmqNp/wAOZXaO5c5HLzmNlafTRV/BZNc38S5t6M01de77t4gGLO7O2+yCtMxEzv1mqPhKiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACMRM+EAmtdZ29+7NnZL5Z18e8x8e/lY9Vej4M/S5FW3ozVExtT743Ye0TBytR1THwMS1VcyMiuLdqiI3mqqZ2h047OXL7G5ecusTT6LO2dlRTey6vOa56xE+zeYBkvGsUWbNuzRG1FumKaY9URG0K1MRT4Ix4AAAAACFc92N/gjvHrSXZju7b+PQFLIyKLNiu9erpot0R3qpmdoiPNzX7VvMq9zB5kXox71U6Xp9U2cSInptHjM/nvM9W0HbW5ofZHgmeGtNv9zVdUommqqirrbt+Ez+U+Dn7dqmquZ+kma6p3q3/MEJme7E9J6qli7ds3qb1quqKrVcVUzE9YmJ8VL/u7xvBvH3u9tv4wDpL2RuZlPHnLuzjZt+KtV02Is3omes0RvFM7eyGa6a5720w5c9nfmJk8uuYmFqn0tX1feri1mW9+k0TMbz7dnTrRs7H1PT8bUcSum5Yv26a7c01bxMTG4PoAAAAAAlminaWFu1ry2o495cX7mLZqr1fTaZv4tUeNURvM0++dma1O/T3qYiIievhPmDjpmY9zGyq7Fymaa7dU019NtpierzNjO2jyvjhDjKriHS8eaNJ1SrvdI9G3d9Xv2mWum0+oEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFamZpiqenTy9ajC5OAOF87i7i3T9CwLdVy5lXaYmYj7tO/pT8NwbDdhblf9da7XxtqePFeFgz3caK4+9X5z7piG9FPd3mI2imPu7Ld5acJYHBvB+BoGFapppxrURXVEffq2jvVT7dlzU0U0zvEAmAAAAABTr6zt5xO+0Pk8Wa3hcO8P52tZ92m3jY1mq5XVM+qN9va+rcjbrv3d/OGm3bw5qdLfL/Sb8xO9N3NmmfhT/wA9wa385uN8vj3jvO13Mu1VU11zRao36U246Rt7ohY1U7zKeK5iZ26JKus7ggACpa28/P8Aw3n7DHNOdZ0S5wVquTFWXg074fen0rlvfrHt3lovRVNNMxHn4ri5c8V5/B3GOncQ4Fc03cW7FUxv0qj1SDrd0iJid5iOvsT253p39fgtnlxxVgcZ8I6dxBp13vWsqzFUxv1irziVzW42oiATAAAAJa9vOdkyFURMTE+EgsXnNwPh8wOAc7Qcq3R9NctzNmuY/wBnV5T/APvW5d8S6RmaDxDmaNqFubOTjXJouUzG20w6+TbpmJ3jx8fzaZdvHldtes8e6Rj+jX6GbRbp8PH/AFJ+MQDTmrrG+228pVS/T3O7Hj0338pUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAEY8EE9qImrad9vPYC3TNU/n5N4+wnyujStKq481Wxvk51HdxaKqdu5TtvvHtidmsnIDl5mcw+YODpVNmr+CtXIuZNcf0UR16+/b4unui6di6TpmNp2DZi1i49uLdq3H9NMA9lmJinr7o9UKiW3ttO07xumAAAAAN49aW7MxRMwoV1026JmZmO75zPSY9cgtLnLxtp/AfAmoa7l3Iiqi3VRZjfrNyY2p298w5bcXa3ncRa9mavqN+q7kZN2q7VVV4+lO+3uZ57bHM2eK+NZ4X0zKpq0zSq5pq7s+jcu+FU+zpDXGvrHe9c9ASoT4oAAAIx4JqfvR12SI07bxuDa7sLc0fqfXLnBesZUzi5/pYcVVbU27nnHwhvPb27vSXHvSc7I0rVbGdjXZt38aumumqmfCYnfo6cdnrmFjcw+XGBq301M5tFMWs2iJ9KLkRG87eqZkGThRon042jbdWAAAAAfD4u0XF4j4cz9Hz7VN2xlWZomJj4T8X3FOd4id9+s9NvIHKDnFwTmcBcd5/DuVRVFFmuarNUx0romZ2mPgsuPF0D7bXK77U8H08UaXjxXqmmf7Tux1uW+m+/sjeWgd2KrdVVE07VxMx0B5wAAAAAAAAAAAAAAAAAAAAAAAAAAAFXHoruV9y3EzVPTZT26s9djflnPG3H1GrZ+PN3SdKqi5dpmOl2vptR8J39wNpex7yw+wvANGpZ9ju6vqtMXb3e8aKem1P+IlnaaN99p2lQx6KLVFFu30poiIiI/5PSCFFPdjbdEAAAAAQrjenw3YZ7VXMrH4B5b5NOPd7uq6hTNjFonpMTPjM+qNt2XdVy7GDgXcvJuRatWqZqqrmelMR5y5l9pnmPf5jcxsvKpuzTp2LVNnEp36dyOu8/nvMgxbkZN29druXpqruVzvVVVO8z71KuvveWyWrrVKAAAAACMTtO6ACf6Se9ExEdGbuyFzLngTmJZx829NOlaltj3qZq6U1TvFMxHtnqwcrY9VVE01xX3JoqiqmY8Yn1g7FY12i9TTdtT37VVMTTXHhMeuPyehr92NOaNPGnAtGi6heirVdKiLU7z1rtx0pn4R1bAgAAAAJe7O/SraNvUmAebOxLOVh3sS9biuzeoqouUz5xMbS5o9qPltf5ecxcizYs1RpmdNWRjV+qJneqn3bxDprc8IYj7TvLmxzB5dZmPZsxVqeLTN7EubdYmmJmaP/VO3wBzGnxQejUMW9h5l7Ev0TRds3KrddM+UxO0qExsCAAAAAAAAAAAAAAAAAAAAAAAABHiAPqaHpmXrOqY2n4FmbuTfuU27dMR1mqfCHUDkFwDicvOXuDo9miJyK6KbuTc2611z16+zfb3NWuwxy6xcvVLvHmtV41FGJPcwqK7lMb1+dW0+qYj4t2aNRwYjrm4vX/xqfmD3yi8U6pgf3uL+tT8z60wP7zF/Wp+YPaPF9aYH95i/rU/M+tMD+8xf1qfmD2jxfWmB/eYv61PzPrTA/vMX9an5g9qlVVMTVMx0p8vW8/1pgf3mL+tT83xeMeMtI4Z4dz9bzMvGqs4lmq5NNN6mZr2jfaPzBgftx80qeHeF44P0rJmNQ1Gj/X7s9aLXnE/4aGVzE3Kqt5q85ldfNfjLP42431HiHNuTc/iLs/RxP9NEdIj4RC0e9G223tBLPSdkEZ8UAAAAAAAE9Ed6No8fHdImiraNgX/yK49yeXvH+Brli9XTj9+LeVRE/etzMb/43dQuHtWxta0fE1TCri7YybdNy3VE7+Mb7e5yApqjvRtTHk3W7C3Ni3kabd4E1nK2vY+93DruV7RNG/Wnr+dQNvLczNPWNkzw29TwYpjfMxY/9+n5o/WmB/eYv61PzB7R4vrTA/vMX9an5n1pgf3mL+tT8we0eL60wP7zF/Wp+Z9aYH95i/rU/MHtlLXEbbbPJ9aYH97i/rU/MnU8Cf8AtuL+tT8waH9tzlbVw1xfTxZpmPtp2pzvepiOlq54be/aZa0XvHfbr5/k6r81uH9D484K1DhvUMzE7l63P0dc3aZm3Xt0qhy94z0bL4e4jzNGzaaab2Jdm3V3ZiYnzid4/LYHxgAAAAAAAAAAAAAAAAAAAAAAAEY8YQAfc0/iHXcDDjEwNZz8a31qii3fqoin3RKrVxfxN0ieIdW/fXPmt/efXKALg+1/E34h1f8Ae3Pmfa/ib8Q6v+9ufNb4C4PtfxN+IdX/AHtz5n2v4m/EOr/vbnzW+AuD7X8TfiHV/wB7c+Z9r+JvxDq/72581vgLg+1/E34h1f8Ae3PmkzeIdezcX+Hy9Z1G/YriYqouZVdVPv3l8JHefXIJ7vu389lMAAAAAAAAAAARpnaqJe/Ts3LwL0ZeDkXse9bie7XarmiqPz6eT56O8+uQXBXxdxLE7faLV59c/wAbc+aH2v4m/EOr/vbnzW+AuD7X8TfiHV/3tz5n2v4m/EOr/vbnzW+AuD7X8TfiHV/3tz5n2v4m/EOr/vbnzW+AuD7X8TfiHV/3tz5n2v4m/EOr/vbnzW+AuSOL+KulUcQartTG+05lc9Pi+LqWTkZmTVlZORdyLlyd6rlyqZqn2zLzbz65N522BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/9k=" style="width:38px;height:38px;object-fit:contain;border-radius:6px;" alt="logo"/></div>
     <div>
       <div class="logo-text">ALGOTEC TRADING</div>
-      <div class="logo-sub">DeepSeek · Hyperliquid · Coinbase</div>
+      <div class="logo-sub">Claude Sonnet 4.6 · CME Databento · Hyperliquid · Tradovate · 20+ Tokens</div>
     </div>
   </div>
   <div class="live-badge">
@@ -414,11 +450,15 @@ td { padding: .6rem 1rem; vertical-align: middle; }
 
 <!-- ── Summary stat bar ── -->
 <div class="statbar" id="statbar">
+  <div class="stat"><div class="stat-label">Vault</div><div class="stat-value g" id="s-vault-count">—</div><div class="stat-sub">proven strategies</div></div>
+  <div class="stat"><div class="stat-label">Ideas</div><div class="stat-value b" id="s-ideas-count">—</div><div class="stat-sub">in ideas.txt</div></div>
   <div class="stat"><div class="stat-label">Strategies Tested</div><div class="stat-value b" id="s-strats">—</div><div class="stat-sub">from RBI agent</div></div>
   <div class="stat"><div class="stat-label">Best Return</div><div class="stat-value g" id="s-best">—</div><div class="stat-sub">across all backtests</div></div>
+  <div class="stat"><div class="stat-label">Avg Sharpe</div><div class="stat-value b" id="s-avg-sharpe">—</div><div class="stat-sub">profitable only</div></div>
+  <div class="stat"><div class="stat-label">Pending Signals</div><div class="stat-value y" id="s-pending-count">—</div><div class="stat-sub">awaiting approval</div></div>
+  <div class="stat"><div class="stat-label">Chart Analyses</div><div class="stat-value p" id="s-chart-count">—</div><div class="stat-sub">ICT grades</div></div>
+  <div class="stat"><div class="stat-label">Arb Candidates</div><div class="stat-value g" id="s-arb-count">—</div><div class="stat-sub">pre-listing tokens</div></div>
   <div class="stat"><div class="stat-label">Live Trades</div><div class="stat-value y" id="s-trades">—</div><div class="stat-sub">since session start</div></div>
-  <div class="stat"><div class="stat-label">Whale Alerts</div><div class="stat-value r" id="s-whale">—</div><div class="stat-sub">HIGH level</div></div>
-  <div class="stat"><div class="stat-label">Liq Alerts</div><div class="stat-value p" id="s-liq">—</div><div class="stat-sub">all windows</div></div>
   <div class="stat"><div class="stat-label">Sentiment</div><div class="stat-value" id="s-sent">—</div><div class="stat-sub" id="s-sent-score">score —</div></div>
 </div>
 
@@ -510,6 +550,36 @@ td { padding: .6rem 1rem; vertical-align: middle; }
     <div class="nav-item" onclick="switchPanel('llm_status')">
       <span>🔀</span> LLM Router
       <span class="nav-count" id="n-llm_status">0</span>
+    </div>
+
+    <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
+
+    <div class="nav-item" onclick="switchPanel('controls')" style="color:var(--green)">
+      <span>🎮</span> Controls
+      <span class="nav-count" id="n-running" style="background:var(--green-dim);color:var(--green)">0</span>
+    </div>
+
+    <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
+
+    <div class="nav-item" onclick="switchPanel('vault')">
+      <span>🏛️</span> Vault
+      <span class="nav-count" id="n-vault">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('killzones')">
+      <span>⏰</span> Kill Zones
+      <span class="nav-count" id="n-killzones">—</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('chart_analysis')">
+      <span>📸</span> Chart Analysis
+      <span class="nav-count" id="n-chart_analysis">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('websearch')">
+      <span>🔍</span> Websearch
+      <span class="nav-count" id="n-websearch">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('listing_arb')">
+      <span>💎</span> Listing Arb
+      <span class="nav-count" id="n-listing_arb">0</span>
     </div>
 
     <div class="sidebar-footer">
@@ -813,6 +883,197 @@ td { padding: .6rem 1rem; vertical-align: middle; }
             Run: <span style="color:var(--yellow);font-family:monospace">python src/agents/rbi_parallel.py</span>
           </div>
         </div>
+      </div>
+    </div>
+
+
+    <!-- ══ CONTROLS PANEL ══ -->
+    <div class="panel" id="panel-controls">
+      <div class="panel-header">
+        <div class="panel-title">🎮 AGENT CONTROLS</div>
+        <div class="panel-meta">Run agents without the terminal</div>
+      </div>
+
+      <!-- Agent status row -->
+      <div style="padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.6rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase">STATUS:</span>
+        <div id="ctrl-status-pills" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+        <button onclick="stopAll()" style="margin-left:auto;background:var(--red-dim);color:var(--red);border:1px solid var(--red);border-radius:4px;padding:.2rem .7rem;font-size:.65rem;cursor:pointer;font-family:'IBM Plex Mono',monospace">⏹ STOP ALL</button>
+      </div>
+
+      <div style="padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
+
+        <!-- RBI Backtester -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">📊 RBI Backtester</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Discovers new strategies from ideas.txt using AI code generation. Runs across all configured symbols and timeframes.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('rbi_futures')" id="btn-rbi_futures">⚡ Futures</button>
+            <button class="ctrl-btn" onclick="runAgent('rbi_crypto')"  id="btn-rbi_crypto">🪙 Crypto</button>
+            <button class="ctrl-btn" onclick="runAgent('rbi_all')"     id="btn-rbi_all">🌐 All Markets</button>
+            <button class="ctrl-btn ctrl-danger" onclick="runAgent('clear_cache')" id="btn-clear_cache">🗑 Clear Cache</button>
+          </div>
+          <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted2)">⚠️ Clear cache first to re-test all ideas fresh</div>
+        </div>
+
+        <!-- Signal Notifier -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🔔 Signal Notifier</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Runs vaulted strategies on live market data. Notify mode logs signals only. Manual mode shows approve/reject buttons.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('notify')" id="btn-notify">👁 Notify Mode</button>
+            <button class="ctrl-btn" onclick="runAgent('manual')" id="btn-manual">👆 Manual Mode</button>
+            <button class="ctrl-stop" onclick="stopAgent('notify');stopAgent('manual')">⏹ Stop</button>
+          </div>
+          <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted2)">Run during market hours: London (09:00-12:00 EAT) + NY AM (15:30-18:00 EAT)</div>
+        </div>
+
+        <!-- Websearch Agent -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🔍 Websearch Agent</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Auto-discovers strategy ideas from web articles, PDFs, and YouTube videos via Tavily + Serper. Adds to ideas.txt.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('websearch')" id="btn-websearch">🔍 Run Search</button>
+            <button class="ctrl-stop" onclick="stopAgent('websearch')">⏹ Stop</button>
+          </div>
+          <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted2)">Uses Tavily (priority) → Serper → Brave</div>
+        </div>
+
+        <!-- Listing Arb -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">💎 Listing Arbitrage</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Finds new tokens on CoinGecko before they list on Binance/Coinbase. Price often pumps 20-100% on listing.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('listing_arb')" id="btn-listing_arb">💎 Scan Now</button>
+            <button class="ctrl-stop" onclick="stopAgent('listing_arb')">⏹ Stop</button>
+          </div>
+        </div>
+
+        <!-- Vault -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🏛️ Strategy Vault</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Lists strategies from the latest backtest run that qualify for vaulting (Sharpe > 1.0, 10+ trades, positive return).</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('vault_list')" id="btn-vault_list">📋 List Candidates</button>
+          </div>
+        </div>
+
+        <!-- Quick Status -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.5rem">⚡ QUICK WORKFLOW</div>
+          <div style="font-size:.68rem;color:var(--muted2);line-height:2.2">
+            <div>1️⃣ <span style="color:var(--green)">Clear Cache</span> → fresh run</div>
+            <div>2️⃣ <span style="color:var(--green)">Websearch</span> → fill ideas.txt</div>
+            <div>3️⃣ <span style="color:var(--green)">RBI All Markets</span> → backtest overnight</div>
+            <div>4️⃣ Upload CSV here → view results</div>
+            <div>5️⃣ <span style="color:var(--green)">List Candidates</span> → vault winners</div>
+            <div>6️⃣ <span style="color:var(--green)">Signal Notifier</span> → forward test</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VAULT PANEL ══ -->
+    <div class="panel" id="panel-vault">
+      <div class="panel-header">
+        <div class="panel-title">🏛️ STRATEGY VAULT</div>
+        <div class="panel-meta">Proven strategies — never re-run through RBI</div>
+      </div>
+      <div style="padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem" id="vault-cards-container">
+        <div class="empty"><span class="empty-icon">🏛️</span>Loading vault...</div>
+      </div>
+    </div>
+
+    <!-- ══ KILL ZONES PANEL ══ -->
+    <div class="panel" id="panel-killzones">
+      <div class="panel-header">
+        <div class="panel-title">⏰ ICT KILL ZONES — LIVE STATUS</div>
+        <div class="panel-meta">UTC: <span id="kz-utc">—</span></div>
+      </div>
+      <div style="padding:1.2rem 1.5rem">
+        <div style="font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase;margin-bottom:.8rem">KILL ZONES (EST · EAT = EST+7h)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem;margin-bottom:1.5rem" id="kz-cards"></div>
+        <div style="font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase;margin-bottom:.8rem">MACRO WINDOWS</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem" id="macro-cards"></div>
+      </div>
+    </div>
+
+    <!-- ══ CHART ANALYSIS PANEL ══ -->
+    <div class="panel" id="panel-chart_analysis">
+      <div class="panel-header">
+        <div class="panel-title">📸 CHART ANALYSIS AGENT</div>
+        <div class="panel-meta">ICT setup grading · Updated <span id="age-chart_analysis">—</span></div>
+      </div>
+      <div style="padding:.75rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);font-size:.72rem;color:var(--muted2)">
+        Run: <span style="color:var(--green)">python src/agents/chart_agent.py --image ~/Desktop/chart.png --symbol MNQ --tf 5m</span>
+        &nbsp;|&nbsp; Grades: <span style="color:var(--red)">A+</span> = Sweep+CISD+KZ &nbsp; <span style="color:var(--yellow)">A</span> = 2 of 3 &nbsp; <span style="color:var(--blue)">B</span> = 1
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Symbol</th><th>TF</th><th>Signal</th><th>Grade</th>
+            <th>Conf%</th><th>Trend</th><th>Patterns</th>
+            <th>Entry</th><th>Stop</th><th>Target</th><th>Reasoning</th>
+          </tr></thead>
+          <tbody id="tbody-chart_analysis"><tr><td colspan="12"><div class="empty"><span class="empty-icon">📸</span>No chart analyses yet.<br/><small>python src/agents/chart_agent.py --image /path/to/chart.png</small></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ WEBSEARCH PANEL ══ -->
+    <div class="panel" id="panel-websearch">
+      <div class="panel-header">
+        <div class="panel-title">🔍 WEBSEARCH AGENT</div>
+        <div class="panel-meta">Auto strategy discovery from articles, PDFs, YouTube</div>
+      </div>
+      <div style="padding:1rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);display:flex;gap:2rem;align-items:center;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase">IDEAS IN FILE</div>
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:2rem;font-weight:700;color:var(--green)" id="ws-idea-count">—</div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted2);line-height:2">
+          Run: <span style="color:var(--green)">python src/agents/websearch_agent.py --queries 5</span><br>
+          Then backtest: <span style="color:var(--green)">python src/agents/rbi_parallel.py --market all</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Ideas Added</th><th>Queries</th><th>Mode</th></tr></thead>
+          <tbody id="tbody-websearch"><tr><td colspan="4"><div class="empty"><span class="empty-icon">🔍</span>No websearch runs yet.<br/><small>python src/agents/websearch_agent.py</small></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ LISTING ARB PANEL ══ -->
+    <div class="panel" id="panel-listing_arb">
+      <div class="panel-header">
+        <div class="panel-title">💎 LISTING ARBITRAGE</div>
+        <div class="panel-meta">Pre-listing token opportunities · Updated <span id="age-listing_arb">—</span></div>
+      </div>
+      <div style="padding:.75rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);font-size:.72rem;color:var(--muted2)">
+        Finds tokens NOT yet on Binance/Coinbase with strong volume momentum.
+        Run: <span style="color:var(--green)">python src/agents/listing_arb_agent.py --once</span>
+      </div>
+      <div class="controls">
+        <div class="ctrl"><label>Search</label><input type="text" id="q-listing_arb" placeholder="symbol, name..." oninput="renderListingArb()"/></div>
+        <div class="ctrl"><label>Sort</label>
+          <select id="sort-listing_arb" onchange="renderListingArb()">
+            <option value="volume_24h">Volume</option>
+            <option value="change_24h">Change%</option>
+            <option value="market_cap">Market Cap</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Symbol</th><th>Name</th><th>Price</th>
+            <th>Volume 24h</th><th>Change 24h</th><th>Market Cap</th>
+            <th>Listed On</th><th>Missing From</th>
+          </tr></thead>
+          <tbody id="tbody-listing_arb"><tr><td colspan="9"><div class="empty"><span class="empty-icon">💎</span>No arb candidates yet.<br/><small>python src/agents/listing_arb_agent.py --once</small></div></td></tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -1362,7 +1623,10 @@ const renderers = {
   monte_carlo: renderMonteCarlo,
   vwap:        renderVwap,
   psychology:  renderPsychology,
-  llm_status:  renderLlmStatus,
+  llm_status:    renderLlmStatus,
+  chart_analysis: renderChartAnalysis,
+  websearch:      renderWebsearch,
+  listing_arb:    r => '',
 };
 
 function render(panel) {
@@ -1373,7 +1637,7 @@ function render(panel) {
 }
 
 // ── fetch all data ─────────────────────────────────────────
-const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','forward_test','prop_firm','pending_signals','signal_log','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status'];
+const PANELS = ['backtest','trades','whale','liquidation','sentiment','risk','swarm','ict','ict_exec','ict_bt','forward_test','prop_firm','pending_signals','signal_log','funding_arb','copy_bot','regime','monte_carlo','vwap','psychology','llm_status','chart_analysis','websearch','listing_arb'];
 
 async function fetchPanel(panel) {
   try {
@@ -1451,7 +1715,22 @@ async function refresh() {
     ...PANELS.map(p => fetchPanel(p)),
     fetchSummary(),
     fetchStatus(),
+    loadVault(),
+    loadWebsearchData(),
   ]);
+  // Update listing arb separately
+  try {
+    const d = await fetch('/api/data/listing_arb').then(r=>r.json());
+    arbRows = d.rows||[];
+    renderListingArb();
+    document.getElementById('n-listing_arb').textContent = arbRows.length;
+  } catch(e) {}
+  // Chart analysis count
+  try {
+    const nc = document.getElementById('n-chart_analysis');
+    const d  = await fetch('/api/data/chart').then(r=>r.json());
+    if(nc) nc.textContent = (d.rows||[]).length;
+  } catch(e) {}
 }
 
 // Initial load + interval
@@ -1574,6 +1853,284 @@ function showToast(msg) {
 // Poll pending signals every 15 seconds
 loadPendingSignals();
 setInterval(loadPendingSignals, 15000);
+
+
+// ── Vault ──────────────────────────────────────────────────────
+async function loadVault() {
+  try {
+    const d  = await fetch('/api/vault').then(r=>r.json());
+    const st = d.strategies || [];
+    const el = document.getElementById('vault-cards-container');
+    document.getElementById('n-vault').textContent = st.length;
+    if(!el) return;
+    if(!st.length){ el.innerHTML='<div class="empty"><span class="empty-icon">🏛️</span>No strategies vaulted yet</div>'; return; }
+    el.innerHTML = st.map(s => {
+      const ret = parseFloat(s.return_pct||0);
+      const retCol = ret>0?'var(--green)':'var(--red)';
+      const sh  = parseFloat(s.sharpe||0);
+      const shCol = sh>=2?'var(--green)':sh>=1?'var(--yellow)':'var(--muted2)';
+      const sym = (s.symbols||[s.symbol]||[]).join(', ');
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;transition:border-color .15s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem">
+          <div>
+            <div style="font-family:'Chakra Petch',sans-serif;font-size:1rem;font-weight:700">${s.name}</div>
+            <div style="font-size:.62rem;color:var(--muted2);margin-top:.15rem">${sym} · ${s.timeframe||'—'}</div>
+          </div>
+          <span class="badge badge-g">✅ VAULTED</span>
+        </div>
+        <div style="font-size:.65rem;color:var(--muted2);line-height:1.5;margin-bottom:.7rem">${(s.idea||'').slice(0,90)}...</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Return</div>
+            <div style="font-size:.95rem;font-weight:700;color:${retCol}">${ret>0?'+':''}${ret.toFixed(1)}%</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Sharpe</div>
+            <div style="font-size:.95rem;font-weight:700;color:${shCol}">${sh.toFixed(2)}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Drawdown</div>
+            <div style="font-size:.95rem;font-weight:700;color:var(--red)">${s.max_drawdown||0}%</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:.5rem .7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Win Rate</div>
+            <div style="font-size:.95rem;font-weight:700;color:var(--green)">${s.win_rate||0}%</div>
+          </div>
+        </div>
+        <div style="font-size:.6rem;color:var(--muted2);margin-top:.5rem">${s.num_trades||0} trades · Added ${s.date_added||'—'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ── Kill Zones ─────────────────────────────────────────────────
+const KZ_LIST = [
+  {n:'Asian KZ',    s:1200,e:1440,col:'#aa66ff',asian:true},
+  {n:'London KZ',   s:120, e:300, col:'#4488ff'},
+  {n:'New York AM', s:510, e:660, col:'#00ff88'},
+  {n:'New York PM', s:810, e:960, col:'#ffcc00'},
+];
+const MACRO_LIST = [
+  {n:'Macro 09:50', s:590,e:610, note:'4H open — most important (PO3)'},
+  {n:'Macro 10:50', s:650,e:670, note:''},
+  {n:'Macro 13:50', s:830,e:850, note:''},
+  {n:'Macro 15:50', s:950,e:970, note:''},
+  {n:'London 02:50',s:170,e:190, note:''},
+  {n:'London 03:50',s:230,e:250, note:''},
+];
+function h2(hm){const h=Math.floor(hm/60)%24,m=hm%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
+function renderKZ(){
+  const est=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const hm=est.getHours()*60+est.getMinutes();
+  const utcEl=document.getElementById('kz-utc');
+  if(utcEl) utcEl.textContent=new Date().toISOString().slice(11,16)+' UTC';
+  const kzEl=document.getElementById('kz-cards');
+  const macEl=document.getElementById('macro-cards');
+  if(kzEl) kzEl.innerHTML=KZ_LIST.map(k=>{
+    const active=k.asian?hm>=1200:(hm>=k.s&&hm<k.e);
+    return `<div style="background:var(--card);border:1px solid ${active?k.col:'var(--border)'};border-radius:8px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem;${active?'box-shadow:0 0 12px '+k.col+'40':''}">
+      <div style="width:10px;height:10px;border-radius:50%;background:${active?k.col:'var(--muted)'};${active?'box-shadow:0 0 8px '+k.col:''}"></div>
+      <div>
+        <div style="font-weight:700;font-size:.85rem">${k.n}</div>
+        <div style="font-size:.62rem;color:var(--muted2)">EST ${h2(k.s)}–${h2(k.e%1440)}</div>
+        <div style="font-size:.62rem;color:var(--muted2)">EAT ${h2((k.s+420)%1440)}–${h2((k.e+420)%1440)}</div>
+        ${active?`<span class="badge badge-g" style="margin-top:.3rem;background:${k.col}20;border-color:${k.col};color:${k.col}">● ACTIVE NOW</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  if(macEl) macEl.innerHTML=MACRO_LIST.map(m=>{
+    const active=hm>=m.s&&hm<m.e;
+    return `<div style="background:var(--card);border:1px solid ${active?'var(--yellow)':'var(--border)'};border-radius:8px;padding:.9rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="width:10px;height:10px;border-radius:50%;background:${active?'var(--yellow)':'var(--muted)'};${active?'box-shadow:0 0 8px var(--yellow)':''}"></div>
+      <div>
+        <div style="font-weight:700;font-size:.85rem">${m.n}</div>
+        <div style="font-size:.62rem;color:var(--muted2)">EST ${h2(m.s)}–${h2(m.e)}</div>
+        <div style="font-size:.62rem;color:var(--muted2)">EAT ${h2((m.s+420)%1440)}–${h2((m.e+420)%1440)}</div>
+        ${m.note?`<div style="font-size:.6rem;color:var(--yellow)">${m.note}</div>`:''}
+        ${active?'<span class="badge badge-y" style="margin-top:.3rem">● ACTIVE NOW</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+setInterval(renderKZ, 30000);
+renderKZ();
+
+// ── Chart Analysis ─────────────────────────────────────────────
+function renderChartAnalysis(rows) {
+  if(!rows||!rows.length) return '<tr><td colspan="12"><div class="empty"><span class="empty-icon">📸</span>No chart analyses yet.<br/><small>python src/agents/chart_agent.py --image /path/to/chart.png</small></div></td></tr>';
+  const GC = {'A+':'badge-r','A':'badge-y','B':'badge-b'};
+  const SC = {'LONG':'badge-g','SHORT':'badge-r','NO_TRADE':'badge-p'};
+  return [...rows].reverse().map(r => {
+    const pats = (r.patterns||'').split('|').filter(Boolean);
+    return '<tr>' +
+      '<td style="color:var(--muted2);font-size:.65rem">' + ts(r.timestamp||'') + '</td>' +
+      '<td>' + badge(r.symbol||'—','badge-b') + '</td>' +
+      '<td style="color:var(--muted2)">' + (r.timeframe||'—') + '</td>' +
+      '<td>' + badge(r.signal||'NO_TRADE', SC[r.signal]||'badge-p') + '</td>' +
+      '<td>' + (r.setup_grade?badge(r.setup_grade, GC[r.setup_grade]||'badge-y'):'—') + '</td>' +
+      '<td style="color:var(--muted2)">' + Math.round((parseFloat(r.confidence||0))*100) + '%</td>' +
+      '<td style="font-size:.7rem;color:var(--muted2)">' + (r.trend||'—') + '</td>' +
+      '<td style="font-size:.65rem">' + pats.map(p=>'<span class="badge badge-b" style="margin-right:.2rem">'+p+'</span>').join('') + '</td>' +
+      '<td class="mono" style="color:var(--text)">' + (r.entry||'—') + '</td>' +
+      '<td class="mono" style="color:var(--red)">' + (r.stop_loss||'—') + '</td>' +
+      '<td class="mono" style="color:var(--green)">' + (r.target||'—') + '</td>' +
+      '<td style="font-size:.65rem;color:var(--muted2);max-width:200px">' + (r.reasoning||'—').slice(0,80) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── Websearch ──────────────────────────────────────────────────
+async function loadWebsearchData() {
+  try {
+    // Load system data for idea count
+    const sys = await fetch('/api/system').then(r=>r.json());
+    const el = document.getElementById('ws-idea-count');
+    if(el) el.textContent = sys.idea_count || '—';
+    // Update new stat bar items
+    const vc = document.getElementById('s-vault-count');
+    if(vc) vc.textContent = sys.vault_count || '—';
+    const ic = document.getElementById('s-ideas-count');
+    if(ic) ic.textContent = sys.idea_count || '—';
+    const as = document.getElementById('s-avg-sharpe');
+    if(as) as.textContent = sys.avg_sharpe || '—';
+    const pc = document.getElementById('s-pending-count');
+    if(pc) pc.textContent = sys.pending_signals || '—';
+    const cc = document.getElementById('s-chart-count');
+    if(cc) cc.textContent = sys.chart_analyses || '—';
+    const ac = document.getElementById('s-arb-count');
+    if(ac) ac.textContent = sys.arb_candidates || '—';
+  } catch(e) {}
+}
+
+function renderWebsearch(rows) {
+  if(!rows||!rows.length) return '<tr><td colspan="4"><div class="empty"><span class="empty-icon">🔍</span>No websearch runs yet.<br/><small>python src/agents/websearch_agent.py</small></div></td></tr>';
+  return [...rows].reverse().map(r => '<tr>' +
+    '<td style="color:var(--muted2);font-size:.65rem">' + ts(r.timestamp||'') + '</td>' +
+    '<td style="color:var(--green);font-weight:600">' + (r.ideas_added||0) + '</td>' +
+    '<td style="color:var(--muted2)">' + (r.queries||r.queries_used||'—') + '</td>' +
+    '<td>' + badge(r.mode||'search','badge-b') + '</td>' +
+  '</tr>').join('');
+}
+
+// ── Listing Arb ────────────────────────────────────────────────
+let arbRows = [];
+function renderListingArb() {
+  const q    = (document.getElementById('q-listing_arb')||{value:''}).value.toLowerCase();
+  const sk   = (document.getElementById('sort-listing_arb')||{value:'volume_24h'}).value;
+  let rows   = arbRows.filter(r=>!q||(r.symbol||'').toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
+  rows.sort((a,b)=>parseFloat(b[sk]||0)-parseFloat(a[sk]||0));
+  const tbody = document.getElementById('tbody-listing_arb');
+  if(!tbody) return;
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty"><span class="empty-icon">💎</span>No arb candidates yet.</div></td></tr>'; return; }
+  function fmt(n){n=parseInt(n)||0;return n>1e9?'$'+(n/1e9).toFixed(1)+'B':n>1e6?'$'+(n/1e6).toFixed(1)+'M':n>1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n;}
+  tbody.innerHTML = rows.slice(0,100).map(r => {
+    const chg  = parseFloat(r.change_24h||0);
+    const miss = (r.missing_from||'').split('|').filter(Boolean);
+    return '<tr>' +
+      '<td style="color:var(--muted2);font-size:.65rem">' + ts(r.timestamp||'') + '</td>' +
+      '<td style="font-weight:700">' + (r.symbol||'—') + '</td>' +
+      '<td style="font-size:.75rem">' + (r.name||'—') + '</td>' +
+      '<td class="mono">$' + parseFloat(r.price||0).toFixed(4) + '</td>' +
+      '<td class="mono" style="color:var(--blue)">' + fmt(r.volume_24h) + '</td>' +
+      '<td class="mono" style="color:' + (chg>0?'var(--green)':'var(--red)') + '">' + (chg>0?'+':'') + chg.toFixed(1) + '%</td>' +
+      '<td class="mono">' + fmt(r.market_cap) + '</td>' +
+      '<td style="font-size:.68rem;color:var(--muted2)">' + (r.listed_on||'').split('|').join(', ') + '</td>' +
+      '<td>' + miss.map(e=>'<span class="badge badge-r" style="margin-right:.2rem">'+e+'</span>').join('') + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+
+// ── Controls ───────────────────────────────────────────────
+async function runAgent(name) {
+  const btn = document.getElementById('btn-'+name);
+  if(btn) { btn.classList.add('running'); btn.textContent = '⏳ Running...'; }
+  try {
+    const r = await fetch('/api/control/run/'+name, {method:'POST'});
+    const d = await r.json();
+    if(d.error) {
+      showToast('❌ '+d.error, 'error');
+      if(btn) btn.classList.remove('running');
+    } else if(d.message) {
+      showToast('✅ '+d.message);
+      if(btn){ btn.classList.remove('running'); btn.textContent = '✅ Done'; }
+    } else {
+      showToast('🚀 Started: '+d.desc);
+    }
+  } catch(e) {
+    showToast('❌ Failed: '+e, 'error');
+    if(btn) btn.classList.remove('running');
+  }
+  setTimeout(updateControlStatus, 1000);
+}
+
+async function stopAgent(name) {
+  await fetch('/api/control/stop/'+name, {method:'POST'});
+  updateControlStatus();
+  showToast('⏹ Stopped: '+name);
+}
+
+async function stopAll() {
+  const r = await fetch('/api/control/stop_all', {method:'POST'});
+  const d = await r.json();
+  showToast('⏹ Stopped: '+(d.stopped||[]).join(', ')||'nothing running');
+  updateControlStatus();
+}
+
+const AGENT_LABELS = {
+  rbi_futures: '⚡ Futures',
+  rbi_crypto:  '🪙 Crypto',
+  rbi_all:     '🌐 All Markets',
+  websearch:   '🔍 Run Search',
+  notify:      '👁 Notify Mode',
+  manual:      '👆 Manual Mode',
+  listing_arb: '💎 Scan Now',
+  vault_list:  '📋 List Candidates',
+  clear_cache: '🗑 Clear Cache',
+};
+
+async function updateControlStatus() {
+  try {
+    const d = await fetch('/api/control/status').then(r=>r.json());
+    let running = 0;
+    const pills = document.getElementById('ctrl-status-pills');
+    if(pills) pills.innerHTML = '';
+    for(const [name, status] of Object.entries(d)) {
+      const btn = document.getElementById('btn-'+name);
+      if(btn) {
+        if(status === 'running') {
+          btn.classList.add('running');
+          btn.textContent = '⏳ Running...';
+          running++;
+          if(pills) pills.innerHTML += `<span class="agent-pill active"><div class="agent-dot"></div>${name}</span>`;
+        } else {
+          btn.classList.remove('running');
+          if(btn.textContent === '⏳ Running...') {
+            btn.textContent = AGENT_LABELS[name] || name;
+            btn.classList.add('finished');
+            setTimeout(()=>btn.classList.remove('finished'), 3000);
+          }
+        }
+      }
+    }
+    const nc = document.getElementById('n-running');
+    if(nc) { nc.textContent = running; nc.style.display = running>0?'':'none'; }
+    if(!pills.innerHTML) pills.innerHTML = '<span style="font-size:.65rem;color:var(--muted2)">No agents running</span>';
+  } catch(e) {}
+}
+
+// Poll control status every 5 seconds
+updateControlStatus();
+setInterval(updateControlStatus, 5000);
+
+function showToast(msg, type='ok') {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  const col = type==='error' ? 'var(--red)' : 'var(--green)';
+  t.style.cssText = `position:fixed;bottom:2rem;right:2rem;background:var(--card);border:1px solid ${col};color:var(--text);padding:.75rem 1.25rem;border-radius:8px;font-size:.8rem;z-index:9999;font-family:'IBM Plex Mono',monospace`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
 
 </script>
 </body>

@@ -2,59 +2,210 @@
   "strategies": [
     {
       "name": "HistogramFade",
-      "symbol": "MES, MNQ, MYM",
+      "symbol": "MES",
+      "symbols": [
+        "MES",
+        "MNQ",
+        "MYM"
+      ],
       "timeframe": "15m",
-      "file": "HistogramFade_15m.py",
-      "vaulted_at": "2026-03-28T22:13:24.525368",
-      "discovery": {
-        "MES": {
-          "sharpe": 2.2,
-          "return": 436.2,
-          "drawdown": -4.2,
-          "trades": 192,
-          "win_rate": 66.2
-        },
-        "MNQ": {
-          "sharpe": 1.7,
-          "return": 162.6,
-          "drawdown": -10.6,
-          "trades": 215,
-          "win_rate": 55.8
-        },
-        "MYM": {
-          "sharpe": 2.46,
-          "return": 81.2,
-          "drawdown": -4.7,
-          "trades": 186,
-          "win_rate": 51.1
-        }
-      },
-      "optimised": {
-        "optimised": false
-      },
-      "idea": "MACD histogram inflection point \u2014 long when histogram below zero and rising, short when above zero and falling.",
-      "notes": "Works across all three micro futures. Best on MES 15m (Sharpe 2.20)."
+      "return_pct": 436.2,
+      "max_drawdown": -4.2,
+      "sharpe": 2.2,
+      "num_trades": 192,
+      "win_rate": 66.2,
+      "idea": "Long when MACD histogram turns from negative to less negative meaning histogram starts rising indicating bullish momentum building",
+      "description": "MACD histogram inflection point momentum strategy",
+      "vault_file": "HistogramFade_15m.py",
+      "date_added": "2026-01-15"
     },
     {
       "name": "VolumeSpikeFade",
       "symbol": "MES",
+      "symbols": [
+        "MES"
+      ],
       "timeframe": "15m",
-      "file": "VolumeSpikeFade_MES_15m.py",
-      "vaulted_at": "2026-03-28T22:03:03.984865",
-      "discovery": {
-        "sharpe": 1.62,
-        "return": 178.3,
-        "drawdown": -7.8,
-        "trades": 501,
-        "win_rate": 61.7
-      },
-      "optimised": {
-        "optimised": false,
-        "note": "Hand-coded \u2014 run --rerun to optimise"
-      },
-      "idea": "Short when volume is 3x the 20-bar average on an up bar and price closes in the lower 25 percent of bar range. Long when volume is 3x the 20-bar average on a down bar and price closes in the upper 25 percent of bar range.",
-      "notes": "Only confirmed on MES 15m. Blew up on MNQ 15m. Forward test MES only."
+      "return_pct": 178.3,
+      "max_drawdown": -8.1,
+      "sharpe": 1.62,
+      "num_trades": 501,
+      "win_rate": 61.7,
+      "idea": "Short when volume is 3x the 20-bar average on an up bar and price closes in the lower 25 percent of its range indicating supply climax",
+      "description": "Volume spike exhaustion fade strategy",
+      "vault_file": "VolumeSpikeFade_MES_15m.py",
+      "date_added": "2026-01-20"
+    },
+    {
+      "name": "RSIOverbought",
+      "symbol": "MES",
+      "symbols": [
+        "MES"
+      ],
+      "timeframe": "15m",
+      "return_pct": 214.8,
+      "max_drawdown": -9.4,
+      "sharpe": 1.61,
+      "num_trades": 593,
+      "win_rate": 62.9,
+      "idea": "Short when RSI rises above 70 and price is below the 200 EMA, exit when RSI falls back below 50",
+      "description": "RSI overbought short with EMA filter",
+      "vault_file": "RSIOverbought_MES_15m.py",
+      "date_added": "2026-02-01"
+    },
+    {
+      "name": "ZScoreReversion",
+      "symbol": "MES",
+      "symbols": [
+        "MES"
+      ],
+      "timeframe": "4H",
+      "return_pct": 44.0,
+      "max_drawdown": -5.2,
+      "sharpe": 1.66,
+      "num_trades": 46,
+      "win_rate": 89.1,
+      "idea": "Short when the 20-bar z-score of price rises above positive 2.0, exit when z-score returns to zero",
+      "description": "Z-score mean reversion strategy",
+      "vault_file": "ZScoreReversion_MES_4H.py",
+      "date_added": "2026-02-01"
+    },
+    {
+      "name": "SupplyClimax",
+      "symbol": "MES",
+      "symbols": [
+        "MES"
+      ],
+      "timeframe": "1H",
+      "return_pct": 121.0,
+      "max_drawdown": -12.3,
+      "sharpe": 1.17,
+      "num_trades": 78,
+      "win_rate": 21.8,
+      "idea": "Short when a wide spread up bar closes on its low with very high volume indicating supply climax and smart money distribution",
+      "description": "Supply climax volume spread analysis",
+      "vault_file": "SupplyClimax_MES_1H.py",
+      "date_added": "2026-02-01"
+    },
+    {
+      "name": "SAR Flip",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 22.13,
+      "max_drawdown": -4.25,
+      "sharpe": 1.436,
+      "num_trades": 184,
+      "win_rate": 40.76,
+      "idea": "Long when Parabolic SAR flips from above price to below price, stop at SAR level",
+      "description": "",
+      "vault_file": "SARFlip_TAO_4H.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "RSI Reversal",
+      "symbol": "WIF",
+      "symbols": [
+        "WIF"
+      ],
+      "timeframe": "15m",
+      "return_pct": 3.48,
+      "max_drawdown": -1.38,
+      "sharpe": 1.15,
+      "num_trades": 47,
+      "win_rate": 55.32,
+      "idea": "Short when RSI rises above 70 and price is below the 200 EMA, exit when RSI fall",
+      "description": "",
+      "vault_file": "RSIReversal_WIF_15m.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "CloudBreakoutLong",
+      "symbol": "SOL",
+      "symbols": [
+        "SOL"
+      ],
+      "timeframe": "4H",
+      "return_pct": 60.22,
+      "max_drawdown": -7.77,
+      "sharpe": 1.116,
+      "num_trades": 233,
+      "win_rate": 25.32,
+      "idea": "Long when price breaks above the Ichimoku cloud and tenkan-sen is above kijun-se",
+      "description": "",
+      "vault_file": "CloudBreakoutLong_SOL_4H.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "RSI Reversal",
+      "symbol": "ETH",
+      "symbols": [
+        "ETH"
+      ],
+      "timeframe": "4H",
+      "return_pct": 2.78,
+      "max_drawdown": -0.49,
+      "sharpe": 1.078,
+      "num_trades": 12,
+      "win_rate": 66.67,
+      "idea": "Short when RSI rises above 70 and price is below the 200 EMA, exit when RSI fall",
+      "description": "",
+      "vault_file": "RSIReversal_ETH_4H.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "SAR Reversal",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 13.27,
+      "max_drawdown": -5.36,
+      "sharpe": 1.071,
+      "num_trades": 184,
+      "win_rate": 44.02,
+      "idea": "Short when Parabolic SAR flips from below price to above price, stop at SAR leve",
+      "description": "",
+      "vault_file": "SARReversal_TAO_4H.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "HighRetraceShort",
+      "symbol": "BNB",
+      "symbols": [
+        "BNB"
+      ],
+      "timeframe": "4H",
+      "return_pct": 8.73,
+      "max_drawdown": -1.31,
+      "sharpe": 1.026,
+      "num_trades": 48,
+      "win_rate": 50.0,
+      "idea": "Short when price makes a new 20-bar high then within the next 3 bars makes a sin",
+      "description": "",
+      "vault_file": "HighRetraceShort_BNB_4H.py",
+      "date_added": "2026-03-31"
+    },
+    {
+      "name": "GapRetracementMidpoint",
+      "symbol": "RNDR",
+      "symbols": [
+        "RNDR"
+      ],
+      "timeframe": "1H",
+      "return_pct": 0.63,
+      "max_drawdown": -0.29,
+      "sharpe": 1.018,
+      "num_trades": 22,
+      "win_rate": 54.55,
+      "idea": "Long when price retraces into the midpoint of the lowest gap in the past 20 bars",
+      "description": "",
+      "vault_file": "GapRetracementMidpoint_RNDR_1H.py",
+      "date_added": "2026-03-31"
     }
   ],
-  "last_updated": "2026-03-28T22:13:24.525386"
+  "last_updated": "2026-03-28T23:27:19.437220"
 }
