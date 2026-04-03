@@ -404,6 +404,7 @@ def run_single_backtest(args: tuple) -> dict | None:
 
             try:
                 stats = bt.run()
+                trades_df = stats._trades   # individual trade log
             finally:
                 if _threading.current_thread() is _threading.main_thread():
                     _signal.alarm(0)   # cancel alarm
@@ -413,6 +414,20 @@ def run_single_backtest(args: tuple) -> dict | None:
             sharpe      = float(stats.get("Sharpe Ratio", 0) or 0)
             num_trades  = int(stats["# Trades"])
             win_rate    = float(stats.get("Win Rate [%]", 0) or 0)
+
+            # Risk:Reward ratio — avg win / avg loss (absolute)
+            avg_win  = float(stats.get("Avg. Winning Trade [%]", 0) or 0)
+            avg_loss = abs(float(stats.get("Avg. Losing Trade [%]", 0) or 0))
+            rr_ratio = round(avg_win / avg_loss, 2) if avg_loss > 0 else 0.0
+
+            # Profit factor — gross profit / gross loss
+            profit_factor = float(stats.get("Profit Factor", 0) or 0)
+            profit_factor = round(min(profit_factor, 999.0), 2)  # cap infinity
+
+            # Expectancy — avg $ per trade (normalised as % of equity)
+            # = (win_rate * avg_win) - (loss_rate * avg_loss)
+            wr_dec   = win_rate / 100
+            expectancy = round((wr_dec * avg_win) - ((1 - wr_dec) * avg_loss), 3)
 
             # Sanity check — reject overflow results
             # Real strategies cannot return more than 100,000% over 5 years
@@ -428,6 +443,45 @@ def run_single_backtest(args: tuple) -> dict | None:
             MIN_SAVE_RETURN = 0.0   # save anything profitable
             # (set to 1.0 to only save results with >1% return)
 
+            # ── Per-year breakdown ────────────────────────────
+            yearly = {}
+            try:
+                if trades_df is not None and len(trades_df) > 0:
+                    import pandas as _pd
+                    tdf = trades_df.copy()
+                    # EntryTime may be datetime or index — normalise
+                    if "EntryTime" in tdf.columns:
+                        tdf["_year"] = _pd.to_datetime(tdf["EntryTime"]).dt.year
+                    elif "Entry Time" in tdf.columns:
+                        tdf["_year"] = _pd.to_datetime(tdf["Entry Time"]).dt.year
+                    else:
+                        tdf["_year"] = None
+
+                    if tdf["_year"].notna().any():
+                        # PnL column — backtesting uses ReturnPct or PnL
+                        pnl_col = None
+                        for col in ["ReturnPct","Return [%]","PnL","Profit"]:
+                            if col in tdf.columns:
+                                pnl_col = col
+                                break
+
+                        for yr, grp in tdf.groupby("_year"):
+                            n_trades = len(grp)
+                            if pnl_col:
+                                n_wins = int((grp[pnl_col] > 0).sum())
+                                yr_ret = round(float(grp[pnl_col].sum()), 2)
+                            else:
+                                n_wins = 0
+                                yr_ret = 0.0
+                            yearly[str(yr)] = {
+                                "trades":   n_trades,
+                                "wins":     n_wins,
+                                "win_pct":  round(n_wins / n_trades * 100, 1) if n_trades else 0,
+                                "return":   yr_ret,
+                            }
+            except Exception:
+                yearly = {}
+
             result = {
                 "symbol":       symbol,
                 "timeframe":    timeframe,
@@ -437,6 +491,12 @@ def run_single_backtest(args: tuple) -> dict | None:
                 "sharpe":       round(sharpe, 3),
                 "num_trades":   num_trades,
                 "win_rate":     round(win_rate, 2),
+                "rr_ratio":     rr_ratio,
+                "profit_factor":profit_factor,
+                "expectancy":   expectancy,
+                "avg_win_pct":  round(avg_win, 3),
+                "avg_loss_pct": round(avg_loss, 3),
+                "yearly":       yearly,
             }
             safe_print(f"    ✅ {spec_name} | {symbol} {timeframe}: "
                        f"return={result['return_pct']:+.1f}% "
@@ -519,7 +579,7 @@ def is_vaulted(idea: str, vaulted_ideas: set) -> bool:
     return False
 
 
-def save_results(idea: str, spec: dict, all_stats: list):
+def save_results(idea: str, spec: dict, all_stats: list, code: str = ""):
     today   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     out_dir = RESULTS_DIR / today
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -528,7 +588,21 @@ def save_results(idea: str, spec: dict, all_stats: list):
     # Per-strategy JSON
     result = {"idea": idea, "spec": spec, "results": all_stats,
                "timestamp": datetime.now().isoformat()}
+    result["code"] = code   # save generated code for vaulting
     (out_dir / f"{name}_parallel.json").write_text(json.dumps(result, indent=2))
+
+    # Also save as standalone .py file — makes vaulting easy
+    if code:
+        (out_dir / f"{name}.py").write_text(
+            f"# Strategy: {name}\n"
+            f"# Idea: {idea[:100]}\n"
+            f"# Generated: {today}\n\n"
+            f"import numpy as np\nimport pandas as pd\n"
+            f"import ta as ta_lib\nimport ta\n"
+            f"from backtesting import Strategy\n"
+            f"from backtesting.lib import crossover\n\n"
+            + code
+        )
 
     # Append to master CSV
     csv_path = RESULTS_DIR / "backtest_stats.csv"
@@ -613,7 +687,7 @@ class ParallelRBIAgent:
             safe_print(f"     🏆 Best: {best['symbol']} {best['timeframe']} "
                        f"→ {best['return_pct']:+.1f}% | Sharpe {best['sharpe']:.2f}")
 
-            save_results(idea, spec, all_stats)
+            save_results(idea, spec, all_stats, code=code)
 
         self.processed[h] = {
             "idea":      idea,

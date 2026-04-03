@@ -65,7 +65,7 @@ MIN_SHARPE_FUTURES  = 1.5
 MIN_RETURN_FUTURES  = 5.0
 # Crypto (Hyperliquid): lower bar — own capital, no drawdown limits
 MIN_SHARPE_CRYPTO   = 1.0
-MIN_RETURN_CRYPTO   = 0.0
+MIN_RETURN_CRYPTO   = 5.0
 
 # Shared thresholds
 MIN_TRADES     = 10      # minimum number of trades

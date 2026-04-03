@@ -251,3 +251,14 @@ if __name__ == "__main__":
         agent.detect()
     else:
         agent.run()
+
+from openbb import obb
+
+# Fed funds rate
+obb.economy.interest_rates()
+
+# Jobs data
+obb.economy.unemployment()
+
+# Earnings calendar (useful for MES/ES trading around earnings)
+obb.equity.calendar.earnings(start_date="2026-04-01")

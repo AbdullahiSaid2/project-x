@@ -460,6 +460,7 @@ td { padding: .6rem 1rem; vertical-align: middle; }
   <div class="stat"><div class="stat-label">Arb Candidates</div><div class="stat-value g" id="s-arb-count">—</div><div class="stat-sub">pre-listing tokens</div></div>
   <div class="stat"><div class="stat-label">Live Trades</div><div class="stat-value y" id="s-trades">—</div><div class="stat-sub">since session start</div></div>
   <div class="stat"><div class="stat-label">Sentiment</div><div class="stat-value" id="s-sent">—</div><div class="stat-sub" id="s-sent-score">score —</div></div>
+  <div class="stat" id="apex-stat" style="display:none"><div class="stat-label">Apex P&L</div><div class="stat-value" id="s-apex-pnl">—</div><div class="stat-sub" id="s-apex-sub">—</div></div>
 </div>
 
 <!-- ── Layout ── -->
@@ -558,6 +559,10 @@ td { padding: .6rem 1rem; vertical-align: middle; }
       <span>🎮</span> Controls
       <span class="nav-count" id="n-running" style="background:var(--green-dim);color:var(--green)">0</span>
     </div>
+    <div class="nav-item" onclick="switchPanel('apex_eval')">
+      <span>🏛️</span> Apex Eval
+      <span class="nav-count" id="n-apex" style="">—</span>
+    </div>
 
     <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
 
@@ -616,8 +621,9 @@ td { padding: .6rem 1rem; vertical-align: middle; }
         <table>
           <thead><tr>
             <th>Strategy</th><th>Symbol</th><th>TF</th>
-            <th>Return %</th><th>B&H %</th><th>Drawdown %</th>
-            <th>Sharpe</th><th>Trades</th><th>Win %</th><th>Date</th>
+            <th>Return %</th><th>Drawdown %</th>
+            <th>Sharpe</th><th>R:R</th><th>Profit F</th>
+            <th>Expectancy</th><th>Trades</th><th>Win %</th><th>By Year</th><th>Date</th>
           </tr></thead>
           <tbody id="tbody-backtest"><tr><td colspan="10"><div class="empty"><span class="empty-icon">📊</span>Waiting for RBI agent to run...<br/><small>python src/agents/rbi_agent.py</small></div></td></tr></tbody>
         </table>
@@ -958,6 +964,40 @@ td { padding: .6rem 1rem; vertical-align: middle; }
           </div>
         </div>
 
+        <!-- Forward Testing -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">📈 Forward Tester</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Runs vaulted strategies on live data. Auto mode executes via PickMyTrade (futures) and Hyperliquid (crypto). Notify mode logs only.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('forward_futures')" id="btn-forward_futures">⚡ Futures Auto</button>
+            <button class="ctrl-btn" onclick="runAgent('forward_crypto')" id="btn-forward_crypto">🪙 Crypto Auto</button>
+            <button class="ctrl-btn btn-ghost" onclick="runAgent('forward_notify')" id="btn-forward_notify">👁 Notify All</button>
+            <button class="ctrl-stop" onclick="stopAgent('forward_futures');stopAgent('forward_crypto');stopAgent('forward_notify')">⏹ Stop</button>
+          </div>
+          <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted2)">Futures → PickMyTrade → Apex &nbsp;|&nbsp; Crypto → Hyperliquid direct</div>
+        </div>
+
+        <!-- Connections -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🔌 Connections</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Test exchange connections before running live. Check PickMyTrade and Hyperliquid are properly configured.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('pmt_test')" id="btn-pmt_test">🔗 Test PickMyTrade</button>
+            <button class="ctrl-btn" onclick="runAgent('hl_test')" id="btn-hl_test">⚡ Test Hyperliquid</button>
+            <button class="ctrl-btn" onclick="runAgent('apex_news')" id="btn-apex_news">📰 News Events</button>
+          </div>
+        </div>
+
+        <!-- Apex Status -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🏆 Apex Eval</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Check current evaluation standing — daily drawdown, max drawdown, profit target progress, and news filter status.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('apex_status')" id="btn-apex_status">📊 Check Status</button>
+            <button class="ctrl-btn btn-ghost" onclick="switchPanel('apex_eval')">🔎 Full Dashboard</button>
+          </div>
+        </div>
+
         <!-- Quick Status -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
           <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.5rem">⚡ QUICK WORKFLOW</div>
@@ -1073,6 +1113,47 @@ td { padding: .6rem 1rem; vertical-align: middle; }
             <th>Listed On</th><th>Missing From</th>
           </tr></thead>
           <tbody id="tbody-listing_arb"><tr><td colspan="9"><div class="empty"><span class="empty-icon">💎</span>No arb candidates yet.<br/><small>python src/agents/listing_arb_agent.py --once</small></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ══ APEX EVAL PANEL ══ -->
+    <div class="panel" id="panel-apex_eval">
+      <div class="panel-header">
+        <div class="panel-title">🏆 APEX EVALUATION STATUS</div>
+        <div class="panel-meta">$50k account · Live tracking · <span id="apex-account-type">—</span></div>
+      </div>
+
+      <!-- Rules grid -->
+      <div style="padding:1.2rem 1.5rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem" id="apex-rules-grid">
+        <div class="empty" style="grid-column:1/-1">Loading Apex status...</div>
+      </div>
+
+      <!-- Progress bar -->
+      <div style="padding:0 1.5rem 1.2rem">
+        <div style="font-size:.6rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase;margin-bottom:.4rem">PROFIT TARGET PROGRESS</div>
+        <div style="background:var(--border);border-radius:4px;height:12px;overflow:hidden">
+          <div id="apex-progress-bar" style="height:100%;background:var(--green);border-radius:4px;width:0%;transition:width .5s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted2);margin-top:.3rem">
+          <span id="apex-progress-label">$0 / $3,000</span>
+          <span id="apex-progress-pct">0%</span>
+        </div>
+      </div>
+
+      <!-- Trade log -->
+      <div class="panel-header" style="border-top:1px solid var(--border)">
+        <div class="panel-title" style="font-size:.8rem">TRADE LOG</div>
+        <div class="panel-meta">Updated <span id="age-forward_test">—</span></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Strategy</th><th>Symbol</th><th>Dir</th>
+            <th>Entry</th><th>SL</th><th>TP</th><th>R:R</th><th>Status</th>
+          </tr></thead>
+          <tbody id="tbody-apex-trades"><tr><td colspan="9"><div class="empty"><span class="empty-icon">📈</span>No trades yet.<br/><small>Run vault_forward_test.py --market futures</small></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1230,6 +1311,19 @@ function safeReturn(val) {
   if (Math.abs(n) > 100000) return {text: '⚠️ overflow', colour: 'var(--yellow)'};
   const colour = n > 0 ? 'var(--green)' : n < 0 ? 'var(--red)' : 'var(--muted)';
   return {text: (n > 0 ? '+' : '') + n.toFixed(1) + '%', colour};
+}
+
+function renderYearly(yearly) {
+  if(!yearly || !Object.keys(yearly).length) return '<span style="color:var(--muted2)">—</span>';
+  const years = Object.keys(yearly).sort();
+  return years.map(yr => {
+    const y   = yearly[yr];
+    const ret = parseFloat(y.return_pct||0);
+    const wr  = parseFloat(y.win_rate||0);
+    const col = ret > 0 ? 'var(--green)' : 'var(--red)';
+    const tip = `${yr}: ${y.trades}t ${wr.toFixed(0)}%wr ${ret>=0?'+':''}${ret.toFixed(1)}%`;
+    return `<span title="${tip}" style="display:inline-block;margin-right:2px;padding:1px 4px;border-radius:3px;background:${ret>0?'rgba(0,255,136,.12)':'rgba(255,51,85,.12)'};color:${col};font-size:.58rem;cursor:default">${String(yr).slice(2)}</span>`;
+  }).join('');
 }
 
 function renderBacktest(rows) {
@@ -2078,15 +2172,22 @@ async function stopAll() {
 }
 
 const AGENT_LABELS = {
-  rbi_futures: '⚡ Futures',
-  rbi_crypto:  '🪙 Crypto',
-  rbi_all:     '🌐 All Markets',
-  websearch:   '🔍 Run Search',
-  notify:      '👁 Notify Mode',
-  manual:      '👆 Manual Mode',
-  listing_arb: '💎 Scan Now',
-  vault_list:  '📋 List Candidates',
-  clear_cache: '🗑 Clear Cache',
+  rbi_futures:     '⚡ Futures',
+  rbi_crypto:      '🪙 Crypto',
+  rbi_all:         '🌐 All Markets',
+  websearch:       '🔍 Run Search',
+  notify:          '👁 Notify Mode',
+  manual:          '👆 Manual Mode',
+  listing_arb:     '💎 Scan Now',
+  vault_list:      '📋 List Candidates',
+  clear_cache:     '🗑 Clear Cache',
+  forward_futures: '⚡ Futures Auto',
+  forward_crypto:  '🪙 Crypto Auto',
+  forward_notify:  '👁 Notify All',
+  pmt_test:        '🔗 Test PickMyTrade',
+  hl_test:         '⚡ Test Hyperliquid',
+  apex_status:     '📊 Check Status',
+  apex_news:       '📰 News Events',
 };
 
 async function updateControlStatus() {
@@ -2130,6 +2231,129 @@ function showToast(msg, type='ok') {
   t.style.cssText = `position:fixed;bottom:2rem;right:2rem;background:var(--card);border:1px solid ${col};color:var(--text);padding:.75rem 1.25rem;border-radius:8px;font-size:.8rem;z-index:9999;font-family:'IBM Plex Mono',monospace`;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 4000);
+}
+
+
+// ── Apex Eval ──────────────────────────────────────────────
+async function loadApex() {
+  try {
+    const d = await fetch('/api/apex').then(r=>r.json());
+    if (!d.active) {
+      document.getElementById('apex-stat').style.display = 'none';
+      return;
+    }
+
+    // Stat bar
+    document.getElementById('apex-stat').style.display = '';
+    const pnlEl = document.getElementById('s-apex-pnl');
+    if (pnlEl) {
+      pnlEl.textContent = (d.total_pnl >= 0 ? '+' : '') + '$' + Math.abs(d.total_pnl).toFixed(0);
+      pnlEl.style.color = d.blown ? 'var(--red)' : d.passed ? 'var(--green)' : d.total_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+    const subEl = document.getElementById('s-apex-sub');
+    if (subEl) subEl.textContent = d.blown ? '💥 BLOWN' : d.passed ? '🎉 PASSED' : `${d.progress_pct}% to target`;
+
+    // Nav badge
+    const nb = document.getElementById('n-apex');
+    if (nb) {
+      nb.textContent = d.blown ? '💥' : d.passed ? '🎉' : `${d.progress_pct}%`;
+      nb.style.background = d.blown ? 'var(--red-dim)' : d.passed ? 'var(--green-dim)' : 'var(--border2)';
+      nb.style.color = d.blown ? 'var(--red)' : d.passed ? 'var(--green)' : 'var(--muted2)';
+    }
+
+    // Account type
+    const at = document.getElementById('apex-account-type');
+    if (at) at.textContent = (d.account_type || 'eval').toUpperCase() + ' ACCOUNT';
+
+    // Progress bar
+    const pct = Math.min(100, d.progress_pct || 0);
+    const pb = document.getElementById('apex-progress-bar');
+    if (pb) {
+      pb.style.width = pct + '%';
+      pb.style.background = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--blue)';
+    }
+    const pl = document.getElementById('apex-progress-label');
+    if (pl) pl.textContent = `$${(d.total_pnl||0).toFixed(0)} / $${d.profit_target||3000}`;
+    const pp = document.getElementById('apex-progress-pct');
+    if (pp) pp.textContent = pct.toFixed(1) + '%';
+
+    // Rules grid
+    const grid = document.getElementById('apex-rules-grid');
+    if (!grid) return;
+
+    const rules = [
+      {
+        label: 'Rule 1 — Daily Drawdown',
+        value: `$${(d.daily_dd||0).toFixed(0)} / $${d.daily_dd_limit||1000}`,
+        sub:   `$${((d.daily_dd_limit||1000) - (d.daily_dd||0)).toFixed(0)} remaining`,
+        ok:    (d.daily_dd||0) < (d.daily_dd_limit||1000),
+        warn:  (d.daily_dd||0) >= (d.daily_dd_limit||1000) * 0.75,
+      },
+      {
+        label: 'Rule 2 — Max Drawdown',
+        value: `$${(d.total_dd||0).toFixed(0)} / $${d.total_dd_limit||2000}`,
+        sub:   d.blown ? '💥 BLOWN' : `$${((d.total_dd_limit||2000)-(d.total_dd||0)).toFixed(0)} remaining`,
+        ok:    !d.blown && (d.total_dd||0) < (d.total_dd_limit||2000),
+        warn:  (d.total_dd||0) >= (d.total_dd_limit||2000)*0.75,
+      },
+      {
+        label: 'Rule 3 — Profit Target',
+        value: `$${(d.total_pnl||0).toFixed(0)} / $${d.profit_target||3000}`,
+        sub:   d.passed ? '🎉 PASSED!' : `${pct.toFixed(1)}% complete`,
+        ok:    true,
+        info:  true,
+      },
+      {
+        label: 'Rule 4 — News Filter',
+        value: 'Active',
+        sub:   'Closes trades 5min before high-impact USD news',
+        ok:    true,
+        info:  true,
+      },
+    ];
+
+    grid.innerHTML = rules.map(r => {
+      const col = r.blown || (!r.ok && !r.info) ? 'var(--red)'
+                : r.info || r.ok && !r.warn ? 'var(--green)'
+                : 'var(--yellow)';
+      const icon = r.blown || (!r.ok && !r.info) ? '🔴' : r.info ? '🔵' : r.warn ? '🟡' : '🟢';
+      return `<div style="background:var(--surface);border:1px solid ${col}40;border-radius:8px;padding:1rem">
+        <div style="font-size:.65rem;color:var(--muted2);margin-bottom:.3rem">${r.label}</div>
+        <div style="font-size:1.1rem;font-weight:700;color:${col}">${icon} ${r.value}</div>
+        <div style="font-size:.65rem;color:var(--muted2);margin-top:.2rem">${r.sub}</div>
+      </div>`;
+    }).join('');
+
+    // Trade log
+    const tbody = document.getElementById('tbody-apex-trades');
+    if (tbody && window._apexTrades && window._apexTrades.length) {
+      tbody.innerHTML = window._apexTrades.slice().reverse().slice(0,20).map(r => {
+        const dir = (r.direction||'').toUpperCase();
+        return `<tr>
+          <td style="font-size:.65rem;color:var(--muted2)">${(r.timestamp||'').slice(0,16)}</td>
+          <td style="font-size:.8rem">${r.strategy||'—'}</td>
+          <td>${badge(r.symbol||'—','badge-b')}</td>
+          <td>${badge(dir, dir==='LONG'?'badge-g':'badge-r')}</td>
+          <td class="mono">${r.entry||'—'}</td>
+          <td class="mono" style="color:var(--red)">${r.sl||'—'}</td>
+          <td class="mono" style="color:var(--green)">${r.tp||'—'}</td>
+          <td style="color:var(--yellow)">${parseFloat(r.rr||0).toFixed(1)}R</td>
+          <td>${badge(r.status||'pending', r.status==='EXECUTED'?'badge-g':r.status==='BLOCKED'?'badge-r':'badge-y')}</td>
+        </tr>`;
+      }).join('');
+    }
+
+  } catch(e) { console.error('Apex load error:', e); }
+}
+
+// Load forward test trades for Apex panel
+async function loadApexTrades() {
+  try {
+    const d = await fetch('/api/data/forward_test').then(r=>r.json());
+    window._apexTrades = (d.rows||[]).filter(r =>
+      ['MES','MNQ','MYM'].includes((r.symbol||'').toUpperCase())
+    );
+  } catch(e) {}
 }
 
 </script>

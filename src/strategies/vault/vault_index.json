@@ -205,6 +205,262 @@
       "description": "",
       "vault_file": "GapRetracementMidpoint_RNDR_1H.py",
       "date_added": "2026-03-31"
+    },
+    {
+      "name": "EMA_RSI_Reversion",
+      "symbol": "PEPE",
+      "symbols": [
+        "PEPE"
+      ],
+      "timeframe": "15m",
+      "return_pct": 25.37,
+      "max_drawdown": -5.56,
+      "sharpe": 1.439,
+      "num_trades": 899,
+      "win_rate": 44.16,
+      "idea": "Long when price is more than 3 percent below the 20 EMA and RSI is below 40, tar",
+      "vault_file": "EMA_RSI_Reversion_PEPE_15m.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "BollingerOversoldReversal",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 21.81,
+      "max_drawdown": -5.15,
+      "sharpe": 1.411,
+      "num_trades": 187,
+      "win_rate": 45.45,
+      "idea": "Long when %b (Bollinger Band) is below 0 and close is below the lower Bollinger ",
+      "vault_file": "BollingerOversoldReversal_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "VWAP Volume",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 20.53,
+      "max_drawdown": -7.37,
+      "sharpe": 1.365,
+      "num_trades": 106,
+      "win_rate": 29.25,
+      "idea": "Long when price crosses above VWAP and volume is above 20-period average, exit w",
+      "vault_file": "VWAPVolume_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "VWAP Bounce",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 21.04,
+      "max_drawdown": -7.68,
+      "sharpe": 1.339,
+      "num_trades": 97,
+      "win_rate": 39.18,
+      "idea": "Long when price bounces off VWAP (price touches VWAP then closes above it) and M",
+      "vault_file": "VWAPBounce_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "VWAP Volume",
+      "symbol": "PEPE",
+      "symbols": [
+        "PEPE"
+      ],
+      "timeframe": "1H",
+      "return_pct": 51.51,
+      "max_drawdown": -8.3,
+      "sharpe": 1.32,
+      "num_trades": 706,
+      "win_rate": 25.5,
+      "idea": "Long when price crosses above VWAP and volume is above 20-period average, exit w",
+      "vault_file": "VWAPVolume_PEPE_1H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "EMA_Cross_LowVol",
+      "symbol": "WIF",
+      "symbols": [
+        "WIF"
+      ],
+      "timeframe": "15m",
+      "return_pct": 21.2,
+      "max_drawdown": -4.75,
+      "sharpe": 1.268,
+      "num_trades": 291,
+      "win_rate": 20.62,
+      "idea": "Long when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average in",
+      "vault_file": "EMA_Cross_LowVol_WIF_15m.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "SMAVolumeBreakout",
+      "symbol": "BNB",
+      "symbols": [
+        "BNB"
+      ],
+      "timeframe": "4H",
+      "return_pct": 12.04,
+      "max_drawdown": -1.36,
+      "sharpe": 1.223,
+      "num_trades": 159,
+      "win_rate": 38.36,
+      "idea": "Long when price crosses above 50 SMA and volume is above 20-day average, exit wh",
+      "vault_file": "SMAVolumeBreakout_BNB_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "EMA_RSI_Short",
+      "symbol": "WIF",
+      "symbols": [
+        "WIF"
+      ],
+      "timeframe": "1H",
+      "return_pct": 14.57,
+      "max_drawdown": -2.86,
+      "sharpe": 1.115,
+      "num_trades": 400,
+      "win_rate": 35.5,
+      "idea": "Short when 9 EMA crosses below 21 EMA and RSI is below 50 confirming downward mo",
+      "vault_file": "EMA_RSI_Short_WIF_1H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "TrendStrengthEntry",
+      "symbol": "WIF",
+      "symbols": [
+        "WIF"
+      ],
+      "timeframe": "1H",
+      "return_pct": 14.89,
+      "max_drawdown": -5.1,
+      "sharpe": 1.113,
+      "num_trades": 147,
+      "win_rate": 24.49,
+      "idea": "Long when ADX crosses above 25 indicating a strong trend and price is above the ",
+      "vault_file": "TrendStrengthEntry_WIF_1H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "EMA Crossover",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 4.56,
+      "max_drawdown": -2.29,
+      "sharpe": 1.094,
+      "num_trades": 92,
+      "win_rate": 50.0,
+      "idea": "Long when 9-period EMA crosses above 21-period EMA on a closing basis, exit when",
+      "vault_file": "EMACrossover_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "GapReversalShort",
+      "symbol": "WIF",
+      "symbols": [
+        "WIF"
+      ],
+      "timeframe": "1H",
+      "return_pct": 12.07,
+      "max_drawdown": -4.63,
+      "sharpe": 1.066,
+      "num_trades": 74,
+      "win_rate": 37.84,
+      "idea": "Short when price gaps up at open above 20 EMA on daily chart and 5-minute moment",
+      "vault_file": "GapReversalShort_WIF_1H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "GapSupportBollinger",
+      "symbol": "FET",
+      "symbols": [
+        "FET"
+      ],
+      "timeframe": "4H",
+      "return_pct": 19.3,
+      "max_drawdown": -2.52,
+      "sharpe": 1.059,
+      "num_trades": 399,
+      "win_rate": 58.9,
+      "idea": "Long when a down gap occurs and price finds support at the lower Bollinger Band ",
+      "vault_file": "GapSupportBollinger_FET_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "SMAVolumeBreakout",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 7.62,
+      "max_drawdown": -2.68,
+      "sharpe": 1.048,
+      "num_trades": 67,
+      "win_rate": 35.82,
+      "idea": "Long when price crosses above 50 SMA and volume is above 20-day average, exit wh",
+      "vault_file": "SMAVolumeBreakout_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "TrendStrengthEntry",
+      "symbol": "TAO",
+      "symbols": [
+        "TAO"
+      ],
+      "timeframe": "4H",
+      "return_pct": 8.02,
+      "max_drawdown": -3.69,
+      "sharpe": 1.043,
+      "num_trades": 36,
+      "win_rate": 30.56,
+      "idea": "Long when ADX crosses above 25 indicating a strong trend and price is above the ",
+      "vault_file": "TrendStrengthEntry_TAO_4H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "TrendStrengthEntry",
+      "symbol": "PEPE",
+      "symbols": [
+        "PEPE"
+      ],
+      "timeframe": "1H",
+      "return_pct": 17.78,
+      "max_drawdown": -6.69,
+      "sharpe": 1.02,
+      "num_trades": 191,
+      "win_rate": 26.18,
+      "idea": "Long when ADX crosses above 25 indicating a strong trend and price is above the ",
+      "vault_file": "TrendStrengthEntry_PEPE_1H.py",
+      "date_added": "2026-04-02"
+    },
+    {
+      "name": "EarlyBreakoutLong",
+      "symbol": "AVAX",
+      "symbols": [
+        "AVAX"
+      ],
+      "timeframe": "4H",
+      "return_pct": 9.77,
+      "max_drawdown": -1.86,
+      "sharpe": 1.019,
+      "num_trades": 94,
+      "win_rate": 84.04,
+      "idea": "Long when price moves more than 1.5 ATR above the open within the first 3 bars, ",
+      "vault_file": "EarlyBreakoutLong_AVAX_4H.py",
+      "date_added": "2026-04-02"
     }
   ],
   "last_updated": "2026-03-28T23:27:19.437220"

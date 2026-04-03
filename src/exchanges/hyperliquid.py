@@ -105,28 +105,48 @@ def get_balance(wallet_address: str) -> dict:
 # The functions below show how to use the SDK once installed.
 
 def _get_agent():
-    """Return an authenticated Hyperliquid agent (requires SDK)."""
+    """
+    Return an authenticated Hyperliquid exchange agent.
+    Uses API wallet (can trade, cannot withdraw) — safer for bots.
+
+    .env keys:
+        HYPERLIQUID_ACCOUNT_ADDRESS  — your main wallet (0x...) from Exodus
+        HYPERLIQUID_API_PRIVATE_KEY  — API wallet private key from app.hyperliquid.xyz/API
+    """
     try:
         from hyperliquid.utils import constants
         from hyperliquid.exchange import Exchange
         from eth_account import Account
     except ImportError:
         raise ImportError(
-            "Install hyperliquid-python-sdk: pip install hyperliquid-python-sdk\n"
-            "Also: pip install eth-account"
+            "Run: pip install hyperliquid-python-sdk eth-account"
         )
 
-    private_key     = os.getenv("HYPERLIQUID_PRIVATE_KEY")
-    wallet_address  = os.getenv("HYPERLIQUID_WALLET_ADDRESS")
+    # New standardised key names
+    api_private_key  = (os.getenv("HYPERLIQUID_API_PRIVATE_KEY") or
+                        os.getenv("HYPERLIQUID_PRIVATE_KEY"))       # fallback
+    account_address  = (os.getenv("HYPERLIQUID_ACCOUNT_ADDRESS") or
+                        os.getenv("HYPERLIQUID_WALLET_ADDRESS"))     # fallback
 
-    if not private_key or not wallet_address:
+    if not api_private_key:
         raise EnvironmentError(
-            "Set HYPERLIQUID_PRIVATE_KEY and HYPERLIQUID_WALLET_ADDRESS in your .env"
+            "Set HYPERLIQUID_API_PRIVATE_KEY in .env\n"
+            "Get it from: app.hyperliquid.xyz/API → Generate API Wallet"
+        )
+    if not account_address:
+        raise EnvironmentError(
+            "Set HYPERLIQUID_ACCOUNT_ADDRESS in .env\n"
+            "This is your main ETH address from Exodus"
         )
 
-    account  = Account.from_key(private_key)
-    exchange = Exchange(account, constants.MAINNET_API_URL)
-    return exchange, wallet_address
+    # API wallet signs orders; account_address is the master account
+    wallet   = Account.from_key(api_private_key)
+    exchange = Exchange(
+        wallet,
+        constants.MAINNET_API_URL,
+        account_address=account_address   # trades on behalf of main account
+    )
+    return exchange, account_address
 
 
 def market_buy(symbol: str, usd_amount: float, leverage: int = 1) -> dict:
