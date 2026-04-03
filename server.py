@@ -214,24 +214,49 @@ def reject(sig_id):
 
 # ── Control endpoints ─────────────────────────────────────────
 AGENT_COMMANDS = {
-    # name → [command, description]
-    "rbi_futures":   (["python3","src/agents/rbi_parallel.py","--market","futures"],
-                      "RBI Backtester — Futures"),
-    "rbi_crypto":    (["python3","src/agents/rbi_parallel.py","--market","crypto"],
-                      "RBI Backtester — Crypto"),
-    "rbi_all":       (["python3","src/agents/rbi_parallel.py","--market","all"],
-                      "RBI Backtester — All Markets"),
-    "websearch":     (["python3","src/agents/websearch_agent.py","--queries","5"],
-                      "Websearch Agent"),
-    "notify":        (["python3","src/agents/signal_notifier.py","--mode","notify"],
-                      "Signal Notifier (notify)"),
-    "manual":        (["python3","src/agents/signal_notifier.py","--mode","manual"],
-                      "Signal Notifier (manual)"),
-    "listing_arb":   (["python3","src/agents/listing_arb_agent.py","--once"],
-                      "Listing Arb Agent"),
-    "vault_list":    (["python3","src/agents/vault_strategy.py","--list"],
-                      "List Vault Candidates"),
-    "clear_cache":   (None, "Clear processed_ideas.json"),
+    # ── Discovery ─────────────────────────────────────────────
+    "rbi_futures":       (["python3","src/agents/rbi_parallel.py","--market","futures"],
+                          "RBI Backtester — Futures"),
+    "rbi_crypto":        (["python3","src/agents/rbi_parallel.py","--market","crypto"],
+                          "RBI Backtester — Crypto"),
+    "rbi_all":           (["python3","src/agents/rbi_parallel.py","--market","all"],
+                          "RBI Backtester — All Markets"),
+    "websearch":         (["python3","src/agents/websearch_agent.py","--queries","5"],
+                          "Websearch Agent"),
+    "clear_cache":       (None, "Clear processed_ideas.json"),
+
+    # ── Vault ─────────────────────────────────────────────────
+    "vault_list":        (["python3","src/agents/vault_strategy.py","--list"],
+                          "List Vault Candidates"),
+    "listing_arb":       (["python3","src/agents/listing_arb_agent.py","--once"],
+                          "Listing Arb Agent"),
+
+    # ── Forward Testing ───────────────────────────────────────
+    "forward_futures":   (["python3","src/agents/vault_forward_test.py",
+                           "--mode","auto","--market","futures"],
+                          "Forward Test — Futures (auto)"),
+    "forward_crypto":    (["python3","src/agents/vault_forward_test.py",
+                           "--mode","auto","--market","crypto"],
+                          "Forward Test — Crypto (auto)"),
+    "forward_notify":    (["python3","src/agents/vault_forward_test.py",
+                           "--mode","notify","--market","all"],
+                          "Forward Test — Notify Mode (all)"),
+
+    # ── Signal Notifier (legacy ICT) ──────────────────────────
+    "notify":            (["python3","src/agents/signal_notifier.py","--mode","notify"],
+                          "ICT Signal Notifier (notify)"),
+    "manual":            (["python3","src/agents/signal_notifier.py","--mode","manual"],
+                          "ICT Signal Notifier (manual)"),
+
+    # ── Apex / Risk ───────────────────────────────────────────
+    "apex_status":       (["python3","src/agents/apex_risk.py","--status"],
+                          "Apex Evaluation Status"),
+    "apex_news":         (["python3","src/agents/apex_risk.py","--news"],
+                          "Check News Events"),
+    "pmt_test":          (["python3","src/agents/apex_bridge.py","--test-pmt"],
+                          "Test PickMyTrade Connection"),
+    "hl_test":           (["python3","src/agents/hyperliquid_setup.py"],
+                          "Test Hyperliquid Connection"),
 }
 
 
@@ -279,6 +304,56 @@ def control_stop_all():
         if stop_process(name):
             stopped.append(name)
     return jsonify({"stopped": stopped})
+
+
+
+@app.route("/api/weekly_brief")
+def api_weekly_brief():
+    try:
+        brief_file = ROOT / "src" / "data" / "weekly_brief.json"
+        if not brief_file.exists():
+            return jsonify({"available": False})
+        brief = json.loads(brief_file.read_text())
+        brief["available"] = True
+        return jsonify(brief)
+    except Exception as e:
+        return jsonify({"error": str(e), "available": False})
+
+
+@app.route("/api/apex")
+def api_apex():
+    """Return current Apex evaluation state."""
+    try:
+        import json
+        state_file = ROOT / "src" / "data" / "apex_state.json"
+        if not state_file.exists():
+            return jsonify({"active": False})
+        state = json.loads(state_file.read_text())
+        from src.config import (APEX_DAILY_DRAWDOWN, APEX_MAX_DRAWDOWN,
+                                 APEX_PROFIT_TARGET, PROP_FIRM_ACTIVE,
+                                 PROP_FIRM_ACCOUNT_TYPE)
+        daily_loss  = abs(min(0, state.get("daily_pnl", 0)))
+        total_dd    = state.get("peak_equity", 50000) - state.get("current_equity", 50000)
+        progress    = state.get("total_pnl", 0) / APEX_PROFIT_TARGET * 100
+        return jsonify({
+            "active":          PROP_FIRM_ACTIVE,
+            "account_type":    PROP_FIRM_ACCOUNT_TYPE,
+            "equity":          state.get("current_equity", 50000),
+            "total_pnl":       state.get("total_pnl", 0),
+            "daily_pnl":       state.get("daily_pnl", 0),
+            "daily_dd":        round(daily_loss, 2),
+            "daily_dd_limit":  APEX_DAILY_DRAWDOWN,
+            "total_dd":        round(total_dd, 2),
+            "total_dd_limit":  APEX_MAX_DRAWDOWN,
+            "profit_target":   APEX_PROFIT_TARGET,
+            "progress_pct":    round(progress, 1),
+            "passed":          state.get("passed", False),
+            "blown":           state.get("blown", False),
+            "kill_switch":     state.get("kill_switch", False),
+            "trades_today":    state.get("trades_today", 0),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "active": False})
 
 
 if __name__ == "__main__":
