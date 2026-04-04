@@ -46,32 +46,136 @@ PAIRS_FILE = DATA_DIR / "pairs_state.json"
 LOG_FILE   = DATA_DIR / "pairs_log.csv"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── Your vault crypto tokens — find pairs within these ───────
+
+# ══════════════════════════════════════════════════════════════
+# KALMAN FILTER HEDGE RATIO (Gap #2 closed — RenTec-style)
+# ══════════════════════════════════════════════════════════════
+
+class KalmanHedgeRatio:
+    """
+    Dynamic hedge ratio using Kalman Filter.
+    Updates the beta relationship between two assets in real-time
+    as market conditions change — instead of recalculating OLS
+    every N bars (which lags behind structural changes).
+
+    RenTec uses this to detect when correlation relationships shift
+    (e.g., FET decouples from TAO during a sector rotation).
+
+    State: beta = hedge ratio (how many units of B per unit of A)
+    Observation: price_A = beta × price_B + noise
+    """
+
+    def __init__(self, initial_beta: float = 1.0,
+                 process_noise: float = 1e-4,
+                 obs_noise: float = 1e-2):
+        self.beta      = initial_beta
+        self.P         = 1.0          # state covariance
+        self.Q         = process_noise # process noise (how fast beta changes)
+        self.R         = obs_noise     # observation noise
+
+    def update(self, price_a: float, price_b: float) -> float:
+        """Update beta given new price observation. Returns current beta."""
+        # Predict
+        P_pred = self.P + self.Q
+
+        # Innovation (difference between prediction and observation)
+        y_hat   = self.beta * price_b
+        innov   = price_a - y_hat
+
+        # Kalman gain
+        S = price_b ** 2 * P_pred + self.R
+        K = P_pred * price_b / S
+
+        # Update
+        self.beta += K * innov
+        self.P     = (1 - K * price_b) * P_pred
+
+        return self.beta
+
+    def spread(self, price_a: float, price_b: float) -> float:
+        """Calculate current spread using dynamic beta."""
+        return price_a - self.beta * price_b
+
+
+# ── Kelly position sizing for pairs (Gap #3 closed) ───────────
+def kelly_pairs_size(win_rate: float, avg_win_pct: float,
+                     avg_loss_pct: float, capital: float,
+                     fraction: float = 0.25) -> float:
+    """
+    Half-Kelly position sizing for pairs trades.
+    Uses actual win/loss percentages rather than fixed R:R.
+
+    fraction=0.25 → quarter-Kelly (conservative for pairs)
+    """
+    if avg_loss_pct <= 0 or win_rate <= 0:
+        return min(100, capital * 0.05)   # fallback 5%
+
+    b = avg_win_pct / avg_loss_pct        # win/loss ratio
+    kelly = (b * win_rate - (1 - win_rate)) / b
+    kelly = max(0.02, min(0.25, kelly))   # cap at 25%
+    return round(capital * kelly * fraction, 2)
+
+# ── Token universe — serious/institutional tokens only ────────
+# Meme coins excluded: too volatile, unreliable cointegration,
+# and correlation breaks down unexpectedly (rugpulls, whale dumps)
 UNIVERSE = [
+    # Large cap — always included (highest liquidity)
     "BTC", "ETH", "SOL", "BNB", "AVAX",
-    "TAO", "FET", "RNDR",          # AI tokens — highly correlated
-    "PEPE", "WIF",                  # Meme tokens — correlated
-    "ARB", "OP",                    # L2 tokens — correlated
-    "LINK", "UNI",                  # DeFi tokens
+    # AI / data economy tokens — strong sector correlation
+    "TAO", "FET", "RNDR", "WLD", "AGIX",
+    # L2 / alt-L1 infrastructure — compete for same users
+    "ARB", "OP", "INJ", "SEI", "APT", "SUI",
+    # DeFi blue chips — correlated to ETH + rate environment
+    "LINK", "UNI", "AAVE",
+    # Layer 1 challengers
+    "TON", "NEAR",
 ]
 
-# Known strong pairs (pre-seeded from domain knowledge)
+# Pre-seeded pairs by sector (tightest correlation within sectors)
 KNOWN_PAIRS = [
-    ("TAO",  "FET"),    # AI tokens
-    ("TAO",  "RNDR"),   # AI tokens
-    ("FET",  "RNDR"),   # AI tokens
-    ("PEPE", "WIF"),    # Meme tokens
-    ("SOL",  "AVAX"),   # L1 competitors
-    ("ARB",  "OP"),     # L2 competitors
-    ("BTC",  "ETH"),    # Core pair
-    ("ETH",  "SOL"),    # Smart contract platforms
-    ("LINK", "UNI"),    # DeFi
+    # AI sector — strongest cointegration (same narrative, same buyers)
+    ("TAO",  "FET"),   ("TAO",  "RNDR"),  ("FET",  "RNDR"),
+    ("TAO",  "WLD"),   ("FET",  "AGIX"),  ("RNDR", "WLD"),
+    # L2 direct competitors — almost perfect correlation
+    ("ARB",  "OP"),    ("INJ",  "SEI"),   ("APT",  "SUI"),
+    # Core infrastructure
+    ("BTC",  "ETH"),   ("ETH",  "SOL"),   ("SOL",  "AVAX"),
+    ("ETH",  "BNB"),
+    # DeFi
+    ("LINK", "UNI"),   ("UNI",  "AAVE"),
+    # New L1s vs established
+    ("TON",  "NEAR"),  ("APT",  "SOL"),
 ]
 
-# Z-score thresholds
-ENTRY_Z   = 2.0    # enter when spread exceeds 2 std devs
-EXIT_Z    = 0.5    # close when spread returns within 0.5 std devs
-STOP_Z    = 3.5    # stop loss if spread blows out to 3.5
+# ── Dynamic Z-score thresholds (gap #1 closed) ────────────────
+# Instead of fixed Z=±2.0, threshold adapts to recent spread volatility.
+# Volatile pairs need wider threshold to avoid noise entries.
+# Stable pairs can use tighter threshold for more frequent signals.
+ENTRY_Z_BASE  = 2.0    # baseline — adjusted per pair dynamically
+EXIT_Z_BASE   = 0.5
+STOP_Z_BASE   = 3.5
+
+def get_dynamic_thresholds(spread: "pd.Series") -> tuple[float, float, float]:
+    """
+    Adapt Z-score thresholds to recent spread volatility.
+    More volatile pair → wider threshold to avoid false entries.
+    """
+    # Measure consistency of mean reversion (higher = more reliable)
+    if len(spread) < 20:
+        return ENTRY_Z_BASE, EXIT_Z_BASE, STOP_Z_BASE
+    recent_std  = spread.rolling(20).std().iloc[-1]
+    overall_std = spread.std()
+    # If recent vol > overall vol: spread is noisy → widen threshold
+    vol_ratio   = recent_std / (overall_std + 1e-8)
+    entry_z     = ENTRY_Z_BASE * max(0.8, min(1.5, vol_ratio))
+    exit_z      = EXIT_Z_BASE  * max(0.5, min(1.2, vol_ratio))
+    stop_z      = STOP_Z_BASE  * max(0.9, min(1.4, vol_ratio))
+    return round(entry_z, 2), round(exit_z, 2), round(stop_z, 2)
+
+# Keep fixed thresholds as fallback
+ENTRY_Z = ENTRY_Z_BASE
+EXIT_Z  = EXIT_Z_BASE
+STOP_Z  = STOP_Z_BASE
 
 
 # ══════════════════════════════════════════════════════════════
@@ -81,12 +185,12 @@ STOP_Z    = 3.5    # stop loss if spread blows out to 3.5
 def fetch_prices(symbols: list[str], timeframe: str = "1H",
                  days: int = 90) -> pd.DataFrame:
     """Fetch OHLCV for multiple symbols, return close prices DataFrame."""
-    from src.data.ccxt_fetcher import fetch_ohlcv_ccxt
+    from src.data.ccxt_fetcher import get_crypto_ohlcv
 
     prices = {}
     for sym in symbols:
         try:
-            df = fetch_ohlcv_ccxt(sym, timeframe=timeframe, days=days)
+            df = get_crypto_ohlcv(sym, timeframe=timeframe, days_back=days)
             if df is not None and len(df) > 50:
                 prices[sym] = df["Close"]
         except Exception as e:
@@ -120,16 +224,22 @@ def test_cointegration(series_a: pd.Series, series_b: pd.Series) -> dict:
         # Cointegration test
         score, pvalue, _ = coint(log_a, log_b)
 
-        # OLS regression to find hedge ratio
-        X = sm.add_constant(log_b)
-        model = sm.OLS(log_a, X).fit()
-        hedge_ratio = model.params.iloc[1]
+        # ── Kalman Filter hedge ratio (RenTec-style dynamic beta) ──
+        kalman = KalmanHedgeRatio()
+        for pa, pb in zip(series_a.values, series_b.values):
+            kalman.update(np.log(pa), np.log(pb))
+        hedge_ratio = kalman.beta
+
+        # Spread using Kalman beta
         spread = log_a - hedge_ratio * log_b
+
+        # Dynamic thresholds (adapts to pair volatility)
+        entry_z, exit_z, stop_z = get_dynamic_thresholds(spread)
 
         # Spread stats
         spread_mean  = spread.mean()
         spread_std   = spread.std()
-        z_current    = (spread.iloc[-1] - spread_mean) / spread_std
+        z_current    = (spread.iloc[-1] - spread_mean) / (spread_std + 1e-8)
 
         return {
             "pvalue":       round(float(pvalue), 4),
@@ -139,6 +249,10 @@ def test_cointegration(series_a: pd.Series, series_b: pd.Series) -> dict:
             "spread_std":   round(float(spread_std), 6),
             "z_current":    round(float(z_current), 3),
             "spread_last":  round(float(spread.iloc[-1]), 6),
+            "entry_z":      entry_z,
+            "exit_z":       exit_z,
+            "stop_z":       stop_z,
+            "kalman_beta":  round(kalman.beta, 4),
         }
     except ImportError:
         print("  ⚠️  statsmodels not installed: pip install statsmodels")
@@ -227,16 +341,19 @@ def generate_signals(prices: pd.DataFrame,
         price_a = float(prices[sym_a].iloc[-1])
         price_b = float(prices[sym_b].iloc[-1])
 
-        if z < -ENTRY_Z:
-            # A is cheap relative to B — buy A, sell B
+        # Use dynamic thresholds if available
+        entry_z = pair.get("entry_z", ENTRY_Z)
+        exit_z  = pair.get("exit_z",  EXIT_Z)
+        stop_z  = pair.get("stop_z",  STOP_Z)
+
+        if z < -entry_z:
             direction_a = "LONG"
             direction_b = "SHORT"
-            rationale   = f"{sym_a} cheap vs {sym_b} (Z={z:.2f})"
-        elif z > ENTRY_Z:
-            # A is expensive relative to B — sell A, buy B
+            rationale   = f"{sym_a} cheap vs {sym_b} (Z={z:.2f}, threshold=±{entry_z:.1f})"
+        elif z > entry_z:
             direction_a = "SHORT"
             direction_b = "LONG"
-            rationale   = f"{sym_a} expensive vs {sym_b} (Z={z:.2f})"
+            rationale   = f"{sym_a} expensive vs {sym_b} (Z={z:.2f}, threshold=±{entry_z:.1f})"
         else:
             continue
 

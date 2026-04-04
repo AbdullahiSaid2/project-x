@@ -64,6 +64,25 @@ BTC_BETA = {
     "SPX":  0.30,   # S&P 500 perp — low correlation to BTC
 }
 
+# ── Hyperliquid symbol mapping ─────────────────────────────────
+# HL uses exact coin names for WebSocket l2Book subscriptions.
+# Some tokens have different names on HL vs their ticker.
+HL_SYMBOL_MAP = {
+    "PEPE":  "PEPE",      # HL lists as PEPE (1000x denomination)
+    "SPX":   "SPX",       # Trade[XYZ] SPX perp
+    "TAO":   "TAO",
+    "WIF":   "WIF",
+    "SOL":   "SOL",
+    "BTC":   "BTC",
+    "ETH":   "ETH",
+    "BNB":   "BNB",
+    "AVAX":  "AVAX",
+}
+
+def hl_symbol(sym: str) -> str:
+    """Convert user symbol to Hyperliquid coin name."""
+    return HL_SYMBOL_MAP.get(sym.upper(), sym.upper())
+
 
 # ══════════════════════════════════════════════════════════════
 # CONFIG
@@ -313,6 +332,16 @@ class InventoryTracker:
 # WEBSOCKET MARKET MAKER — THE CORE
 # ══════════════════════════════════════════════════════════════
 
+async def _keepalive(ws):
+    """Send ping every 30 seconds to prevent WebSocket disconnection."""
+    while True:
+        try:
+            await asyncio.sleep(30)
+            await ws.ping()
+        except Exception:
+            break
+
+
 class WebSocketMarketMaker:
     """
     Single-token WebSocket market maker.
@@ -365,7 +394,11 @@ class WebSocketMarketMaker:
             )
             print(f"  ✅ {self.symbol}: Exchange connected")
         except Exception as e:
-            print(f"  ❌ {self.symbol}: Exchange connection failed: {e}")
+            if "hyperliquid" in str(e):
+                print(f"  ⚠️  {self.symbol}: HL SDK not installed — running orderbook-only mode")
+                print(f"     To enable live orders: pip install hyperliquid-python-sdk eth-account")
+            else:
+                print(f"  ❌ {self.symbol}: Exchange connection failed: {e}")
 
     def _calculate_spread(self, volatility: float) -> float:
         """Adaptive spread — widens on volatility spikes."""
@@ -587,14 +620,15 @@ class WebSocketMarketMaker:
                 async with websockets.connect(
                     HL_WS_URL,
                     ping_interval=20,
-                    ping_timeout=10,
+                    ping_timeout=30,
+                    close_timeout=10,
                 ) as ws:
                     # Subscribe to L2 orderbook for this token
                     sub_msg = json.dumps({
                         "method": "subscribe",
                         "subscription": {
                             "type": "l2Book",
-                            "coin": self.symbol
+                            "coin": hl_symbol(self.symbol)
                         }
                     })
                     await ws.send(sub_msg)
@@ -687,6 +721,8 @@ class BTCSignalBroadcaster:
                         "method": "subscribe",
                         "subscription": {"type": "l2Book", "coin": "BTC"}
                     }))
+                    # Send keepalive ping every 30s to prevent disconnection
+                    asyncio.ensure_future(_keepalive(ws))
                     print(f"  ✅ BTC Signal Broadcaster: connected")
 
                     async for raw in ws:

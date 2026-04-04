@@ -11,6 +11,24 @@
 #   - Single-direction ideas stay single-direction where logic demands it
 # ============================================================
 
+# ── PATTERN-BASED SCALPS (1-5m) ──────────────────────────────
+
+# 1m double bottom scalp
+Long when 1-minute chart forms two lows within 0.1% of each other with an RSI higher low between them, enter on break above the peak between the lows, stop below the second low
+Short when 1-minute chart forms two highs within 0.1% of each other with an RSI lower high between them, enter on break below the trough between the highs, stop above the second high
+
+# 5m inside bar breakout
+Long when a 5-minute bar is fully contained within the prior bar range (inside bar) and the next bar breaks above the inside bar high with volume, stop at inside bar low, target 1:2 R:R
+Short when a 5-minute bar is fully contained within the prior bar range and the next bar breaks below the inside bar low with volume, stop at inside bar high, target 1:2 R:R
+
+# 5m three-bar reversal pattern
+Long when 5-minute chart shows three bars: large red, small doji touching prior low, large green reclaiming the doji high, enter on close of green bar, stop below doji low, target 1:1.5 R:R
+Short when 5-minute chart shows three bars: large green, small doji touching prior high, large red reclaiming the doji low, enter on close of red bar, stop above doji high, target 1:1.5 R:R
+
+# 1m engulfing candle scalp
+Long when a 1-minute bullish engulfing candle completely covers the prior red candle body with volume 1.5x average, stop below the engulfing candle low, exit at 0.2% profit or after 5 bars
+Short when a 1-minute bearish engulfing candle completely covers the prior green candle body with volume 1.5x average, stop above the engulfing candle high, exit at 0.2% profit or after 5 bars
+
 
 # ══════════════════════════════════════════════════════════════
 # ORIGINAL CORE STRATEGIES
@@ -532,3 +550,122 @@ Short when SPX rises more than 0.5% in the 2 hours before FOMC announcement and 
 # Post-news reversion on SPX 5m
 Long when SPX drops more than 1% within 5 minutes of major economic data release and the 5-minute RSI is below 25, exit when RSI returns to 45
 Short when SPX rises more than 1% within 5 minutes of major economic data release and the 5-minute RSI is above 75, exit when RSI returns to 55
+
+
+# ══════════════════════════════════════════════════════════════
+# HIGH FREQUENCY SCALPING — 1-MINUTE AND 5-MINUTE BARS
+# Target: 50-200 trades/day | Hold: 1-15 minutes
+# Works on: MES/MNQ/MYM (futures) + crypto on Hyperliquid
+# RBI will backtest all — only Sharpe > 1.5 get vaulted
+# ══════════════════════════════════════════════════════════════
+
+# ── 1-MINUTE MEAN REVERSION (highest frequency) ───────────────
+
+# RSI snap-back on 1m — fires constantly on liquid markets
+Long when 1-minute RSI drops below 20 and the prior 3 bars closed red and price is above the 200 EMA on 5-minute chart, exit when 1-minute RSI rises above 40
+Short when 1-minute RSI rises above 80 and the prior 3 bars closed green and price is below the 200 EMA on 5-minute chart, exit when 1-minute RSI falls below 60
+
+# Micro VWAP reversion on 1m — catches over-extensions
+Long when price drops more than 0.15% below VWAP on 1-minute bars and volume on that bar is 2x the 5-bar average, exit when price returns to VWAP
+Short when price rises more than 0.15% above VWAP on 1-minute bars and volume on that bar is 2x the 5-bar average, exit when price returns to VWAP
+
+# 1-minute EMA distance snap
+Long when price is more than 0.3% below the 9 EMA on 1-minute bars and the 9 EMA slope is still positive, exit when price touches the 9 EMA
+Short when price is more than 0.3% above the 9 EMA on 1-minute bars and the 9 EMA slope is still negative, exit when price touches the 9 EMA
+
+# Stochastic cross on 1m
+Long when 1-minute stochastic K crosses above D from below 20 and price is above the 50 EMA on the 5-minute chart, exit when stochastic reaches 60
+Short when 1-minute stochastic K crosses below D from above 80 and price is below the 50 EMA on the 5-minute chart, exit when stochastic reaches 40
+
+# 1m hammer candle with volume
+Long when a 1-minute bar has a lower wick at least 2x the body size and volume is 3x the 10-bar average, indicating rejection of lows, exit at 0.15% profit or after 5 bars
+Short when a 1-minute bar has an upper wick at least 2x the body size and volume is 3x the 10-bar average, indicating rejection of highs, exit at 0.15% profit or after 5 bars
+
+# Micro support bounce on 1m
+Long when price touches a level that held 3 times in the prior 30 bars on 1-minute chart and the current bar closes with a bullish candle above that level, exit when price rises 0.2%
+Short when price touches a level that rejected 3 times in the prior 30 bars on 1-minute chart and the current bar closes with a bearish candle below that level, exit when price falls 0.2%
+
+# 1-minute consecutive close momentum
+Long when 3 consecutive 1-minute bars all close higher than their opens and total range is less than 0.3% preventing overextension, exit when first red bar closes below its open
+Short when 3 consecutive 1-minute bars all close lower than their opens and total range is less than 0.3%, exit when first green bar closes above its open
+
+# ── 5-MINUTE SCALPING STRATEGIES ─────────────────────────────
+
+# Opening 5-minute candle continuation
+Long when the first 5-minute candle of the session closes bullish with volume 2x the 20-bar average, enter on the second bar open with stop below the first bar low, exit at 0.3% profit
+Short when the first 5-minute candle of the session closes bearish with volume 2x the 20-bar average, enter on the second bar open with stop above the first bar high, exit at 0.3% profit
+
+# 5m Bollinger squeeze breakout scalp
+Long when 5-minute Bollinger Band width drops to a 20-bar low and price breaks above the upper band on the next bar with volume, stop at middle band, exit after 2 bars
+Short when 5-minute Bollinger Band width drops to a 20-bar low and price breaks below the lower band on the next bar with volume, stop at middle band, exit after 2 bars
+
+# 5m higher low momentum entry
+Long when 5-minute chart forms a higher low above prior swing low and MACD is positive and rising, enter on the break above the prior swing high, stop at the higher low, exit at 1:1.5 R:R
+Short when 5-minute chart forms a lower high below prior swing high and MACD is negative and falling, enter on the break below the prior swing low, stop at the lower high, exit at 1:1.5 R:R
+
+# 5m VWAP standard deviation extremes
+Long when price touches 2 standard deviations below VWAP on 5-minute bars and RSI is below 30, exit when price returns to 1 standard deviation below VWAP
+Short when price touches 2 standard deviations above VWAP on 5-minute bars and RSI is above 70, exit when price returns to 1 standard deviation above VWAP
+
+# 5m volume climax reversal
+Long when 5-minute volume is 5x the 20-bar average and the bar closes in the upper 25% of its range after initially dropping, indicating capitulation buying, exit after 3 bars
+Short when 5-minute volume is 5x the 20-bar average and the bar closes in the lower 25% of its range after initially rising, indicating distribution selling, exit after 3 bars
+
+# 5m order flow absorption
+Long when 3 consecutive 5-minute bars have above-average volume but price barely moved lower, indicating strong buyers absorbing supply, exit when price breaks 0.2% above the range
+Short when 3 consecutive 5-minute bars have above-average volume but price barely moved higher, indicating strong sellers absorbing demand, exit when price breaks 0.2% below the range
+
+# ── ICT-STYLE 1-5 MINUTE ENTRIES ─────────────────────────────
+
+# Liquidity sweep and reversal on 1m
+Long when 1-minute price sweeps below a prior swing low by 0.1-0.3% then reverses and closes above that low within 2 bars, stop below the sweep low, target prior swing high
+Short when 1-minute price sweeps above a prior swing high by 0.1-0.3% then reverses and closes below that high within 2 bars, stop above the sweep high, target prior swing low
+
+# Fair value gap fill on 5m — fast version
+Long when a 5-minute bullish fair value gap forms (gap between bar 1 high and bar 3 low) and price retraces into the gap on the next 1-3 bars, exit when gap is fully filled or at prior high
+Short when a 5-minute bearish fair value gap forms (gap between bar 1 low and bar 3 high) and price retraces into the gap on the next 1-3 bars, exit when gap is fully filled or at prior low
+
+# Kill zone scalp — London open 1m (3am EST / 10am EAT)
+Long when price drops into a 1-minute demand zone in the first 30 minutes of London session and RSI is below 35, exit when RSI reaches 55 or after 15 bars
+Short when price rises into a 1-minute supply zone in the first 30 minutes of London session and RSI is above 65, exit when RSI reaches 45 or after 15 bars
+
+# Kill zone scalp — NY open 1m (9:30am EST / 4:30pm EAT)
+Long when price drops sharply in the first 5 minutes of NY session by more than 0.2% and then forms a 1-minute bullish candle with volume, exit after 0.2% recovery
+Short when price rises sharply in the first 5 minutes of NY session by more than 0.2% and then forms a 1-minute bearish candle with volume, exit after 0.2% decline
+
+# ── CRYPTO-SPECIFIC SCALPS (1-5m on Hyperliquid) ─────────────
+
+# BTC 1m momentum scalp — leads altcoins by 15-60 seconds
+Long when Bitcoin 1-minute RSI rises from below 30 to above 40 and closes a green bar, enter on next altcoin bar showing same RSI pattern, exit when altcoin RSI reaches 55
+Short when Bitcoin 1-minute RSI falls from above 70 to below 60 and closes a red bar, enter on next altcoin bar showing same RSI pattern, exit when altcoin RSI reaches 45
+
+# Funding rate extreme + 5m entry
+Long when perpetual funding rate is below -0.04% and 5-minute RSI drops below 35 and price is above the 50 EMA, hold until RSI recovers to 55 or funding normalises
+Short when perpetual funding rate is above 0.08% and 5-minute RSI rises above 65 and price is below the 50 EMA, hold until RSI drops to 45 or funding normalises
+
+# 5m liquidation cascade fade
+Long when price drops more than 0.5% in a single 5-minute bar with volume 4x average suggesting liquidation cascade, enter on the next bar if it forms a bullish reversal candle, exit at 0.3%
+Short when price rises more than 0.5% in a single 5-minute bar with volume 4x average suggesting short squeeze, enter on the next bar if it forms a bearish reversal candle, exit at 0.3%
+
+# 5m perpetual vs spot divergence
+Long when spot price of crypto is 0.1-0.3% above perpetual price indicating positive funding and RSI is below 45 on both, exit when gap narrows to 0.05%
+Short when spot price of crypto is 0.1-0.3% below perpetual price indicating negative funding and RSI is above 55 on both, exit when gap narrows to 0.05%
+
+# ── FUTURES SCALPS (MES/MNQ/MYM — works with Apex intraday) ──
+
+# MES/MNQ 1m pullback in trend
+Long when MES 5-minute trend is up (price above 20 EMA on 5m) and 1-minute RSI pulls back to 40-50 and forms a bullish reversal candle, stop below the 1-minute low, target 2:1 R:R
+Short when MES 5-minute trend is down (price below 20 EMA on 5m) and 1-minute RSI rises to 50-60 and forms a bearish reversal candle, stop above the 1-minute high, target 2:1 R:R
+
+# MES 5m pre-market level respect
+Long when MES opens below pre-market high, rallies to test it, pulls back slightly and forms a bullish 5-minute bar above that level, stop below level, target 0.2% above entry
+Short when MES opens above pre-market low, falls to test it, bounces slightly and forms a bearish 5-minute bar below that level, stop above level, target 0.2% below entry
+
+# MNQ 5m fail-to-follow scalp
+Long when NQ makes a lower low on 5-minute bars but RSI makes a higher low confirming positive divergence, enter on next green candle close, stop at the low, target prior swing high
+Short when NQ makes a higher high on 5-minute bars but RSI makes a lower high confirming negative divergence, enter on next red candle close, stop at the high, target prior swing low
+
+# MES range high/low scalp
+Long when MES breaks above the prior 10-bar 5-minute high with a large green bar and volume, pullback to that broken level and bounces, stop below the level, target 1:2 R:R
+Short when MES breaks below the prior 10-bar 5-minute low with a large red bar and volume, retests that broken level and reverses, stop above the level, target 1:2 R:R
+
