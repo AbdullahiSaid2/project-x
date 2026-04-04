@@ -498,6 +498,19 @@ Strategies loaded:""")
             print(f"\n✅ Single scan complete. {signals_found} signal(s) found.")
             break
 
+        # Auto-regenerate handoff every 6 scan cycles (~1.5 hrs)
+        if scan_count % 6 == 0:
+            try:
+                import subprocess as _sp
+                _sp.Popen(
+                    ["python3", "src/agents/handoff_generator.py"],
+                    cwd=str(Path(__file__).resolve().parents[2]),
+                    stdout=_sp.DEVNULL, stderr=_sp.DEVNULL
+                )
+                print("  📄 Handoff auto-updated")
+            except Exception:
+                pass   # non-critical — never block trading for this
+
         # Wait for next scan — 15m candle = 15m wait
         tfs  = [s["timeframe"] for s in strategies]
         wait = min(TF_INTERVALS.get(tf, 900) for tf in tfs)

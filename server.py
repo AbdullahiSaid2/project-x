@@ -135,6 +135,18 @@ def api_vault():
         return jsonify(json.loads(VAULT_INDEX.read_text()))
     except: return jsonify({"strategies": []})
 
+@app.route("/api/handoff/generate", methods=["POST"])
+def api_handoff_generate():
+    """Manually trigger handoff regeneration from dashboard."""
+    try:
+        pid = run_process("handoff_now",
+                          ["python3", "src/agents/handoff_generator.py"],
+                          cwd=str(ROOT))
+        return jsonify({"status": "started", "pid": pid})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/system")
 def api_system():
     # Ideas count
@@ -257,6 +269,14 @@ AGENT_COMMANDS = {
                           "Test PickMyTrade Connection"),
     "hl_test":           (["python3","src/agents/hyperliquid_setup.py"],
                           "Test Hyperliquid Connection"),
+
+    # ── Handoff Generator ─────────────────────────────────────
+    "handoff_now":       (["python3","src/agents/handoff_generator.py"],
+                          "Generate Handoff Doc Now"),
+    "handoff_watch":     (["python3","src/agents/handoff_generator.py","--watch"],
+                          "Auto-Watch + Regenerate Handoff"),
+    "handoff_diff":      (["python3","src/agents/handoff_generator.py","--diff"],
+                          "Show What Changed in Handoff"),
 }
 
 

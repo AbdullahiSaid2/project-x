@@ -461,6 +461,9 @@ td { padding: .6rem 1rem; vertical-align: middle; }
   <div class="stat"><div class="stat-label">Live Trades</div><div class="stat-value y" id="s-trades">—</div><div class="stat-sub">since session start</div></div>
   <div class="stat"><div class="stat-label">Sentiment</div><div class="stat-value" id="s-sent">—</div><div class="stat-sub" id="s-sent-score">score —</div></div>
   <div class="stat" id="apex-stat" style="display:none"><div class="stat-label">Apex P&L</div><div class="stat-value" id="s-apex-pnl">—</div><div class="stat-sub" id="s-apex-sub">—</div></div>
+  <div class="stat"><div class="stat-label">MM Fills/day</div><div class="stat-value" id="s-mm-fills">—</div><div class="stat-sub">market maker v2</div></div>
+  <div class="stat"><div class="stat-label">Pairs Active</div><div class="stat-value" id="s-pairs-active">—</div><div class="stat-sub" id="s-pairs-sub">cointegrated</div></div>
+  <div class="stat"><div class="stat-label">HL Capital</div><div class="stat-value g" id="s-hl-capital">—</div><div class="stat-sub">deployed on HL</div></div>
 </div>
 
 <!-- ── Layout ── -->
@@ -585,6 +588,29 @@ td { padding: .6rem 1rem; vertical-align: middle; }
     <div class="nav-item" onclick="switchPanel('listing_arb')">
       <span>💎</span> Listing Arb
       <span class="nav-count" id="n-listing_arb">0</span>
+    </div>
+
+    <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
+
+    <div class="nav-item" onclick="switchPanel('pairs_trading')" style="color:#7ee8fa">
+      <span>🔀</span> Pairs Trading
+      <span class="nav-count" id="n-pairs" style="background:#0d2233;color:#7ee8fa">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('market_maker')" style="color:#ffd700">
+      <span>⚡</span> Market Maker
+      <span class="nav-count" id="n-mm" style="background:#2a2100;color:#ffd700">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('spx_perp')">
+      <span>📈</span> SPX Perp
+      <span class="nav-count" id="n-spx">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('weekly_brief')" >
+      <span>🗓️</span> Weekly Brief
+      <span class="nav-count" id="n-brief">0</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('income_tracker')" style="color:var(--green)">
+      <span>💰</span> Income Tracker
+      <span class="nav-count" id="n-income" style="background:var(--green-dim);color:var(--green)">0</span>
     </div>
 
     <div class="sidebar-footer">
@@ -998,6 +1024,51 @@ td { padding: .6rem 1rem; vertical-align: middle; }
           </div>
         </div>
 
+        <!-- Pairs Trading -->
+        <div style="background:var(--card);border:1px solid #0d2233;border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem;color:#7ee8fa">🔀 Pairs Trading</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Statistical arbitrage on 17 pairs across 20 tokens. Kalman filter hedge ratio, dynamic Z-score thresholds. No meme coins. Personal HL only.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('pairs_scan')">🔍 Scan</button>
+            <button class="ctrl-btn" onclick="runAgent('pairs_backtest')">📊 Backtest</button>
+            <button class="ctrl-btn" onclick="runAgent('pairs_live')">👁 Notify</button>
+            <button class="ctrl-btn" onclick="runAgent('pairs_auto')">⚡ Auto</button>
+          </div>
+        </div>
+
+        <!-- Market Maker v2 -->
+        <div style="background:var(--card);border:1px solid #2a2100;border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem;color:#ffd700">⚡ Market Maker v2</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">WebSocket orderbook + BTC lead signal. Reacts in &lt;100ms. Pre-skews altcoin quotes when BTC moves. Includes SPX perp. pip install websockets first.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('mm_paper')">📄 Paper TAO</button>
+            <button class="ctrl-btn" onclick="runAgent('mm_spx_paper')">📄 Paper SPX</button>
+            <button class="ctrl-btn" onclick="runAgent('mm_spx_live')">⚡ Live SPX</button>
+            <button class="ctrl-btn" onclick="runAgent('mm_spx_crypto')">🔥 SPX+Crypto</button>
+          </div>
+        </div>
+
+        <!-- RBI 5m -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">📊 RBI 5-Minute</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Backtest 5-minute bar strategies. Higher frequency — targets 50-200 trades/week. Same vault pipeline as other timeframes.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('rbi_5m')">⚡ Run 5m Crypto</button>
+            <button class="ctrl-btn" onclick="runAgent('rbi_spx')">📈 Run SPX</button>
+          </div>
+        </div>
+
+        <!-- Weekly Brief -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.3rem">🗓️ Weekly Briefing</div>
+          <div style="font-size:.65rem;color:var(--muted2);margin-bottom:1rem;line-height:1.6">Monday macro agent — regime, key USD events, crypto caution tokens, MES/MNQ levels. Feeds size adjustments into vault forward tester automatically.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="ctrl-btn" onclick="runAgent('weekly_brief_run')">🗓️ Run Now</button>
+            <button class="ctrl-btn btn-ghost" onclick="runAgent('weekly_brief_show')">👁 Show Latest</button>
+          </div>
+          <div style="margin-top:.6rem;font-size:.6rem;color:var(--muted2)">Auto-runs Monday 6am EST — or force it anytime before the session</div>
+        </div>
+
         <!-- Quick Status -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
           <div style="font-family:'Chakra Petch',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:.5rem">⚡ QUICK WORKFLOW</div>
@@ -1008,6 +1079,8 @@ td { padding: .6rem 1rem; vertical-align: middle; }
             <div>4️⃣ Upload CSV here → view results</div>
             <div>5️⃣ <span style="color:var(--green)">List Candidates</span> → vault winners</div>
             <div>6️⃣ <span style="color:var(--green)">Signal Notifier</span> → forward test</div>
+            <div>7️⃣ <span style="color:#7ee8fa">Pairs Scan</span> → find cointegrated pairs</div>
+            <div>8️⃣ <span style="color:#ffd700">Market Maker</span> → paper mode first</div>
           </div>
         </div>
 

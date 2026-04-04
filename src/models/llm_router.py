@@ -47,6 +47,8 @@ OAI_PROVIDERS = [
         "name":     "Groq",
         "env_key":  "GROQ_API_KEY",
         "base_url": "https://api.groq.com/openai/v1",
+        # llama-3.3-70b-versatile is Groq's best model
+        # Falls back automatically within Groq if rate limited
         "model":    "llama-3.3-70b-versatile",
         "emoji":    "⚡",
     },
@@ -54,7 +56,9 @@ OAI_PROVIDERS = [
         "name":     "Gemini",
         "env_key":  "GEMINI_KEY",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "model":    "gemini-2.0-flash",
+        # gemini-2.0-flash is free tier — limit: 1500 req/day
+        # If hitting quota, upgrade to paid or use gemini-1.5-flash-latest
+        "model":    "gemini-1.5-flash-latest",
         "emoji":    "💎",
     },
     {
@@ -64,6 +68,31 @@ OAI_PROVIDERS = [
         "model":    "gpt-4o-mini",
         "emoji":    "🤖",
     },
+    {
+        # ── OpenRouter — 29+ free models, one API key ──────────
+        # Sign up FREE at openrouter.ai → no credit card needed
+        # Best free coding model: Qwen3 Coder 480B (rivals Claude)
+        # API is OpenAI-compatible — drop-in replacement
+        # Rate limits: 20 req/min, 200 req/day (resets daily)
+        # Get key at: openrouter.ai → API Keys → Create Key
+        "name":     "OpenRouter",
+        "env_key":  "OPENROUTER_API_KEY",
+        "base_url": "https://openrouter.ai/api/v1",
+        "model":    "qwen/qwen3-coder:free",   # best free coding model
+        "emoji":    "🌐",
+    },
+]
+
+# OpenRouter free model cascade — tried in order when primary is rate-limited
+OPENROUTER_FREE_MODELS = [
+    "qwen/qwen3-coder:free",             # #1 — Qwen3 Coder 480B, best for code
+    "qwen/qwen3.6-plus-preview:free",    # #2 — 1M context, strong reasoning
+    "deepseek/deepseek-r1:free",         # #3 — DeepSeek R1 (reasoning model)
+    "openrouter/free",                   # #4 — auto-selects best available free model
+    "meta-llama/llama-3.3-70b-instruct:free",  # #5 — Llama 3.3 70B
+    "openai/gpt-oss-120b:free",          # #6 — OpenAI open-weight 120B
+    "mistralai/mistral-small-3.1:free",  # #7 — Mistral Small 3.1
+    "google/gemma-3-27b-it:free",        # #8 — Google Gemma 3 27B
 ]
 
 FALLBACK_STATUS_CODES = {400, 402, 429, 500, 502, 503, 504}  # 400 = Claude credit error
@@ -137,9 +166,18 @@ class LLMRouter:
                      max_tokens: int) -> str:
         """Call Claude via native Anthropic API."""
         _, config = self.clients["Claude"]
+        # Claude Sonnet has 200k context but RBI prompts can be large.
+        # Cap max_tokens at 8192 to prevent 400 errors on long prompts.
+        safe_max = min(max_tokens, 8192)
+        # Also truncate extremely long prompts (RBI code generation)
+        combined_len = len(system_prompt) + len(user_prompt)
+        if combined_len > 150_000:
+            # Trim user_prompt to fit — keep system prompt intact
+            trim_to = 150_000 - len(system_prompt) - 1000
+            user_prompt = user_prompt[:trim_to] + "\n[...truncated for length...]"
         response = self._anthropic_client.messages.create(
             model=config["model"],
-            max_tokens=max_tokens,
+            max_tokens=safe_max,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
@@ -149,16 +187,68 @@ class LLMRouter:
                   user_prompt: str, max_tokens: int) -> str:
         """Call an OpenAI-compatible provider."""
         client, config = self.clients[name]
-        response = client.chat.completions.create(
-            model=config["model"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_prompt},
-            ],
-            max_tokens=max_tokens,
-            temperature=0.1,
+
+        # OpenRouter: rotate through free models if primary is rate-limited
+        if name == "OpenRouter":
+            last_err = None
+            for model_name in OPENROUTER_FREE_MODELS:
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user",   "content": user_prompt},
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.1,
+                    )
+                    if model_name != OPENROUTER_FREE_MODELS[0]:
+                        print(f"    ↳ OpenRouter: using {model_name}")
+                    return response.choices[0].message.content.strip()
+                except Exception as e:
+                    last_err = e
+                    err_s = str(e)
+                    if "429" in err_s or "rate" in err_s.lower() or "quota" in err_s.lower():
+                        continue   # try next free model
+                    raise          # different error — propagate
+            raise last_err
+
+        # Groq: if primary model rate-limited, try smaller model
+        groq_fallback_models = [
+            "llama-3.3-70b-versatile",    # Groq primary — best quality
+            "llama-3.1-8b-instant",       # faster, less likely rate-limited
+            "llama3-70b-8192",            # alternate 70B
+            "llama3-8b-8192",             # smallest — almost never rate-limited
+        ]
+        # gemma2-9b-it and mixtral-8x7b removed — discontinued on Groq
+
+        models_to_try = (
+            groq_fallback_models if name == "Groq"
+            else [config["model"]]
         )
-        return response.choices[0].message.content.strip()
+
+        last_err = None
+        for model_name in models_to_try:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user",   "content": user_prompt},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.1,
+                )
+                if model_name != config["model"]:
+                    print(f"    ↳ Groq: using {model_name} (primary rate-limited)")
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                last_err = e
+                if "429" in str(e) or "rate" in str(e).lower():
+                    continue   # try next Groq model
+                raise          # other error — propagate
+
+        raise last_err
 
     def chat(self, system_prompt: str, user_prompt: str,
              max_tokens: int = 4096, prefer: str = None) -> str:
@@ -213,9 +303,17 @@ class LLMRouter:
                 )
 
                 if should_fallback:
-                    next_p = [p for p in order if p != name]
-                    if next_p:
-                        print(f"  ⚠️  [{name}] failed → trying {next_p[0]}...")
+                    # Find the NEXT provider in order (not just any other)
+                    try:
+                        current_idx = order.index(name)
+                        remaining   = order[current_idx + 1:]
+                    except ValueError:
+                        remaining = []
+                    if remaining:
+                        print(f"  ⚠️  [{name}] failed ({type(e).__name__}: "
+                              f"{str(e)[:60]}) → trying {remaining[0]}...")
+                    else:
+                        print(f"  ⚠️  [{name}] failed — all providers exhausted")
                     continue
                 else:
                     raise

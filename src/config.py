@@ -115,7 +115,19 @@ WEBHOOK_SECRET    = os.getenv("WEBHOOK_SECRET", "algotec_secret_change_me")
 # ── Data / Backtesting ──────────────────────────────────────
 BACKTEST_INITIAL_CASH = 100_000
 BACKTEST_COMMISSION   = 0.001    # 0.1%
-DATA_TIMEFRAMES       = ["5m", "15m", "1H", "4H", "1D"]
+DATA_TIMEFRAMES       = ["1m", "5m", "15m", "1H", "4H", "1D"]
+
+# ── High-frequency Sharpe thresholds ─────────────────────────
+# 1m/5m strategies need higher Sharpe to compensate for fees+slippage
+# More trades = transaction costs eat into edge faster
+HF_SHARPE_THRESHOLD = {
+    "1m":  1.8,    # very high bar — fees dominate at 1m
+    "5m":  1.5,    # high bar — still frequent enough to matter
+    "15m": 1.3,    # standard
+    "1H":  1.2,
+    "4H":  1.0,
+    "1D":  1.0,
+}
 DEFAULT_TIMEFRAME     = "1H"
 DAYS_BACK             = 365
 
