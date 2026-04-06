@@ -1,667 +1,370 @@
 # ============================================================
-# 🌙 Strategy Vault
+# Strategy Vault v2
 #
-# Automatically identifies winning strategies from RBI backtest
-# results, optimises their parameters, and saves them permanently
-# so they survive cache clears and re-runs.
+# Deterministic vault compiler for RBI v2 artifacts.
 #
 # HOW IT WORKS:
-#   1. Reads latest backtest_stats.csv after each RBI run
-#   2. Filters strategies passing quality gate:
-#        - Sharpe > 1.5
-#        - 10+ trades
-#        - Drawdown < 20%
-#        - Profitable
-#   3. For each winner, asks DeepSeek to write clean hard-coded
-#      strategy code (not the RBI one-shot — a proper version)
-#   4. Optimises key parameters using backtesting.py optimiser
-#   5. Saves to src/strategies/vault/ — never gets deleted
-#   6. Maintains a vault manifest (vault_index.json)
-#
-# HOW TO RUN:
-#   # Automatically after a backtest run:
-#   python src/agents/rbi_parallel.py --market futures && \
-#   python src/strategies/strategy_vault.py
-#
-#   # Manually on existing results:
-#   python src/strategies/strategy_vault.py
-#   python src/strategies/strategy_vault.py --csv path/to/backtest_stats.csv
-#   python src/strategies/strategy_vault.py --optimise MES 15m HistogramFade
+# 1. Reads RBI v2 json result files from src/data/rbi_results/
+# 2. Applies aggregate quality + robustness gate
+# 3. Compiles deterministic VaultStrategy from schema/family
+# 4. Optimizes class parameters using backtesting.py optimizer
+# 5. Saves to src/strategies/vault/ and updates vault_index.json
 # ============================================================
 
-import os
-import sys
-import csv
+from __future__ import annotations
+
 import json
-import time
+import re
 import textwrap
 import warnings
-import re
-import numpy as np
-import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Any, List, Tuple
 
-warnings.filterwarnings("ignore", category=UserWarning,    module="backtesting")
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="backtesting")
+import numpy as np
+import pandas as pd
+from backtesting import Backtest
 
+import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.models.llm_router    import model
-from src.data.fetcher          import get_ohlcv
-from src.config                import (EXCHANGE, BACKTEST_INITIAL_CASH,
-                                        BACKTEST_COMMISSION)
+from src.data.fetcher import get_ohlcv
+from src.config import EXCHANGE, BACKTEST_INITIAL_CASH, BACKTEST_COMMISSION
+from src.strategies.families.schema import schema_from_dict
+from src.strategies.families.compiler import compile_strategy_class, RUNTIME_IMPORT_BLOCK
 
-# ── Paths ─────────────────────────────────────────────────────
-REPO_ROOT      = Path(__file__).resolve().parents[2]
-RESULTS_CSV    = REPO_ROOT / "src" / "data" / "rbi_results" / "backtest_stats.csv"
-VAULT_DIR      = REPO_ROOT / "src" / "strategies" / "vault"
-VAULT_INDEX    = VAULT_DIR / "vault_index.json"
+warnings.filterwarnings("ignore", category=UserWarning, module="backtesting")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="backtesting")
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RESULTS_DIR = REPO_ROOT / "src" / "data" / "rbi_results"
+VAULT_DIR = REPO_ROOT / "src" / "strategies" / "vault"
+VAULT_INDEX = VAULT_DIR / "vault_index.json"
 VAULT_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── Quality gate ──────────────────────────────────────────────
-# Futures (prop firm): higher bar — one bad week ends an evaluation
-MIN_SHARPE_FUTURES  = 1.5
-MIN_RETURN_FUTURES  = 5.0
-# Crypto (Hyperliquid): lower bar — own capital, no drawdown limits
-MIN_SHARPE_CRYPTO   = 1.0
-MIN_RETURN_CRYPTO   = 5.0
+FUTURES_SYMBOLS = {"MES", "MNQ", "MYM", "ES", "NQ", "YM", "CL", "GC", "ZB"}
 
-# Shared thresholds
-MIN_TRADES     = 10      # minimum number of trades
-MAX_DRAWDOWN   = -20.0   # maximum acceptable drawdown %
-MIN_WIN_RATE   = 40.0    # minimum win rate %
+MIN_SHARPE_FUTURES = 1.3
+MIN_RETURN_FUTURES = 4.0
+MIN_SHARPE_CRYPTO = 1.0
+MIN_RETURN_CRYPTO = 4.0
 
-# Backward compat
-FUTURES_SYMBOLS = {'MES','MNQ','MYM','ES','NQ','YM','CL','GC','ZB'}
+MIN_TRADES = 12
+MAX_DRAWDOWN = -25.0
+MIN_WIN_RATE = 35.0
+MIN_DATASET_BREADTH = 2
+OPTIMISE_DAYS = 1825
+RUN_OPTIMISE = True
 
-def get_thresholds(symbol: str):
-    """Return (min_sharpe, min_return) based on market."""
+
+def get_thresholds(symbol: str) -> Tuple[float, float]:
     if symbol.upper() in FUTURES_SYMBOLS:
         return MIN_SHARPE_FUTURES, MIN_RETURN_FUTURES
     return MIN_SHARPE_CRYPTO, MIN_RETURN_CRYPTO
 
-MIN_SHARPE = MIN_SHARPE_FUTURES   # default for backward compat
 
-# ── Optimisation ──────────────────────────────────────────────
-RUN_OPTIMISE   = True    # set False to skip parameter optimisation
-OPTIMISE_DAYS  = 1825    # days of data to use for optimisation
-
-# ── Code generation prompt ────────────────────────────────────
-VAULT_PROMPT = """You are an expert Python quant developer.
-Write a clean, production-quality backtesting.py Strategy class.
-
-STRATEGY IDEA:
-{idea}
-
-BACKTEST RESULTS THAT TRIGGERED THIS SAVE:
-Symbol: {symbol}, Timeframe: {timeframe}
-Return: {return_pct}%, Sharpe: {sharpe}, Drawdown: {drawdown}%
-Trades: {num_trades}, Win Rate: {win_rate}%
-
-STRICT RULES:
-- Class name must be exactly: VaultStrategy
-- Import ONLY: numpy as np, pandas as pd, ta as ta_lib, ta
-  from backtesting import Strategy
-  from backtesting.lib import crossover
-- Use self.I() for ALL indicators
-- Use ta library: ta_lib.trend.ema_indicator(pd.Series(c), window=9).values
-- Always wrap inputs in pd.Series() before ta functions
-- Fixed position size: self.buy(size=0.1) — never larger
-- Include proper stop loss and take profit
-- Add class-level parameters for key values so they can be optimised:
-    fast_period = 12
-    slow_period = 26
-    etc.
-- NEVER use talib, TA-Lib, or pandas_ta
-- Clean, well-commented code
-- Return ONLY the class, no imports, no markdown
-
-Start with: class VaultStrategy(Strategy):"""
-
-
-# ════════════════════════════════════════════════════════════════
-# VAULT INDEX
-# ════════════════════════════════════════════════════════════════
-
-def load_vault_index() -> dict:
+def load_vault_index() -> Dict[str, Any]:
     if VAULT_INDEX.exists():
         return json.loads(VAULT_INDEX.read_text())
     return {"strategies": [], "last_updated": None}
 
 
-def save_vault_index(index: dict):
+def save_vault_index(index: Dict[str, Any]):
     index["last_updated"] = datetime.now().isoformat()
     VAULT_INDEX.write_text(json.dumps(index, indent=2))
 
 
-def is_already_vaulted(strategy_name: str, symbol: str,
-                        timeframe: str) -> bool:
-    index = load_vault_index()
-    for s in index["strategies"]:
-        if (s["name"]      == strategy_name and
-                s["symbol"]    == symbol and
-                s["timeframe"] == timeframe):
+def slugify(text: str) -> str:
+    text = re.sub(r"[^a-zA-Z0-9]+", "_", text.strip()).strip("_")
+    return text[:80] if text else "strategy"
+
+
+def is_already_vaulted(name: str, family: str) -> bool:
+    idx = load_vault_index()
+    for s in idx["strategies"]:
+        if s.get("name") == name and s.get("family") == family:
             return True
     return False
 
 
-# ════════════════════════════════════════════════════════════════
-# QUALITY GATE
-# ════════════════════════════════════════════════════════════════
-
-def passes_quality_gate(row: dict) -> tuple[bool, str]:
-    """Check if a backtest result deserves to be vaulted."""
-    try:
-        sharpe   = float(row.get("sharpe",   0) or 0)
-        trades   = int(row.get("num_trades", 0) or 0)
-        drawdown = float(row.get("max_drawdown", -100) or -100)
-        ret      = float(row.get("return_pct",   0) or 0)
-        winrate  = float(row.get("win_rate",     0) or 0)
-    except (ValueError, TypeError):
-        return False, "Invalid numeric data"
-
-    symbol        = str(row.get("symbol", "")).upper()
-    min_sh, min_ret = get_thresholds(symbol)
-    market        = "FUTURES" if symbol in FUTURES_SYMBOLS else "CRYPTO"
-
-    if sharpe < min_sh:
-        return False, f"Sharpe {sharpe:.2f} < {min_sh} ({market} threshold)"
-    if trades < MIN_TRADES:
-        return False, f"Only {trades} trades < {MIN_TRADES}"
-    if drawdown < MAX_DRAWDOWN:
-        return False, f"Drawdown {drawdown:.1f}% < {MAX_DRAWDOWN}%"
-    if ret < min_ret:
-        return False, f"Return {ret:.1f}% < {min_ret}% ({market} threshold)"
-    if winrate < MIN_WIN_RATE:
-        return False, f"Win rate {winrate:.1f}% < {MIN_WIN_RATE}%"
-
-    return True, "Passed all checks"
-
-
-# ════════════════════════════════════════════════════════════════
-# CODE GENERATION
-# ════════════════════════════════════════════════════════════════
-
-def generate_vault_code(row: dict) -> str:
-    """Ask the LLM to write clean strategy code for vaulting."""
-    prompt = VAULT_PROMPT.format(
-        idea       = row.get("idea", ""),
-        symbol     = row.get("symbol", ""),
-        timeframe  = row.get("timeframe", ""),
-        return_pct = row.get("return_pct", 0),
-        sharpe     = row.get("sharpe", 0),
-        drawdown   = row.get("max_drawdown", 0),
-        num_trades = row.get("num_trades", 0),
-        win_rate   = row.get("win_rate", 0),
+def load_candidate_files() -> List[Path]:
+    return sorted(
+        [
+            p for p in RESULTS_DIR.glob("*.json")
+            if p.name != "vault_index.json"
+        ]
     )
-    code = model.chat(
-        system_prompt="You are an expert Python quant. Return only valid Python code.",
-        user_prompt=prompt,
+
+
+def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
+    results = payload.get("results", [])
+    valid = [r for r in results if not r.get("error")]
+    if not valid:
+        return {
+            "best": None,
+            "valid_count": 0,
+            "dataset_breadth": 0,
+            "mean_sharpe": 0.0,
+            "mean_return": 0.0,
+            "mean_win_rate": 0.0,
+            "mean_drawdown": 0.0,
+        }
+
+    valid_sorted = sorted(
+        valid,
+        key=lambda r: (
+            r.get("sharpe", 0.0),
+            r.get("return_pct", 0.0),
+            r.get("win_rate", 0.0),
+            -(abs(r.get("max_drawdown", 0.0))),
+        ),
+        reverse=True,
     )
-    code = re.sub(r"```python|```", "", code).strip()
-    if not code.startswith("class VaultStrategy"):
-        match = re.search(r"(class VaultStrategy.*)", code, re.DOTALL)
-        code  = match.group(1) if match else code
+
+    dataset_breadth = sum(1 for r in valid if (r.get("return_pct", 0.0) or 0.0) > 0)
+    return {
+        "best": valid_sorted[0],
+        "valid_count": len(valid),
+        "dataset_breadth": dataset_breadth,
+        "mean_sharpe": float(sum(r["sharpe"] for r in valid) / len(valid)),
+        "mean_return": float(sum(r["return_pct"] for r in valid) / len(valid)),
+        "mean_win_rate": float(sum(r["win_rate"] for r in valid) / len(valid)),
+        "mean_drawdown": float(sum(r["max_drawdown"] for r in valid) / len(valid)),
+    }
+
+
+def passes_quality_gate(payload: Dict[str, Any]) -> Tuple[bool, str]:
+    summary = summarize_candidate(payload)
+    best = summary["best"]
+    if not best:
+        return False, "No valid backtests"
+
+    min_sharpe, min_return = get_thresholds(best["symbol"])
+
+    if summary["dataset_breadth"] < MIN_DATASET_BREADTH:
+        return False, f"Dataset breadth {summary['dataset_breadth']} < {MIN_DATASET_BREADTH}"
+
+    if (best.get("sharpe", 0.0) or 0.0) < min_sharpe:
+        return False, f"Sharpe {best.get('sharpe', 0.0):.2f} < {min_sharpe}"
+
+    if (best.get("return_pct", 0.0) or 0.0) < min_return:
+        return False, f"Return {best.get('return_pct', 0.0):.2f}% < {min_return}%"
+
+    if (best.get("num_trades", 0) or 0) < MIN_TRADES:
+        return False, f"Trades {best.get('num_trades', 0)} < {MIN_TRADES}"
+
+    if (best.get("max_drawdown", 0.0) or 0.0) < MAX_DRAWDOWN:
+        return False, f"Drawdown {best.get('max_drawdown', 0.0):.2f}% < {MAX_DRAWDOWN}%"
+
+    if (best.get("win_rate", 0.0) or 0.0) < MIN_WIN_RATE:
+        return False, f"Win rate {best.get('win_rate', 0.0):.2f}% < {MIN_WIN_RATE}%"
+
+    return True, "Passed"
+
+
+def compile_vault_code(payload: Dict[str, Any]) -> str:
+    schema = schema_from_dict(payload["schema"], source_idea=payload.get("idea", ""))
+    code = compile_strategy_class(schema, class_name="VaultStrategy")
     return code
 
 
-# ════════════════════════════════════════════════════════════════
-# PARAMETER OPTIMISATION
-# ════════════════════════════════════════════════════════════════
+def exec_vault_code(code: str):
+    namespace: Dict[str, Any] = {}
+    compiled = compile(RUNTIME_IMPORT_BLOCK + "\n\n" + code, "<vault_strategy>", "exec")
+    exec(compiled, namespace)
+    return namespace["VaultStrategy"]
 
-def optimise_strategy(code: str, symbol: str, timeframe: str,
-                       strategy_name: str) -> tuple[str, dict]:
-    """
-    Run backtesting.py parameter optimisation on the strategy.
-    Returns optimised code with best parameters baked in, and stats dict.
-    """
+
+def optimise_strategy(code: str, symbol: str, timeframe: str) -> Tuple[str, Dict[str, Any]]:
     try:
-        from backtesting import Backtest
+        df = get_ohlcv(symbol, exchange=EXCHANGE, timeframe=timeframe, days_back=OPTIMISE_DAYS)
+        df = pd.DataFrame(
+            {
+                "Open": df["Open"].astype(float).values,
+                "High": df["High"].astype(float).values,
+                "Low": df["Low"].astype(float).values,
+                "Close": df["Close"].astype(float).values,
+                "Volume": df["Volume"].astype(float).values,
+            },
+            index=df.index,
+        )
 
-        df = get_ohlcv(symbol, exchange=EXCHANGE,
-                       timeframe=timeframe, days_back=OPTIMISE_DAYS)
-        df = pd.DataFrame({
-            "Open":   df["Open"].astype(float).values,
-            "High":   df["High"].astype(float).values,
-            "Low":    df["Low"].astype(float).values,
-            "Close":  df["Close"].astype(float).values,
-            "Volume": df["Volume"].astype(float).values,
-        }, index=df.index)
+        StrategyClass = exec_vault_code(code)
+        bt = Backtest(
+            df,
+            StrategyClass,
+            cash=BACKTEST_INITIAL_CASH,
+            commission=BACKTEST_COMMISSION,
+            exclusive_orders=True,
+        )
 
-        imports = textwrap.dedent("""
-            import numpy as np
-            import pandas as pd
-            import ta as ta_lib
-            import ta
-            from backtesting import Strategy
-            from backtesting.lib import crossover
-        """)
-        namespace = {}
-        exec(compile(imports + "\n" + code, "<vault>", "exec"), namespace)
-        StrategyClass = namespace["VaultStrategy"]
-
-        bt = Backtest(df, StrategyClass,
-                      cash=BACKTEST_INITIAL_CASH,
-                      commission=BACKTEST_COMMISSION,
-                      exclusive_orders=True)
-
-        # Detect optimisable parameters (class-level int/float attributes)
         opt_params = {}
         for attr, val in vars(StrategyClass).items():
             if attr.startswith("_"):
                 continue
             if isinstance(val, int) and 2 <= val <= 200:
-                # Create a range around the default value
-                step  = max(1, val // 5)
-                low   = max(2, val - val // 2)
-                high  = val + val // 2 + step
-                opt_params[attr] = range(low, high, step)
-            elif isinstance(val, float) and 0 < val < 1:
-                opt_params[attr] = [round(v, 2) for v in
-                                     np.arange(max(0.01, val-0.2),
-                                               min(0.99, val+0.21), 0.05)]
+                step = max(1, val // 5)
+                low = max(2, val - val // 2)
+                high = val + val // 2 + step
+                if high > low:
+                    opt_params[attr] = range(low, high, step)
+            elif isinstance(val, float) and 0 < val <= 5:
+                vals = np.arange(max(0.05, val * 0.5), min(5.0, val * 1.5) + 0.001, max(0.05, val / 5))
+                vals = [round(float(v), 3) for v in vals]
+                if len(vals) > 1:
+                    opt_params[attr] = vals
 
         if not opt_params:
-            print(f"     ℹ️  No optimisable parameters found — using defaults")
             stats = bt.run()
             return code, {
-                "sharpe":    round(float(stats.get("Sharpe Ratio", 0) or 0), 3),
-                "return":    round(float(stats["Return [%]"]), 2),
-                "drawdown":  round(float(stats["Max. Drawdown [%]"]), 2),
-                "trades":    int(stats["# Trades"]),
-                "win_rate":  round(float(stats.get("Win Rate [%]", 0) or 0), 2),
                 "optimised": False,
+                "sharpe": round(float(stats.get("Sharpe Ratio", 0) or 0), 3),
+                "return": round(float(stats.get("Return [%]", 0) or 0), 2),
+                "drawdown": round(float(stats.get("Max. Drawdown [%]", 0) or 0), 2),
+                "trades": int(stats.get("# Trades", 0) or 0),
+                "win_rate": round(float(stats.get("Win Rate [%]", 0) or 0), 2),
             }
 
-        print(f"     🔧 Optimising {len(opt_params)} parameters: {list(opt_params.keys())}")
-
-        # Run optimisation — maximise Sharpe ratio
-        stats, heatmap = bt.optimize(
+        stats, _ = bt.optimize(
             **opt_params,
             maximize="Sharpe Ratio",
             return_heatmap=True,
         )
-
         best_params = stats._strategy.__dict__
-        best_sharpe = round(float(stats.get("Sharpe Ratio", 0) or 0), 3)
-        print(f"     ✅ Optimised Sharpe: {best_sharpe:.2f}")
 
-        # Bake best parameters into the code as comments
-        param_lines = "\n".join(
-            f"    # optimised: {k} = {v}"
-            for k, v in opt_params.items()
-            if k in best_params
-        )
-        # Replace default parameter values with optimised ones
         opt_code = code
         for param, val in best_params.items():
-            if param in opt_params:
-                if isinstance(val, int):
-                    opt_code = re.sub(
-                        rf"(\s+{param}\s*=\s*)\d+",
-                        rf"\g<1>{val}",
-                        opt_code
-                    )
-                elif isinstance(val, float):
-                    opt_code = re.sub(
-                        rf"(\s+{param}\s*=\s*)[\d.]+",
-                        rf"\g<1>{round(val, 4)}",
-                        opt_code
-                    )
+            if param not in opt_params:
+                continue
+            if isinstance(val, int):
+                opt_code = re.sub(rf"(\s+{param}\s*=\s*)\d+", rf"\g<1>{val}", opt_code)
+            elif isinstance(val, float):
+                opt_code = re.sub(rf"(\s+{param}\s*=\s*)[\d.]+", rf"\g<1>{round(val, 4)}", opt_code)
 
         return opt_code, {
-            "sharpe":    best_sharpe,
-            "return":    round(float(stats["Return [%]"]), 2),
-            "drawdown":  round(float(stats["Max. Drawdown [%]"]), 2),
-            "trades":    int(stats["# Trades"]),
-            "win_rate":  round(float(stats.get("Win Rate [%]", 0) or 0), 2),
             "optimised": True,
-            "best_params": {k: v for k, v in best_params.items()
-                             if k in opt_params},
+            "sharpe": round(float(stats.get("Sharpe Ratio", 0) or 0), 3),
+            "return": round(float(stats.get("Return [%]", 0) or 0), 2),
+            "drawdown": round(float(stats.get("Max. Drawdown [%]", 0) or 0), 2),
+            "trades": int(stats.get("# Trades", 0) or 0),
+            "win_rate": round(float(stats.get("Win Rate [%]", 0) or 0), 2),
+            "best_params": {k: v for k, v in best_params.items() if k in opt_params},
         }
 
     except Exception as e:
-        print(f"     ⚠️  Optimisation failed: {e} — saving with defaults")
         return code, {"optimised": False, "error": str(e)}
 
 
-# ════════════════════════════════════════════════════════════════
-# VAULT A STRATEGY
-# ════════════════════════════════════════════════════════════════
+def vault_strategy(payload: Dict[str, Any], force: bool = False) -> bool:
+    schema = payload["schema"]
+    name = schema["name"].replace(" ", "")
+    family = schema["family"]
 
-def vault_strategy(row: dict, force: bool = False) -> bool:
-    """
-    Generate, optimise and save a strategy to the vault.
-    Returns True if successfully vaulted.
-    """
-    strategy_name = row.get("strategy", "Unknown").replace(" ", "")
-    symbol        = row.get("symbol", "")
-    timeframe     = row.get("timeframe", "")
-    sharpe        = float(row.get("sharpe", 0) or 0)
-    ret           = float(row.get("return_pct", 0) or 0)
-
-    if not force and is_already_vaulted(strategy_name, symbol, timeframe):
-        print(f"  ⏭️  {strategy_name} {symbol} {timeframe} — already in vault")
+    if not force and is_already_vaulted(name, family):
+        print(f"⏭️ {name} ({family}) — already vaulted")
         return False
 
-    print(f"\n  💾 Vaulting: {strategy_name} | {symbol} {timeframe}")
-    print(f"     Sharpe {sharpe:.2f} | Return {ret:+.1f}% | "
-          f"{row.get('num_trades')} trades")
+    summary = summarize_candidate(payload)
+    best = summary["best"]
+    if not best:
+        print(f"❌ {name} — no valid backtests")
+        return False
 
-    # 1. Generate code
-    print(f"     📝 Generating strategy code...")
+    print(f"\n🏛️ Vaulting: {name} | {family}")
+    print(
+        f"Best: {best['symbol']} {best['timeframe']} | "
+        f"Sharpe {best['sharpe']:.2f} | Return {best['return_pct']:.1f}% | "
+        f"Trades {best['num_trades']}"
+    )
+
     try:
-        code = generate_vault_code(row)
+        code = compile_vault_code(payload)
     except Exception as e:
-        print(f"     ❌ Code generation failed: {e}")
+        print(f"❌ Compile failed: {e}")
         return False
 
-    # 2. Optimise parameters
-    optimised_code = code
-    opt_stats      = {}
+    opt_code = code
+    opt_stats = {}
     if RUN_OPTIMISE:
-        print(f"     🔧 Running parameter optimisation...")
-        optimised_code, opt_stats = optimise_strategy(
-            code, symbol, timeframe, strategy_name
-        )
+        print("⚙️ Optimizing parameters...")
+        opt_code, opt_stats = optimise_strategy(code, best["symbol"], best["timeframe"])
 
-    # 3. Build the vault file
-    timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_name  = re.sub(r"[^a-zA-Z0-9_]", "_", strategy_name)
-    filename   = f"{safe_name}_{symbol}_{timeframe}_{timestamp}.py"
-    vault_path = VAULT_DIR / filename
+    filename = f"{slugify(name)}_{family}.py"
+    out_path = VAULT_DIR / filename
 
-    file_content = f'''# ============================================================
-# 🌙 VAULT STRATEGY: {strategy_name}
-# Symbol: {symbol} | Timeframe: {timeframe}
-#
-# DISCOVERY STATS:
-#   Return   : {ret:+.1f}%
-#   Sharpe   : {sharpe:.2f}
-#   Drawdown : {row.get("max_drawdown", 0):.1f}%
-#   Trades   : {row.get("num_trades", 0)}
-#   Win Rate : {row.get("win_rate", 0):.1f}%
-#
-# OPTIMISED STATS:
-#   Sharpe   : {opt_stats.get("sharpe", "N/A")}
-#   Return   : {opt_stats.get("return", "N/A")}%
-#   Optimised: {opt_stats.get("optimised", False)}
-#   Best params: {opt_stats.get("best_params", {})}
-#
-# ORIGINAL IDEA:
-#   {row.get("idea", "")[:120]}
-#
-# VAULTED: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-# DO NOT DELETE — this is a verified winning strategy
-# ============================================================
+    file_text = textwrap.dedent(
+        f"""\
+        # Auto-generated by strategy_vault.py
+        # Source idea: {payload.get("idea", "")}
+        # Family: {family}
+        # Best dataset: {best["symbol"]} {best["timeframe"]}
+        # Summary: {json.dumps(summary)}
+        # Optimization: {json.dumps(opt_stats, default=str)}
 
-import sys
-import warnings
-import numpy as np
-import pandas as pd
-import ta as ta_lib
-import ta
-from pathlib import Path
-from datetime import datetime
-from backtesting import Backtest, Strategy
-from backtesting.lib import crossover
+        {RUNTIME_IMPORT_BLOCK}
 
-warnings.filterwarnings("ignore", category=UserWarning,    module="backtesting")
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="backtesting")
+        {opt_code}
+        """
+    )
+    out_path.write_text(file_text)
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-
-
-{optimised_code}
-
-
-def run(symbol: str = "{symbol}", timeframe: str = "{timeframe}",
-        days_back: int = 1825) -> dict:
-    """Run this vaulted strategy."""
-    from src.data.fetcher import get_ohlcv
-    from src.config import EXCHANGE, BACKTEST_INITIAL_CASH, BACKTEST_COMMISSION
-
-    df = get_ohlcv(symbol, exchange=EXCHANGE,
-                   timeframe=timeframe, days_back=days_back)
-    df = pd.DataFrame({{
-        "Open":   df["Open"].astype(float).values,
-        "High":   df["High"].astype(float).values,
-        "Low":    df["Low"].astype(float).values,
-        "Close":  df["Close"].astype(float).values,
-        "Volume": df["Volume"].astype(float).values,
-    }}, index=df.index)
-
-    bt    = Backtest(df, VaultStrategy,
-                     cash=BACKTEST_INITIAL_CASH,
-                     commission=BACKTEST_COMMISSION,
-                     exclusive_orders=True)
-    stats = bt.run()
-
-    return {{
-        "strategy":     "{strategy_name}",
-        "symbol":       symbol,
-        "timeframe":    timeframe,
-        "return_pct":   round(float(stats["Return [%]"]), 2),
-        "sharpe":       round(float(stats.get("Sharpe Ratio", 0) or 0), 3),
-        "max_drawdown": round(float(stats["Max. Drawdown [%]"]), 2),
-        "num_trades":   int(stats["# Trades"]),
-        "win_rate":     round(float(stats.get("Win Rate [%]", 0) or 0), 2),
-    }}
-
-
-if __name__ == "__main__":
-    result = run()
-    print(f"Return: {{result['return_pct']:+.1f}}% | "
-          f"Sharpe: {{result['sharpe']:.2f}} | "
-          f"DD: {{result['max_drawdown']:.1f}}% | "
-          f"Trades: {{result['num_trades']}}")
-'''
-
-    vault_path.write_text(file_content)
-
-    # 4. Update vault index
     index = load_vault_index()
-    index["strategies"].append({
-        "name":         strategy_name,
-        "symbol":       symbol,
-        "timeframe":    timeframe,
-        "file":         filename,
-        "vaulted_at":   datetime.now().isoformat(),
-        "discovery": {
-            "sharpe":    sharpe,
-            "return":    ret,
-            "drawdown":  float(row.get("max_drawdown", 0)),
-            "trades":    int(row.get("num_trades", 0)),
-            "win_rate":  float(row.get("win_rate", 0)),
-        },
-        "optimised":    opt_stats,
-        "idea":         row.get("idea", "")[:200],
-    })
+    index["strategies"].append(
+        {
+            "name": name,
+            "family": family,
+            "filename": filename,
+            "source_idea": payload.get("idea", ""),
+            "symbol": best["symbol"],
+            "timeframe": best["timeframe"],
+            "summary": summary,
+            "optimisation": opt_stats,
+            "vaulted_at": datetime.now().isoformat(),
+        }
+    )
     save_vault_index(index)
 
-    print(f"     ✅ Saved to vault: {filename}")
+    print(f"✅ Saved to {out_path}")
     return True
 
 
-# ════════════════════════════════════════════════════════════════
-# MAIN VAULT RUNNER
-# ════════════════════════════════════════════════════════════════
-
-def run_vault(csv_path: Path = None, force: bool = False):
-    """
-    Read latest backtest results and vault all qualifying strategies.
-    """
-    path = csv_path or RESULTS_CSV
-
-    if not path.exists():
-        print(f"❌ No backtest results found at: {path}")
-        print(f"   Run: python src/agents/rbi_parallel.py --market futures")
+def run_vault(force: bool = False):
+    files = load_candidate_files()
+    if not files:
+        print("❌ No RBI result files found")
         return
 
-    # Load results
-    df = pd.read_csv(path)
-    for col in ["return_pct","sharpe","max_drawdown","num_trades","win_rate"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+    vaulted = 0
+    skipped = 0
 
-    total      = len(df)
-    qualifying = []
-    rejected   = []
-
-    print(f"\n🏛️  Strategy Vault — Quality Check")
-    print(f"   Results file: {path.name}")
-    print(f"   Total results: {total}")
-    print(f"\n   Quality gate:")
-    print(f"   Sharpe   > 1.5 (futures) / > 1.0 (crypto)")
-    print(f"   Trades   ≥ {MIN_TRADES}")
-    print(f"   Drawdown > {MAX_DRAWDOWN}%")
-    print(f"   Return   > {MIN_RETURN}%")
-    print(f"   Win Rate > {MIN_WIN_RATE}%")
-    print()
-
-    for _, row in df.iterrows():
-        passed, reason = passes_quality_gate(row.to_dict())
-        if passed:
-            qualifying.append(row.to_dict())
-        else:
-            rejected.append((row.get("strategy","?"), reason))
-
-    print(f"   Qualifying : {len(qualifying)}")
-    print(f"   Rejected   : {len(rejected)}")
-
-    if not qualifying:
-        print(f"\n  ℹ️  No strategies passed the quality gate this run.")
-        print(f"     This is normal — not every run produces vault-worthy results.")
-        print(f"\n  Closest to qualifying (top 5 by Sharpe):")
-        top = df[df["num_trades"] > 0].nlargest(5, "sharpe")
-        for _, r in top.iterrows():
-            passed, reason = passes_quality_gate(r.to_dict())
-            print(f"    {r['strategy']:<30} {r['symbol']:<5} {r['timeframe']:<5} "
-                  f"Sharpe={r['sharpe']:.2f} — ❌ {reason}")
-        return
-
-    # Vault each qualifying strategy
-    print(f"\n{'═'*55}")
-    print(f"  Vaulting {len(qualifying)} qualifying strategies...")
-    print(f"{'═'*55}")
-
-    vaulted  = 0
-    skipped  = 0
-
-    for row in qualifying:
-        result = vault_strategy(row, force=force)
-        if result:
-            vaulted += 1
-        else:
-            skipped += 1
-        time.sleep(1)   # be polite to the AI API
-
-    # Summary
-    index = load_vault_index()
-    print(f"\n{'═'*55}")
-    print(f"✅ Vault run complete")
-    print(f"   New strategies vaulted : {vaulted}")
-    print(f"   Already in vault       : {skipped}")
-    print(f"   Total in vault         : {len(index['strategies'])}")
-    print(f"   Vault location         : {VAULT_DIR}")
-
-
-def list_vault():
-    """Print all strategies currently in the vault."""
-    index = load_vault_index()
-    strats = index.get("strategies", [])
-
-    if not strats:
-        print("🏛️  Vault is empty. Run a backtest first.")
-        return
-
-    print(f"\n🏛️  Strategy Vault — {len(strats)} strategies")
-    print(f"{'═'*70}")
-    print(f"\n{'#':<4} {'Strategy':<28} {'Sym':<5} {'TF':<5} "
-          f"{'Sharpe':>7} {'Return':>8} {'DD':>8} {'Trades':>7}")
-    print(f"{'─'*70}")
-
-    for i, s in enumerate(strats, 1):
-        disc = s.get("discovery", {})
-        opt  = s.get("optimised", {})
-        # Show optimised Sharpe if available, else discovery
-        sharpe = opt.get("sharpe") or disc.get("sharpe", 0)
-        ret    = opt.get("return") or disc.get("return", 0)
-        print(f"{i:<4} {s['name']:<28} {s['symbol']:<5} {s['timeframe']:<5} "
-              f"{sharpe:>7.2f} {ret:>+7.1f}% {disc.get('drawdown',0):>7.1f}% "
-              f"{disc.get('trades',0):>7}")
-
-    print(f"\n  Vault: {VAULT_DIR}")
-    print(f"  Index: {VAULT_INDEX}")
-
-
-def run_all_vaulted():
-    """Re-run all vaulted strategies on fresh data to verify they still work."""
-    index = load_vault_index()
-    strats = index.get("strategies", [])
-
-    if not strats:
-        print("🏛️  Vault is empty.")
-        return
-
-    print(f"\n🔄 Re-running all {len(strats)} vaulted strategies on fresh data...")
-    print(f"{'═'*60}")
-
-    results = []
-    for s in strats:
-        file_path = VAULT_DIR / s["file"]
-        if not file_path.exists():
-            print(f"  ❌ File missing: {s['file']}")
-            continue
+    for fp in files:
         try:
-            namespace = {}
-            exec(compile(file_path.read_text(), str(file_path), "exec"), namespace)
-            run_fn = namespace.get("run")
-            if run_fn:
-                r = run_fn(s["symbol"], s["timeframe"])
-                results.append(r)
-                disc_sharpe = s.get("discovery", {}).get("sharpe", 0)
-                delta = r["sharpe"] - disc_sharpe
-                icon  = "✅" if r["sharpe"] >= 1.0 else "⚠️ "
-                print(f"  {icon} {s['name']:<28} {s['symbol']:<5} {s['timeframe']:<5} "
-                      f"Sharpe {r['sharpe']:.2f} ({delta:+.2f} vs discovery)")
+            payload = json.loads(fp.read_text())
         except Exception as e:
-            print(f"  ❌ {s['name']}: {e}")
+            print(f"⚠️ Skipping {fp.name}: {e}")
+            skipped += 1
+            continue
 
-    print(f"\n  ✅ Re-run complete. {len(results)} strategies verified.")
-    return results
+        ok, reason = passes_quality_gate(payload)
+        strategy_name = payload.get("schema", {}).get("name", fp.stem)
 
+        if not ok:
+            print(f"⏭️ {strategy_name}: {reason}")
+            skipped += 1
+            continue
 
-# ════════════════════════════════════════════════════════════════
-# ENTRYPOINT
-# ════════════════════════════════════════════════════════════════
+        success = vault_strategy(payload, force=force)
+        vaulted += int(success)
+        skipped += int(not success)
+
+    print(f"\n✅ Vault complete | vaulted: {vaulted} | skipped: {skipped}")
+
 
 if __name__ == "__main__":
     import argparse
-    p = argparse.ArgumentParser(description="🏛️ Strategy Vault")
-    p.add_argument("--csv",      type=str, default=None,
-                   help="Path to backtest_stats.csv (default: latest results)")
-    p.add_argument("--list",     action="store_true",
-                   help="List all vaulted strategies")
-    p.add_argument("--rerun",    action="store_true",
-                   help="Re-run all vaulted strategies on fresh data")
-    p.add_argument("--force",    action="store_true",
-                   help="Re-vault strategies even if already in vault")
-    p.add_argument("--sharpe",   type=float, default=None,
-                   help=f"Override min Sharpe (default: {MIN_SHARPE})")
-    p.add_argument("--trades",   type=int,   default=None,
-                   help=f"Override min trades (default: {MIN_TRADES})")
-    args = p.parse_args()
 
-    if args.sharpe:
-        MIN_SHARPE = args.sharpe
-    if args.trades:
-        MIN_TRADES = args.trades
+    parser = argparse.ArgumentParser(description="🏛️ Strategy Vault v2")
+    parser.add_argument("--force", action="store_true", help="Force vaulting even if already vaulted")
+    args = parser.parse_args()
 
-    if args.list:
-        list_vault()
-    elif args.rerun:
-        run_all_vaulted()
-    else:
-        csv_path = Path(args.csv) if args.csv else None
-        run_vault(csv_path=csv_path, force=args.force)
+    run_vault(force=args.force)
