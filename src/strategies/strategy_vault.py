@@ -1,14 +1,8 @@
 # ============================================================
 # Strategy Vault v2
 #
-# Deterministic vault compiler for RBI v2 artifacts.
-#
-# HOW IT WORKS:
-# 1. Reads RBI v2 json result files from src/data/rbi_results/
-# 2. Applies aggregate quality + robustness gate
-# 3. Compiles deterministic VaultStrategy from schema/family
-# 4. Optimizes class parameters using backtesting.py optimizer
-# 5. Saves to src/strategies/vault/ and updates vault_index.json
+# Reads RBI v2 JSON results and only vaults strategies with
+# enough breadth and enough trades.
 # ============================================================
 
 from __future__ import annotations
@@ -44,12 +38,12 @@ VAULT_DIR.mkdir(parents=True, exist_ok=True)
 
 FUTURES_SYMBOLS = {"MES", "MNQ", "MYM", "ES", "NQ", "YM", "CL", "GC", "ZB"}
 
-MIN_SHARPE_FUTURES = 1.3
-MIN_RETURN_FUTURES = 4.0
+MIN_SHARPE_FUTURES = 1.2
+MIN_RETURN_FUTURES = 2.0
 MIN_SHARPE_CRYPTO = 1.0
-MIN_RETURN_CRYPTO = 4.0
+MIN_RETURN_CRYPTO = 2.0
 
-MIN_TRADES = 12
+MIN_TRADES = 20
 MAX_DRAWDOWN = -25.0
 MIN_WIN_RATE = 35.0
 MIN_DATASET_BREADTH = 2
@@ -88,12 +82,7 @@ def is_already_vaulted(name: str, family: str) -> bool:
 
 
 def load_candidate_files() -> List[Path]:
-    return sorted(
-        [
-            p for p in RESULTS_DIR.glob("*.json")
-            if p.name != "vault_index.json"
-        ]
-    )
+    return sorted([p for p in RESULTS_DIR.glob("*.json") if p.name != "vault_index.json"])
 
 
 def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -104,18 +93,23 @@ def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
             "best": None,
             "valid_count": 0,
             "dataset_breadth": 0,
+            "eligible_count": 0,
             "mean_sharpe": 0.0,
             "mean_return": 0.0,
             "mean_win_rate": 0.0,
             "mean_drawdown": 0.0,
         }
 
+    eligible = [r for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES]
+    ranking_pool = eligible if eligible else valid
+
     valid_sorted = sorted(
-        valid,
+        ranking_pool,
         key=lambda r: (
             r.get("sharpe", 0.0),
             r.get("return_pct", 0.0),
             r.get("win_rate", 0.0),
+            r.get("num_trades", 0),
             -(abs(r.get("max_drawdown", 0.0))),
         ),
         reverse=True,
@@ -126,6 +120,7 @@ def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
         "best": valid_sorted[0],
         "valid_count": len(valid),
         "dataset_breadth": dataset_breadth,
+        "eligible_count": len(eligible),
         "mean_sharpe": float(sum(r["sharpe"] for r in valid) / len(valid)),
         "mean_return": float(sum(r["return_pct"] for r in valid) / len(valid)),
         "mean_win_rate": float(sum(r["win_rate"] for r in valid) / len(valid)),
@@ -140,6 +135,9 @@ def passes_quality_gate(payload: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "No valid backtests"
 
     min_sharpe, min_return = get_thresholds(best["symbol"])
+
+    if summary["eligible_count"] == 0:
+        return False, f"No eligible results with >= {MIN_TRADES} trades"
 
     if summary["dataset_breadth"] < MIN_DATASET_BREADTH:
         return False, f"Dataset breadth {summary['dataset_breadth']} < {MIN_DATASET_BREADTH}"
@@ -164,8 +162,7 @@ def passes_quality_gate(payload: Dict[str, Any]) -> Tuple[bool, str]:
 
 def compile_vault_code(payload: Dict[str, Any]) -> str:
     schema = schema_from_dict(payload["schema"], source_idea=payload.get("idea", ""))
-    code = compile_strategy_class(schema, class_name="VaultStrategy")
-    return code
+    return compile_strategy_class(schema, class_name="VaultStrategy")
 
 
 def exec_vault_code(code: str):
@@ -193,7 +190,7 @@ def optimise_strategy(code: str, symbol: str, timeframe: str) -> Tuple[str, Dict
         bt = Backtest(
             df,
             StrategyClass,
-            cash=BACKTEST_INITIAL_CASH,
+            cash=max(BACKTEST_INITIAL_CASH, 1_000_000),
             commission=BACKTEST_COMMISSION,
             exclusive_orders=True,
         )
@@ -202,14 +199,14 @@ def optimise_strategy(code: str, symbol: str, timeframe: str) -> Tuple[str, Dict
         for attr, val in vars(StrategyClass).items():
             if attr.startswith("_"):
                 continue
-            if isinstance(val, int) and 2 <= val <= 200:
+            if attr in {"lookback", "rsi_window", "atr_window", "ema_fast", "ema_slow"} and isinstance(val, int):
                 step = max(1, val // 5)
-                low = max(2, val - val // 2)
-                high = val + val // 2 + step
+                low = max(2, val - max(2, val // 3))
+                high = val + max(2, val // 3) + step
                 if high > low:
                     opt_params[attr] = range(low, high, step)
-            elif isinstance(val, float) and 0 < val <= 5:
-                vals = np.arange(max(0.05, val * 0.5), min(5.0, val * 1.5) + 0.001, max(0.05, val / 5))
+            elif attr in {"sl_atr_mult", "tp_r_multiple"} and isinstance(val, (int, float)):
+                vals = np.arange(max(0.25, float(val) * 0.6), min(5.0, float(val) * 1.4) + 0.001, 0.25)
                 vals = [round(float(v), 3) for v in vals]
                 if len(vals) > 1:
                     opt_params[attr] = vals

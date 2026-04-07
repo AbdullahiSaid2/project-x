@@ -1,15 +1,15 @@
 # ============================================================
 # RBI Parallel Backtester v2
 #
-# Compiler-driven RBI:
-# raw idea -> rewrite -> family/schema -> deterministic compiler
-# -> smoke test -> parallel dataset sweep -> saved result json
+# Strict mode:
+# raw idea -> parameter-aware family/schema -> deterministic compiler
+# -> smoke test -> parallel backtest sweep -> save results
 #
-# HOW TO RUN:
-# python src/agents/rbi_parallel_v2.py
-# python src/agents/rbi_parallel_v2.py --workers 8
-# python src/agents/rbi_parallel_v2.py --idea "Long when 5-minute inside bar breaks high"
-# python src/agents/rbi_parallel_v2.py --market futures
+# Upgrades in this version:
+# - Adds 5m futures datasets
+# - Prioritizes datasets by timeframe_hint and symbol mentioned in idea
+# - Filters out undersampled "best" results
+# - Labels low-trade strategies as under-sampled
 # ============================================================
 
 from __future__ import annotations
@@ -33,12 +33,10 @@ from src.config import (
     BACKTEST_INITIAL_CASH,
     BACKTEST_COMMISSION,
     EXCHANGE,
-    DEFAULT_TIMEFRAME,
 )
-from src.models.llm_router import rbi_model as model
 from src.data.fetcher import get_ohlcv
 from src.strategies.families.registry import heuristic_schema_from_idea
-from src.strategies.families.schema import schema_from_dict
+
 try:
     from src.strategies.families.compiler import compile_strategy_class, RUNTIME_IMPORT_BLOCK
 except Exception:
@@ -46,12 +44,15 @@ except Exception:
 
     def compile_strategy_class(*args, **kwargs):
         return """
-class GeneratedStrategy:
-    def init(self): pass
-    def next(self): pass
+class GeneratedStrategy(Strategy):
+    def init(self):
+        pass
+    def next(self):
+        return
 """
+    RUNTIME_IMPORT_BLOCK = "from backtesting import Strategy"
 
-    RUNTIME_IMPORT_BLOCK = ""
+from src.strategies.families.schema import schema_from_dict
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -61,6 +62,8 @@ PROCESSED = REPO_ROOT / "src" / "data" / "processed_ideas_v2.json"
 SUMMARY_CSV = RESULTS_DIR / "backtest_stats_v2.csv"
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+MIN_TRADES_FOR_BEST = 20
 
 CRYPTO_DATASETS = [
     ("BTC", "15m"), ("BTC", "1H"), ("BTC", "4H"),
@@ -79,9 +82,9 @@ CRYPTO_DATASETS = [
 ]
 
 FUTURES_DATASETS = [
-    ("MNQ", "15m"), ("MNQ", "1H"), ("MNQ", "4H"), ("MNQ", "1D"),
-    ("MES", "15m"), ("MES", "1H"), ("MES", "4H"), ("MES", "1D"),
-    ("MYM", "15m"), ("MYM", "1H"), ("MYM", "4H"), ("MYM", "1D"),
+    ("MNQ", "5m"), ("MNQ", "15m"), ("MNQ", "1H"), ("MNQ", "4H"), ("MNQ", "1D"),
+    ("MES", "5m"), ("MES", "15m"), ("MES", "1H"), ("MES", "4H"), ("MES", "1D"),
+    ("MYM", "5m"), ("MYM", "15m"), ("MYM", "1H"), ("MYM", "4H"), ("MYM", "1D"),
 ]
 
 ALL_DATASETS = CRYPTO_DATASETS
@@ -91,66 +94,6 @@ print_lock = threading.Lock()
 def safe_print(*args, **kwargs):
     with print_lock:
         print(*args, **kwargs)
-
-
-IDEA_REWRITE_PROMPT = """Rewrite this trading idea into a strict mechanical rule.
-
-IDEA:
-{idea}
-
-Rules:
-- make it codifiable
-- keep only the core edge
-- max 2 entry conditions
-- include clear trigger logic
-- avoid discretionary language
-- return JSON only:
-{{
-  "normalized_idea": "...",
-  "ambiguity_score": 0-10,
-  "codifiability_score": 0-10
-}}
-"""
-
-SCHEMA_PROMPT = """Convert this normalized trading idea into a strict strategy schema.
-
-NORMALIZED IDEA:
-{idea}
-
-Allowed families:
-- double_bottom
-- inside_bar_breakout
-- three_bar_reversal
-- rsi_reversal
-- breakout_retest
-
-Return JSON only:
-{
-  "family": "...",
-  "name": "...",
-  "description": "...",
-  "direction": "long_only|short_only|both",
-  "timeframe_hint": "15m",
-  "trade_frequency_target": "low|medium|high",
-  "indicator_params": {
-    "rsi_window": 14,
-    "atr_window": 14,
-    "ema_fast": 9,
-    "ema_slow": 21,
-    "bb_window": 20,
-    "bb_std": 2.0
-  },
-  "setup_params": {},
-  "risk_params": {
-    "sl_atr_mult": 1.0,
-    "tp_r_multiple": 1.5,
-    "fixed_size": 0.1
-  },
-  "family_confidence": 0.0,
-  "codifiability_score": 0.0,
-  "ambiguity_score": 0.0
-}
-"""
 
 
 def idea_hash(idea: str) -> str:
@@ -182,59 +125,6 @@ def load_ideas() -> List[str]:
     return ideas
 
 
-def strip_code_fences(text: str) -> str:
-    return text.replace("```json", "").replace("```", "").strip()
-
-
-def call_json_llm(prompt: str) -> Dict[str, Any]:
-    raw = model.chat(
-        system_prompt="You are a strict JSON generator. Return valid JSON only.",
-        user_prompt=prompt,
-        max_tokens=1200,
-    )
-    raw = strip_code_fences(raw)
-    return json.loads(raw)
-
-
-def mechanical_rewrite(idea: str) -> Dict[str, Any]:
-    try:
-        result = call_json_llm(IDEA_REWRITE_PROMPT.format(idea=idea))
-        normalized = result.get("normalized_idea", idea)
-        return {
-            "normalized_idea": str(normalized),
-            "ambiguity_score": float(result.get("ambiguity_score", 3.0)),
-            "codifiability_score": float(result.get("codifiability_score", 7.0)),
-        }
-    except Exception:
-        return {
-            "normalized_idea": idea,
-            "ambiguity_score": 4.0,
-            "codifiability_score": 6.5,
-        }
-
-
-def build_schema(idea: str) -> Dict[str, Any]:
-    rewrite = mechanical_rewrite(idea)
-
-    if rewrite["codifiability_score"] < 5.5 or rewrite["ambiguity_score"] > 6.5:
-        # still try, but fall back to heuristic if LLM schema fails
-        pass
-
-    try:
-        raw_schema = call_json_llm(SCHEMA_PROMPT.format(idea=rewrite["normalized_idea"]))
-        raw_schema["normalized_idea"] = rewrite["normalized_idea"]
-        raw_schema["codifiability_score"] = raw_schema.get("codifiability_score", rewrite["codifiability_score"])
-        raw_schema["ambiguity_score"] = raw_schema.get("ambiguity_score", rewrite["ambiguity_score"])
-    except Exception:
-        raw_schema = heuristic_schema_from_idea(rewrite["normalized_idea"])
-        raw_schema["normalized_idea"] = rewrite["normalized_idea"]
-        raw_schema["codifiability_score"] = rewrite["codifiability_score"]
-        raw_schema["ambiguity_score"] = rewrite["ambiguity_score"]
-
-    schema = schema_from_dict(raw_schema, source_idea=idea)
-    return schema.to_dict()
-
-
 def exec_strategy_code(code: str, class_name: str = "GeneratedStrategy"):
     namespace: Dict[str, Any] = {}
     compiled = compile(RUNTIME_IMPORT_BLOCK + "\n\n" + code, "<generated_strategy>", "exec")
@@ -244,7 +134,7 @@ def exec_strategy_code(code: str, class_name: str = "GeneratedStrategy"):
 
 def load_dataframe(symbol: str, timeframe: str, days_back: int = 1825) -> pd.DataFrame | None:
     df = get_ohlcv(symbol, exchange=EXCHANGE, timeframe=timeframe, days_back=days_back)
-    if df is None or len(df) < 50:
+    if df is None or len(df) < 80:
         return None
     return pd.DataFrame(
         {
@@ -258,20 +148,75 @@ def load_dataframe(symbol: str, timeframe: str, days_back: int = 1825) -> pd.Dat
     )
 
 
+def choose_smoke_dataset(schema_dict: Dict[str, Any]) -> Tuple[str, str]:
+    desc = (schema_dict.get("description") or "").lower()
+    tf = (schema_dict.get("timeframe_hint") or "15m").lower()
+
+    if "mes" in desc:
+        return ("MES", tf if tf in {"5m", "15m", "1h", "4h", "1d"} else "15m")
+    if "mnq" in desc:
+        return ("MNQ", tf if tf in {"5m", "15m", "1h", "4h", "1d"} else "15m")
+    if "mym" in desc:
+        return ("MYM", tf if tf in {"5m", "15m", "1h", "4h", "1d"} else "15m")
+
+    family = (schema_dict.get("family") or "").lower()
+    if family in {"ict_fvg", "ict_liquidity_sweep", "breakout"}:
+        return ("MES", tf if tf in {"5m", "15m", "1h", "4h", "1d"} else "15m")
+
+    return ("ETH", "15m")
+
+
+def build_schema(idea: str) -> Dict[str, Any]:
+    raw = heuristic_schema_from_idea(idea)
+    schema = schema_from_dict(raw, source_idea=idea)
+    return schema.to_dict()
+
+
+def dataset_priority_key(dataset: Tuple[str, str], schema_dict: Dict[str, Any]) -> Tuple[int, int, int]:
+    symbol, timeframe = dataset
+    desc = (schema_dict.get("description") or "").lower()
+    tf_hint = (schema_dict.get("timeframe_hint") or "15m").lower()
+
+    symbol_score = 2
+    if symbol.lower() in desc:
+        symbol_score = 0
+    elif any(x in desc for x in ["mes", "mnq", "mym"]):
+        symbol_score = 1
+
+    tf_order = {
+        tf_hint: 0,
+        "5m": 1,
+        "15m": 2,
+        "1h": 3,
+        "4h": 4,
+        "1d": 5,
+    }
+    tf_score = tf_order.get(timeframe.lower(), 9)
+
+    market_score = 0
+    if symbol in {"MES", "MNQ", "MYM"}:
+        market_score = 0
+    return (symbol_score, tf_score, market_score)
+
+
+def order_datasets(schema_dict: Dict[str, Any], datasets: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    return sorted(datasets, key=lambda d: dataset_priority_key(d, schema_dict))
+
+
 def smoke_test_strategy(code: str, dataset: Tuple[str, str]) -> Tuple[bool, str]:
     symbol, timeframe = dataset
     try:
-        df = load_dataframe(symbol, timeframe, days_back=120)
+        df = load_dataframe(symbol, timeframe, days_back=180)
         if df is None:
             return False, "No smoke-test data"
 
         StrategyClass = exec_strategy_code(code, "GeneratedStrategy")
-        df = df.iloc[: min(len(df), 400)].copy()
+        df = df.iloc[: min(len(df), 300)].copy()
 
         bt = Backtest(
             df,
             StrategyClass,
-            cash=BACKTEST_INITIAL_CASH,
+            cash=max(BACKTEST_INITIAL_CASH, 1_000_000),
             commission=BACKTEST_COMMISSION,
             exclusive_orders=True,
         )
@@ -293,7 +238,7 @@ def run_single_backtest(args: Tuple[str, str, str, str]) -> Dict[str, Any] | Non
         bt = Backtest(
             df,
             StrategyClass,
-            cash=BACKTEST_INITIAL_CASH,
+            cash=max(BACKTEST_INITIAL_CASH, 1_000_000),
             commission=BACKTEST_COMMISSION,
             exclusive_orders=True,
         )
@@ -305,13 +250,14 @@ def run_single_backtest(args: Tuple[str, str, str, str]) -> Dict[str, Any] | Non
             "strategy": strategy_name,
             "symbol": symbol,
             "timeframe": timeframe,
-            "return_pct": float(stats.get("Return [%]", 0.0)),
-            "sharpe": float(stats.get("Sharpe Ratio", 0.0) or 0.0),
-            "max_drawdown": float(stats.get("Max. Drawdown [%]", 0.0)),
-            "win_rate": float(stats.get("Win Rate [%]", 0.0)),
+            "return_pct": float(stats.get("Return [%]", 0.0) or 0.0),
+            "sharpe": float(stats.get("Sharpe Ratio", 0.0) or 0.0) if stats.get("Sharpe Ratio", 0.0) == stats.get("Sharpe Ratio", 0.0) else 0.0,
+            "max_drawdown": float(stats.get("Max. Drawdown [%]", 0.0) or 0.0),
+            "win_rate": float(stats.get("Win Rate [%]", 0.0) or 0.0) if stats.get("Win Rate [%]", 0.0) == stats.get("Win Rate [%]", 0.0) else 0.0,
             "num_trades": int(trades),
-            "equity_final": float(stats.get("Equity Final [$]", 0.0)),
-            "buy_hold_return_pct": float(stats.get("Buy & Hold Return [%]", 0.0)),
+            "equity_final": float(stats.get("Equity Final [$]", 0.0) or 0.0),
+            "buy_hold_return_pct": float(stats.get("Buy & Hold Return [%]", 0.0) or 0.0),
+            "under_sampled": trades < MIN_TRADES_FOR_BEST,
             "error": "",
         }
     except Exception as e:
@@ -326,6 +272,7 @@ def run_single_backtest(args: Tuple[str, str, str, str]) -> Dict[str, Any] | Non
             "num_trades": 0,
             "equity_final": 0.0,
             "buy_hold_return_pct": 0.0,
+            "under_sampled": True,
             "error": str(e),
         }
 
@@ -333,15 +280,29 @@ def run_single_backtest(args: Tuple[str, str, str, str]) -> Dict[str, Any] | Non
 def rank_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def score(r: Dict[str, Any]):
         if r.get("error"):
-            return (-999999, -999999, -999999, -999999)
+            return (-999999, -999999, -999999, -999999, -999999)
+        trades = r.get("num_trades", 0) or 0
+        min_trade_boost = min(trades, 50) / 50.0
+        undersampled_penalty = -5 if trades < MIN_TRADES_FOR_BEST else 0
         return (
-            r.get("sharpe", 0.0) or 0.0,
+            undersampled_penalty + (r.get("sharpe", 0.0) or 0.0) + min_trade_boost,
             r.get("return_pct", 0.0) or 0.0,
             r.get("win_rate", 0.0) or 0.0,
+            trades,
             -(abs(r.get("max_drawdown", 0.0) or 0.0)),
         )
-
     return sorted(results, key=score, reverse=True)
+
+
+def select_best_result(valid: List[Dict[str, Any]]) -> Dict[str, Any] | None:
+    if not valid:
+        return None
+
+    eligible = [r for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES_FOR_BEST]
+    if eligible:
+        return rank_results(eligible)[0]
+
+    return rank_results(valid)[0]
 
 
 def summarize_result_set(results: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -357,22 +318,24 @@ def summarize_result_set(results: List[Dict[str, Any]]) -> Dict[str, Any]:
             "mean_return": 0.0,
             "mean_win_rate": 0.0,
             "dataset_breadth": 0,
+            "eligible_count": 0,
         }
 
-    ranked = rank_results(valid)
     mean_sharpe = sum(r["sharpe"] for r in valid) / len(valid)
     mean_return = sum(r["return_pct"] for r in valid) / len(valid)
     mean_win = sum(r["win_rate"] for r in valid) / len(valid)
-
     positive_datasets = sum(1 for r in valid if r["return_pct"] > 0)
+    eligible_count = sum(1 for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES_FOR_BEST)
+
     return {
         "valid_count": len(valid),
         "failed_count": len(failed),
-        "best": ranked[0],
+        "best": select_best_result(valid),
         "mean_sharpe": round(mean_sharpe, 4),
         "mean_return": round(mean_return, 4),
         "mean_win_rate": round(mean_win, 4),
         "dataset_breadth": positive_datasets,
+        "eligible_count": eligible_count,
     }
 
 
@@ -381,7 +344,7 @@ def write_summary_csv(rows: List[Dict[str, Any]]) -> None:
         return
     fieldnames = [
         "strategy", "symbol", "timeframe", "return_pct", "sharpe", "max_drawdown",
-        "win_rate", "num_trades", "equity_final", "buy_hold_return_pct", "error"
+        "win_rate", "num_trades", "equity_final", "buy_hold_return_pct", "under_sampled", "error"
     ]
     with open(SUMMARY_CSV, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -399,7 +362,7 @@ class ParallelRBIAgentV2:
     def process_idea(self, idea: str):
         print("\n" + "─" * 60)
         print(f"💡 IDEA: {idea}")
-        print("🔬 Normalizing...")
+        print("🔬 Building schema...")
 
         idea_id = idea_hash(idea)
 
@@ -408,7 +371,15 @@ class ParallelRBIAgentV2:
             strategy_name = schema_dict["name"]
             print(f"🧠 Family: {schema_dict['family']}")
             print(f"📝 Strategy: {strategy_name}")
-            print(f"⏱️ Preferred timeframe: {schema_dict.get('timeframe_hint', DEFAULT_TIMEFRAME)}")
+            print(
+                f"⚙️ Params: lookback={schema_dict['setup_params']['lookback']}, "
+                f"retest={schema_dict['setup_params']['retest_required']}, "
+                f"volume={schema_dict['setup_params']['volume_confirmation']}, "
+                f"large_bar={schema_dict['setup_params']['large_bar_confirmation']}, "
+                f"rr={schema_dict['risk_params']['tp_r_multiple']}, "
+                f"direction={schema_dict['direction']}, "
+                f"timeframe={schema_dict['timeframe_hint']}"
+            )
         except Exception as e:
             print(f"❌ Schema build failed: {e}")
             self.processed.add(idea_id)
@@ -423,7 +394,7 @@ class ParallelRBIAgentV2:
             save_processed(self.processed)
             return
 
-        smoke_dataset = ALL_DATASETS[0]
+        smoke_dataset = choose_smoke_dataset(schema_dict)
         ok, smoke_msg = smoke_test_strategy(code, smoke_dataset)
         if not ok:
             print(f"❌ Smoke test failed on {smoke_dataset[0]} {smoke_dataset[1]}: {smoke_msg}")
@@ -432,9 +403,11 @@ class ParallelRBIAgentV2:
             return
 
         print(f"✅ Smoke test passed on {smoke_dataset[0]} {smoke_dataset[1]}")
-        print(f"⚙️ Running parallel backtests across {len(ALL_DATASETS)} datasets...")
 
-        jobs = [(symbol, timeframe, code, strategy_name) for symbol, timeframe in ALL_DATASETS]
+        ordered = order_datasets(schema_dict, ALL_DATASETS)
+        print(f"⚙️ Running parallel backtests across {len(ordered)} datasets...")
+
+        jobs = [(symbol, timeframe, code, strategy_name) for symbol, timeframe in ordered]
         results: List[Dict[str, Any]] = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -448,16 +421,17 @@ class ParallelRBIAgentV2:
                     safe_print(f"⚠️ Worker failed: {e}")
 
         summary = summarize_result_set(results)
-        ranked = rank_results(results)
 
         print(f"\n⏱️ Completed {summary['valid_count']} successful backtests")
-        if ranked and summary["best"]:
+        if summary["best"]:
             best = summary["best"]
+            sample_note = " | under-sampled" if best.get("under_sampled") else ""
             print(
                 f"⭐ BEST: {best['symbol']} {best['timeframe']} | "
                 f"Sharpe {best['sharpe']:.2f} | Return {best['return_pct']:.1f}% | "
-                f"WR {best['win_rate']:.1f}% | Trades {best['num_trades']}"
+                f"WR {best['win_rate']:.1f}% | Trades {best['num_trades']}{sample_note}"
             )
+        print(f"📊 Eligible results (>= {MIN_TRADES_FOR_BEST} trades): {summary['eligible_count']}")
 
         artifact = {
             "idea": idea,
@@ -468,7 +442,7 @@ class ParallelRBIAgentV2:
             "created_at_utc": datetime.utcnow().isoformat(),
         }
 
-        out_path = RESULTS_DIR / f"{idea_id}_{strategy_name}.json"
+        out_path = RESULTS_DIR / f"{idea_id}_{strategy_name.replace(' ', '_')}.json"
         out_path.write_text(json.dumps(artifact, indent=2))
         print(f"💾 Saved: {out_path}")
 
@@ -496,7 +470,6 @@ class ParallelRBIAgentV2:
             self.process_idea(idea)
         print(f"\n{'═' * 60}")
         print(f"✅ All done! Results in: {RESULTS_DIR}")
-        model.print_status()
 
 
 if __name__ == "__main__":
