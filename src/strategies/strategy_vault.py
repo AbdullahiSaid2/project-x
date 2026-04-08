@@ -1,8 +1,10 @@
 # ============================================================
 # Strategy Vault v2
 #
-# Reads RBI v2 JSON results and only vaults strategies with
-# enough breadth and enough trades.
+# Upgrades in this version:
+# - Uses best_faithful by default
+# - Falls back to best_discovery only if faithful is absent
+# - Keeps ranking_score_faithful / discovery in selection
 # ============================================================
 
 from __future__ import annotations
@@ -85,9 +87,16 @@ def load_candidate_files() -> List[Path]:
     return sorted([p for p in RESULTS_DIR.glob("*.json") if p.name != "vault_index.json"])
 
 
+def _candidate_best(payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    summary = payload.get("summary", {})
+    return summary.get("best_faithful") or summary.get("best_discovery") or summary.get("best")
+
+
 def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
     results = payload.get("results", [])
     valid = [r for r in results if not r.get("error")]
+    best = _candidate_best(payload)
+
     if not valid:
         return {
             "best": None,
@@ -100,27 +109,27 @@ def summarize_candidate(payload: Dict[str, Any]) -> Dict[str, Any]:
             "mean_drawdown": 0.0,
         }
 
-    eligible = [r for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES]
-    ranking_pool = eligible if eligible else valid
-
-    valid_sorted = sorted(
-        ranking_pool,
-        key=lambda r: (
-            r.get("sharpe", 0.0),
-            r.get("return_pct", 0.0),
-            r.get("win_rate", 0.0),
-            r.get("num_trades", 0),
-            -(abs(r.get("max_drawdown", 0.0))),
-        ),
-        reverse=True,
-    )
-
     dataset_breadth = sum(1 for r in valid if (r.get("return_pct", 0.0) or 0.0) > 0)
+    eligible_count = sum(1 for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES)
+
+    if best is None:
+        ranking_pool = [r for r in valid if (r.get("num_trades", 0) or 0) >= MIN_TRADES] or valid
+        best = sorted(
+            ranking_pool,
+            key=lambda r: (
+                r.get("ranking_score_faithful", -999999.0),
+                r.get("ranking_score_discovery", -999999.0),
+                r.get("sharpe", 0.0),
+                r.get("return_pct", 0.0),
+            ),
+            reverse=True,
+        )[0]
+
     return {
-        "best": valid_sorted[0],
+        "best": best,
         "valid_count": len(valid),
         "dataset_breadth": dataset_breadth,
-        "eligible_count": len(eligible),
+        "eligible_count": eligible_count,
         "mean_sharpe": float(sum(r["sharpe"] for r in valid) / len(valid)),
         "mean_return": float(sum(r["return_pct"] for r in valid) / len(valid)),
         "mean_win_rate": float(sum(r["win_rate"] for r in valid) / len(valid)),
@@ -172,7 +181,41 @@ def exec_vault_code(code: str):
     return namespace["VaultStrategy"]
 
 
-def optimise_strategy(code: str, symbol: str, timeframe: str) -> Tuple[str, Dict[str, Any]]:
+def _family_specific_opt_params(strategy_class, payload: Dict[str, Any]) -> Dict[str, Any]:
+    family = payload.get("schema", {}).get("family", "generic")
+    opt_params: Dict[str, Any] = {}
+    base_attrs = vars(strategy_class)
+
+    def add_int(name: str, low: int, high: int, step: int):
+        if name in base_attrs:
+            opt_params[name] = range(low, high + 1, step)
+
+    def add_float(name: str, values: List[float]):
+        if name in base_attrs:
+            opt_params[name] = [round(float(v), 4) for v in values]
+
+    add_int("lookback", 5, 30, 5)
+    add_int("max_retest_bars", 2, 8, 1)
+    add_int("rsi_window", 7, 21, 2)
+    add_int("atr_window", 7, 21, 2)
+    add_int("ema_fast", 10, 30, 5)
+    add_int("ema_slow", 30, 80, 10)
+
+    add_float("sl_atr_mult", [0.5, 0.75, 1.0, 1.25, 1.5])
+    add_float("tp_r_multiple", [1.25, 1.5, 2.0, 2.5, 3.0])
+
+    if family == "breakout":
+        add_float("retest_tolerance_pct", [0.0005, 0.001, 0.0015, 0.002])
+        add_float("volume_multiplier", [1.0, 1.05, 1.1, 1.2, 1.3])
+        add_float("large_bar_atr_mult", [0.0, 0.1, 0.2, 0.3, 0.4])
+        add_float("min_breakout_range_mult", [0.8, 1.0, 1.2])
+        add_float("move_to_be_at_r", [0.0, 1.0])
+        add_float("trail_atr_after_r", [0.0, 1.0])
+
+    return opt_params
+
+
+def optimise_strategy(code: str, symbol: str, timeframe: str, payload: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
     try:
         df = get_ohlcv(symbol, exchange=EXCHANGE, timeframe=timeframe, days_back=OPTIMISE_DAYS)
         df = pd.DataFrame(
@@ -195,21 +238,7 @@ def optimise_strategy(code: str, symbol: str, timeframe: str) -> Tuple[str, Dict
             exclusive_orders=True,
         )
 
-        opt_params = {}
-        for attr, val in vars(StrategyClass).items():
-            if attr.startswith("_"):
-                continue
-            if attr in {"lookback", "rsi_window", "atr_window", "ema_fast", "ema_slow"} and isinstance(val, int):
-                step = max(1, val // 5)
-                low = max(2, val - max(2, val // 3))
-                high = val + max(2, val // 3) + step
-                if high > low:
-                    opt_params[attr] = range(low, high, step)
-            elif attr in {"sl_atr_mult", "tp_r_multiple"} and isinstance(val, (int, float)):
-                vals = np.arange(max(0.25, float(val) * 0.6), min(5.0, float(val) * 1.4) + 0.001, 0.25)
-                vals = [round(float(v), 3) for v in vals]
-                if len(vals) > 1:
-                    opt_params[attr] = vals
+        opt_params = _family_specific_opt_params(StrategyClass, payload)
 
         if not opt_params:
             stats = bt.run()
@@ -271,7 +300,9 @@ def vault_strategy(payload: Dict[str, Any], force: bool = False) -> bool:
     print(
         f"Best: {best['symbol']} {best['timeframe']} | "
         f"Sharpe {best['sharpe']:.2f} | Return {best['return_pct']:.1f}% | "
-        f"Trades {best['num_trades']}"
+        f"Trades {best['num_trades']} | "
+        f"FaithfulScore {best.get('ranking_score_faithful', 0.0):.2f} | "
+        f"DiscoveryScore {best.get('ranking_score_discovery', 0.0):.2f}"
     )
 
     try:
@@ -284,7 +315,7 @@ def vault_strategy(payload: Dict[str, Any], force: bool = False) -> bool:
     opt_stats = {}
     if RUN_OPTIMISE:
         print("⚙️ Optimizing parameters...")
-        opt_code, opt_stats = optimise_strategy(code, best["symbol"], best["timeframe"])
+        opt_code, opt_stats = optimise_strategy(code, best["symbol"], best["timeframe"], payload)
 
     filename = f"{slugify(name)}_{family}.py"
     out_path = VAULT_DIR / filename

@@ -68,6 +68,14 @@ def schema_from_dict(raw, source_idea=""):
         "use_volatility_filter": True,
         "use_trend_filter": True,
         "strict_mode": True,
+        "use_regime_filter": False,
+        "regime_ema_window": 200,
+        "min_breakout_range_mult": 1.0,
+        "move_to_be_at_r": 0.0,
+        "partial_tp_at_r": 0.0,
+        "partial_tp_size": 0.0,
+        "trail_atr_after_r": 0.0,
+        "failure_exit_on_level_reclaim": False,
     }
     setup_defaults.update(raw.get("setup_params", {}) or {})
 
@@ -95,6 +103,14 @@ def schema_from_dict(raw, source_idea=""):
         "use_volatility_filter": bool(setup_defaults.get("use_volatility_filter", True)),
         "use_trend_filter": bool(setup_defaults.get("use_trend_filter", True)),
         "strict_mode": bool(setup_defaults.get("strict_mode", True)),
+        "use_regime_filter": bool(setup_defaults.get("use_regime_filter", False)),
+        "regime_ema_window": _to_int(setup_defaults.get("regime_ema_window", 200), 200),
+        "min_breakout_range_mult": _to_float(setup_defaults.get("min_breakout_range_mult", 1.0), 1.0),
+        "move_to_be_at_r": _to_float(setup_defaults.get("move_to_be_at_r", 0.0), 0.0),
+        "partial_tp_at_r": _to_float(setup_defaults.get("partial_tp_at_r", 0.0), 0.0),
+        "partial_tp_size": _to_float(setup_defaults.get("partial_tp_size", 0.0), 0.0),
+        "trail_atr_after_r": _to_float(setup_defaults.get("trail_atr_after_r", 0.0), 0.0),
+        "failure_exit_on_level_reclaim": bool(setup_defaults.get("failure_exit_on_level_reclaim", False)),
     }
 
     risk_params = {

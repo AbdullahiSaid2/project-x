@@ -115,6 +115,14 @@ def heuristic_schema_from_idea(idea: str):
         "use_volatility_filter": True,
         "use_trend_filter": strict_mode,
         "strict_mode": strict_mode,
+        "use_regime_filter": family == "breakout",
+        "regime_ema_window": 200,
+        "min_breakout_range_mult": 1.0 if family == "breakout" else 0.0,
+        "move_to_be_at_r": 1.0 if family == "breakout" else 0.0,
+        "partial_tp_at_r": 1.0 if family == "breakout" else 0.0,
+        "partial_tp_size": 0.5 if family == "breakout" else 0.0,
+        "trail_atr_after_r": 1.0 if family == "breakout" else 0.0,
+        "failure_exit_on_level_reclaim": family == "breakout",
     }
 
     risk_params = {
@@ -122,14 +130,6 @@ def heuristic_schema_from_idea(idea: str):
         "tp_r_multiple": rr,
         "fixed_size": 0.1,
     }
-
-    if family == "mean_reversion":
-        if "1:2" in text:
-            risk_params["tp_r_multiple"] = 2.0
-        if "oversold" in text or "rsi below 30" in text:
-            direction = "long_only"
-        if "overbought" in text or "rsi above 70" in text:
-            direction = "short_only"
 
     if family == "double_bottom":
         setup_params["price_tolerance_pct"] = 0.001
