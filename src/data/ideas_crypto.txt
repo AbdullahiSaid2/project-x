@@ -1,0 +1,29 @@
+# ============================================================
+# ICT-NATIVE CRYPTO IDEA SET
+#
+# Side-lane only.
+# Focus:
+# - HTF sweep + reclaim
+# - displacement retracement
+# - trend continuation after raid
+# ============================================================
+
+Long BTC 1H continuation when 4H bias is bullish, price sweeps below the prior 20-bar low and closes back above it with a bullish displacement candle, enter on break above displacement candle high, stop below sweep low, target 2.5R, no trade if reclaim candle closes below 50 EMA
+
+Short BTC 1H continuation when 4H bias is bearish, price sweeps above the prior 20-bar high and closes back below it with a bearish displacement candle, enter on break below displacement candle low, stop above sweep high, target 2.5R, no trade if rejection candle closes above 50 EMA
+
+Long ETH 1H continuation when 4H trend is bullish, 1H prints a bullish displacement through prior 20-bar high, then retraces into the lower half of that displacement candle and reclaims its midpoint, stop below retracement low, target 2R, no trade if ATR contracts during retracement
+
+Short ETH 1H continuation when 4H trend is bearish, 1H prints a bearish displacement through prior 20-bar low, then retraces into the upper half of that displacement candle and rejects its midpoint, stop above retracement high, target 2R, no trade if ATR contracts during retracement
+
+Long SOL 4H continuation when price is above 20 EMA and 50 EMA, a prior 15-bar high is broken with a bullish displacement candle, and retracement stays above the midpoint of that candle, stop below retracement low, target 3R, no trade if retracement closes below 50 EMA
+
+Short SOL 4H continuation when price is below 20 EMA and 50 EMA, a prior 15-bar low is broken with a bearish displacement candle, and retracement stays below the midpoint of that candle, stop above retracement high, target 3R, no trade if retracement closes above 50 EMA
+
+Long AVAX 1H pullback continuation when 4H bias is bullish and 1H retraces into the lower half of the last bullish displacement candle while staying above 50 EMA, enter on reclaim of displacement midpoint, stop below pullback low, target 2R, no trade in ranging EMA conditions
+
+Short AVAX 1H pullback continuation when 4H bias is bearish and 1H retraces into the upper half of the last bearish displacement candle while staying below 50 EMA, enter on rejection of displacement midpoint, stop above pullback high, target 2R, no trade in ranging EMA conditions
+
+Long BTC 4H reversal only when market has been below 50 EMA, sweeps prior swing low, closes back above it, then breaks above the reclaim candle high, stop below sweep low, target 3R, no trade if ATR is collapsing
+
+Short BTC 4H reversal only when market has been above 50 EMA, sweeps prior swing high, closes back below it, then breaks below the rejection candle low, stop above sweep high, target 3R, no trade if ATR is collapsing

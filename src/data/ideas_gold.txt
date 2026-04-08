@@ -1,0 +1,25 @@
+# ============================================================
+# ICT-NATIVE GOLD IDEA SET
+# Product:
+# - MGC
+# Focus:
+# - level reactions
+# - sweep + reclaim / reject
+# - cleaner pullback continuation
+# ============================================================
+
+Long MGC 1H continuation when 4H bias is bullish, price sweeps below the prior 15-bar low and closes back above it with a displacement candle, enter on break above the displacement candle high, stop below sweep low, target 2.2R, no trade if reclaim candle closes below 20 EMA
+
+Short MGC 1H continuation when 4H bias is bearish, price sweeps above the prior 15-bar high and closes back below it with a displacement candle, enter on break below the displacement candle low, stop above sweep high, target 2.2R, no trade if rejection candle closes above 20 EMA
+
+Long MGC 1H pullback continuation when 4H trend is bullish and 1H retraces into the lower half of the last bullish displacement candle while 20 EMA stays above 50 EMA, enter on reclaim of the displacement midpoint, stop below pullback low, target 2R, no trade if pullback closes below 50 EMA
+
+Short MGC 1H pullback continuation when 4H trend is bearish and 1H retraces into the upper half of the last bearish displacement candle while 20 EMA stays below 50 EMA, enter on rejection of the displacement midpoint, stop above pullback high, target 2R, no trade if pullback closes above 50 EMA
+
+Long MGC 4H continuation when price is above 20 EMA and 50 EMA, a 15-bar range high is broken with a bullish displacement candle, then retracement holds above the midpoint of that candle, stop below retracement low, target 2.8R, no trade if retracement lasts more than 5 bars
+
+Short MGC 4H continuation when price is below 20 EMA and 50 EMA, a 15-bar range low is broken with a bearish displacement candle, then retracement holds below the midpoint of that candle, stop above retracement high, target 2.8R, no trade if retracement lasts more than 5 bars
+
+Long MGC 1H reversal only when price sweeps the prior swing low, closes back above it, and then breaks above reclaim candle high while 20 EMA turns up, stop below sweep low, target 2R, no trade if price remains below 50 EMA after trigger
+
+Short MGC 1H reversal only when price sweeps the prior swing high, closes back below it, and then breaks below rejection candle low while 20 EMA turns down, stop above sweep high, target 2R, no trade if price remains above 50 EMA after trigger

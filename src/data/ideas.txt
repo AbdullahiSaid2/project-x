@@ -1,671 +1,159 @@
 # ============================================================
-# 🌙 Trading Ideas — Full Strategy Library
+# FUTURES-FIRST RBI IDEA SET
+#
+# Goals:
+# - prop-firm friendly
+# - emphasize MNQ / MES / MYM
+# - emphasize 1H / 4H
+# - use 15m only as execution under HTF bias
+# - include New York / RTH conditions
+# - avoid generic retail patterns
 # ============================================================
-# Rules for this file:
-#   - Each idea is one line
-#   - Lines starting with # are ignored
-#   - Paired ideas (long + short) are separate consecutive lines
-#   - Direction is explicit in every idea
-#   - Long ideas only fire when confirmed bullish
-#   - Short ideas only fire when confirmed bearish
-#   - Single-direction ideas stay single-direction where logic demands it
-# ============================================================
-
-# ── PATTERN-BASED SCALPS (1-5m) ──────────────────────────────
 
-# 1m double bottom scalp
-Long when 1-minute chart forms two lows within 0.1% of each other with an RSI higher low between them, enter on break above the peak between the lows, stop below the second low
-Short when 1-minute chart forms two highs within 0.1% of each other with an RSI lower high between them, enter on break below the trough between the highs, stop above the second high
 
-# 5m inside bar breakout
-Long when a 5-minute bar is fully contained within the prior bar range (inside bar) and the next bar breaks above the inside bar high with volume, stop at inside bar low, target 1:2 R:R
-Short when a 5-minute bar is fully contained within the prior bar range and the next bar breaks below the inside bar low with volume, stop at inside bar high, target 1:2 R:R
+# =========================
+# MNQ — 1H CONTINUATION
+# =========================
 
-# 5m three-bar reversal pattern
-Long when 5-minute chart shows three bars: large red, small doji touching prior low, large green reclaiming the doji high, enter on close of green bar, stop below doji low, target 1:1.5 R:R
-Short when 5-minute chart shows three bars: large green, small doji touching prior high, large red reclaiming the doji low, enter on close of red bar, stop above doji high, target 1:1.5 R:R
+Long MNQ 1H continuation when 20 EMA is above 50 EMA, ATR is expanding, price breaks above the prior 20-bar high during New York RTH, then retests that level within 3 bars and closes back above it, stop below retest low, target 2.5R, no trade if retest closes below 20 EMA or breakout happens outside RTH
 
-# 1m engulfing candle scalp
-Long when a 1-minute bullish engulfing candle completely covers the prior red candle body with volume 1.5x average, stop below the engulfing candle low, exit at 0.2% profit or after 5 bars
-Short when a 1-minute bearish engulfing candle completely covers the prior green candle body with volume 1.5x average, stop above the engulfing candle high, exit at 0.2% profit or after 5 bars
+Long MNQ 1H bullish continuation when 20 EMA is above 50 EMA and both slopes are positive, breakout above the prior 25-bar high must close strongly during the first two hours of New York session, enter on first valid retest that holds above breakout level, stop below retest low, target 2.5R, no trade if breakout candle upper wick is larger than body
 
+Long MNQ 1H continuation after compression when the prior 10 bars are narrow, ATR begins expanding, and price breaks the compression high during New York RTH while above 50 EMA, enter on shallow retest, stop below retest low, target 2.5R, no trade if breakout occurs after three already extended green bars
 
-# ══════════════════════════════════════════════════════════════
-# ORIGINAL CORE STRATEGIES
-# Fixed: was missing short counterparts and had ambiguous direction.
-# ══════════════════════════════════════════════════════════════
+Long MNQ 1H pullback continuation when 20 EMA is above 50 EMA and price retraces into the 20 EMA zone while staying above 50 EMA, enter on bullish reclaim of pullback high during New York session, stop below pullback low, target 2R, no trade if pullback lasts longer than 5 bars
 
-# RSI Extremes with Trend Filter
-Long when RSI drops below 30 and price is above the 200 EMA, exit when RSI rises back above 50
-Short when RSI rises above 70 and price is below the 200 EMA, exit when RSI falls back below 50
+Long MNQ 1H continuation when 20 EMA is above 50 EMA, ATR expansion ratio is above 1.05, and price reclaims the previous day high during New York RTH, enter on retest hold above previous day high, stop below retest low, target 2.5R, no trade if reclaim happens after 14:30 New York time
 
-# MACD Crossover with Volume
-Long when MACD line crosses above the signal line with volume above the 20-bar average confirming the move, exit when MACD crosses back below signal
-Short when MACD line crosses below the signal line with volume above the 20-bar average confirming the move, exit when MACD crosses back above signal
+Short MNQ 1H continuation when 20 EMA is below 50 EMA, ATR is expanding, price breaks below the prior 20-bar low during New York RTH, then retests that level within 3 bars and closes back below it, stop above retest high, target 2.5R, no trade if retest closes above 20 EMA or breakdown happens outside RTH
 
-# Bollinger Band Squeeze Breakout
-Long when Bollinger Band width contracts to a 6-month low squeeze and price breaks and closes above the upper band with volume, stop below the lower band
-Short when Bollinger Band width contracts to a 6-month low squeeze and price breaks and closes below the lower band with volume, stop above the upper band
+Short MNQ 1H bearish continuation when 20 EMA is below 50 EMA and both slopes are negative, breakdown below the prior 25-bar low must close strongly during the first two hours of New York session, enter on first valid retest that fails below breakdown level, stop above retest high, target 2.5R, no trade if breakdown candle lower wick is larger than body
 
-# EMA Cross with RSI Momentum Guard
-Long when 9 EMA crosses above 21 EMA and RSI is above 50 confirming upward momentum, exit when 9 EMA crosses back below 21 EMA
-Short when 9 EMA crosses below 21 EMA and RSI is below 50 confirming downward momentum, exit when 9 EMA crosses back above 21 EMA
+Short MNQ 1H continuation after compression when the prior 10 bars are narrow, ATR begins expanding, and price breaks the compression low during New York RTH while below 50 EMA, enter on shallow retest, stop above retest high, target 2.5R, no trade if breakdown occurs after three already extended red bars
 
+Short MNQ 1H pullback continuation when 20 EMA is below 50 EMA and price retraces into the 20 EMA zone while staying below 50 EMA, enter on bearish rejection that breaks pullback low during New York session, stop above pullback high, target 2R, no trade if pullback lasts longer than 5 bars
 
-# ══════════════════════════════════════════════════════════════
-# ICT STRATEGIES
-# Inherently directional — each setup is one direction only.
-# Long and short versions are separate entries as they should be.
-# ══════════════════════════════════════════════════════════════
+Short MNQ 1H continuation when 20 EMA is below 50 EMA, ATR expansion ratio is above 1.05, and price loses the previous day low during New York RTH, enter on retest failure below previous day low, stop above retest high, target 2.5R, no trade if loss of previous day low happens late session
 
-# Order Blocks
-Long when a 3-bar bullish move occurs where each bar closes higher than the previous and the total move exceeds 1.5 ATR, then price retraces back to the open of the first bar of that move within the next 8 bars, enter long at that level with stop 0.5 ATR below entry
-Short when a 3-bar bearish move occurs where each bar closes lower than the previous and the total move exceeds 1.5 ATR, then price retraces back to the open of the first bar of that move within the next 8 bars, enter short at that level with stop 0.5 ATR above entry
 
-# Fair Value Gaps
-Long when price makes a strong up move of at least 1 ATR in a single bar leaving a gap between the prior bar high and the next bar low, then price retraces into that gap within 5 bars, enter long at the midpoint of the gap with stop below the gap low
-Short when price makes a strong down move of at least 1 ATR in a single bar leaving a gap between the prior bar low and the next bar high, then price retraces into that gap within 5 bars, enter short at the midpoint of the gap with stop above the gap high
+# =========================
+# MES — 1H CONTINUATION
+# =========================
 
-# Liquidity Sweeps
-Long when a candle's low breaks below the lowest low of the previous 20 bars but the candle closes above that 20-bar low level indicating a false breakout, enter long at the candle close with stop at the candle low
-Short when a candle's high breaks above the highest high of the previous 20 bars but the candle closes below that 20-bar high level indicating a false breakout, enter short at the candle close with stop at the candle high
+Long MES 1H continuation when 20 EMA is above 50 EMA, ATR is expanding, and price breaks above the prior 20-bar high during New York RTH then retests that level within 3 bars and closes back above it, stop below retest low, target 2R, no trade if retest closes below 20 EMA
 
-# Change of Character
-Long when price closes above the highest high of the previous 10 bars after having made a new 10-bar low within the last 5 bars, stop below the 10-bar low, target 2x the distance from the 10-bar low to entry
-Short when price closes below the lowest low of the previous 10 bars after having made a new 10-bar high within the last 5 bars, stop above the 10-bar high, target 2x the distance from entry to the 10-bar high
+Long MES 1H bullish continuation when 20 EMA is above 50 EMA and both slopes are positive, breakout above the prior 25-bar high must close strongly in the first half of New York session, enter on first valid retest that holds above breakout level, stop below retest low, target 2.25R, no trade if breakout candle upper wick is larger than body
 
-# Premium and Discount Zone
-Long when price is below the midpoint of the 20-bar high-low range and RSI is below 40, exit when price reaches the 20-bar high
-Short when price is above the midpoint of the 20-bar high-low range and RSI is above 60, exit when price reaches the 20-bar low
+Long MES 1H pullback continuation when 20 EMA is above 50 EMA and price retraces toward 20 EMA without closing below 50 EMA, enter on bullish reclaim of pullback high during New York session, stop below pullback low, target 2R, no trade if pullback lasts more than 5 bars
 
-# FVG after Liquidity Sweep
-Long when price makes a new 20-bar low then within the next 3 bars makes a single bar move up of at least 1 ATR, then price retraces 50 percent of that up move, enter long at the 50 percent retracement with stop at the 20-bar low
-Short when price makes a new 20-bar high then within the next 3 bars makes a single bar move down of at least 1 ATR, then price retraces 50 percent of that down move, enter short at the 50 percent retracement with stop at the 20-bar high
+Long MES 1H continuation after opening range break when the first hour New York range breaks to the upside while 20 EMA is above 50 EMA and ATR is expanding, enter on retest hold above opening range high, stop below retest low, target 2R, no trade if breakout happens after midday
 
+Long MES 1H continuation when previous day high is reclaimed during New York RTH, 20 EMA is above 50 EMA, and breakout candle closes above the prior 15-bar high, enter on retest hold above previous day high, stop below retest low, target 2R, no trade if reclaim is weak with small body candle
 
-# ══════════════════════════════════════════════════════════════
-# TECHNICAL INDICATOR STRATEGIES
-# All correctly paired. Long only fires in uptrend context, short only in downtrend.
-# ══════════════════════════════════════════════════════════════
+Short MES 1H continuation when 20 EMA is below 50 EMA, ATR is expanding, and price breaks below the prior 20-bar low during New York RTH then retests that level within 3 bars and closes back below it, stop above retest high, target 2R, no trade if retest closes above 20 EMA
 
-# StochRSI — trend-filtered so we never long in a downtrend or short in an uptrend
-Long when StochRSI crosses above 20 from oversold territory and price is above the 200 EMA, exit when StochRSI crosses above 80
-Short when StochRSI crosses below 80 from overbought territory and price is below the 200 EMA, exit when StochRSI crosses below 20
+Short MES 1H bearish continuation when 20 EMA is below 50 EMA and both slopes are negative, breakdown below the prior 25-bar low must close strongly in the first half of New York session, enter on first valid retest that fails below breakdown level, stop above retest high, target 2.25R, no trade if breakdown candle lower wick is larger than body
 
-# RSI Divergence — divergence is inherently directional
-Long when price makes a lower low but RSI makes a higher low indicating bullish divergence, enter on the next bullish candle close
-Short when price makes a higher high but RSI makes a lower high indicating bearish divergence, enter on the next bearish candle close
+Short MES 1H pullback continuation when 20 EMA is below 50 EMA and price retraces toward 20 EMA without closing above 50 EMA, enter on bearish rejection that breaks pullback low during New York session, stop above pullback high, target 2R, no trade if pullback lasts more than 5 bars
 
-# MACD Histogram Turning Points
-Long when MACD histogram turns from negative to less negative meaning histogram starts rising while still below zero, target the zero line
-Short when MACD histogram turns from positive to less positive meaning histogram starts falling while still above zero, target the zero line
+Short MES 1H continuation after opening range break when the first hour New York range breaks to the downside while 20 EMA is below 50 EMA and ATR is expanding, enter on retest failure below opening range low, stop above retest high, target 2R, no trade if breakdown happens after midday
 
-# Bollinger Band Squeeze
-Long when Bollinger Band width reaches a 6-month low squeeze and price breaks above the upper band with volume
-Short when Bollinger Band width reaches a 6-month low squeeze and price breaks below the lower band with volume
+Short MES 1H continuation when previous day low is lost during New York RTH, 20 EMA is below 50 EMA, and breakdown candle closes below the prior 15-bar low, enter on retest failure below previous day low, stop above retest high, target 2R, no trade if loss of previous day low is weak with small body candle
 
-# Keltner Channel Breakout
-Long when price closes above the upper Keltner Channel which is 20 EMA plus 1.5 ATR with RSI above 50
-Short when price closes below the lower Keltner Channel which is 20 EMA minus 1.5 ATR with RSI below 50
 
-# ADX Trend Strength — trades only in direction of the confirmed trend
-Long when ADX crosses above 25 indicating a strong trend and price is above the 50 EMA, hold until ADX drops below 20
-Short when ADX crosses above 25 indicating a strong trend and price is below the 50 EMA, hold until ADX drops below 20
+# =========================
+# MYM — 1H CONTINUATION
+# =========================
 
-# CCI Overbought Oversold — symmetric mean reversion
-Long when CCI drops below negative 100 and then crosses back above negative 100, targeting the zero line
-Short when CCI rises above positive 100 and then crosses back below positive 100, targeting the zero line
+Long MYM 1H continuation when 20 EMA is above 50 EMA, ATR is expanding, and price breaks above the prior 20-bar high during New York RTH, enter on retest hold above breakout level within 3 bars, stop below retest low, target 2.25R, no trade if retest closes below 20 EMA
 
-# Williams %R — symmetric oscillator
-Long when Williams %R drops below negative 80 and crosses back above negative 80, stop below recent swing low
-Short when Williams %R rises above negative 20 and crosses back below negative 20, stop above recent swing high
+Long MYM 1H pullback continuation when 20 EMA is above 50 EMA and both are rising, price pulls back into prior broken resistance during New York session and holds above it, enter on reclaim of pullback high, stop below pullback low, target 2R, no trade if pullback closes below 50 EMA
 
-# Parabolic SAR — trend-following trail
-Long when Parabolic SAR flips from above price to below price, stop at SAR level, trail stop as SAR moves up
-Short when Parabolic SAR flips from below price to above price, stop at SAR level, trail stop as SAR moves down
+Long MYM 1H continuation after previous day high reclaim when 20 EMA is above 50 EMA and ATR is expanding, enter on retest hold above previous day high during New York RTH, stop below retest low, target 2.25R, no trade if retest lasts more than 4 bars
 
-# Money Flow Index — volume-weighted oscillator
-Long when MFI drops below 20 indicating oversold with high volume and then crosses back above 20
-Short when MFI rises above 80 indicating overbought with high volume and then crosses back below 80
+Short MYM 1H continuation when 20 EMA is below 50 EMA, ATR is expanding, and price breaks below the prior 20-bar low during New York RTH, enter on retest failure below breakdown level within 3 bars, stop above retest high, target 2.25R, no trade if retest closes above 20 EMA
 
-# Ichimoku Cloud — trend-confirmed entries only
-Long when price breaks above the Ichimoku cloud and tenkan-sen is above kijun-sen and chikou span is above price
-Short when price breaks below the Ichimoku cloud and tenkan-sen is below kijun-sen and chikou span is below price
+Short MYM 1H pullback continuation when 20 EMA is below 50 EMA and both are falling, price pulls back into prior broken support during New York session and fails below it, enter on break of pullback low, stop above pullback high, target 2R, no trade if pullback closes above 50 EMA
 
+Short MYM 1H continuation after previous day low loss when 20 EMA is below 50 EMA and ATR is expanding, enter on retest failure below previous day low during New York RTH, stop above retest high, target 2.25R, no trade if retest lasts more than 4 bars
 
-# ══════════════════════════════════════════════════════════════
-# VOLUME AND ORDER FLOW STRATEGIES
-# ══════════════════════════════════════════════════════════════
 
-# On-Balance Volume — OBV leads price
-Long when OBV makes a new high before price makes a new high, enter long on price confirmation
-Short when OBV makes a new low before price makes a new low, enter short on price confirmation
+# =========================
+# MNQ — 4H TREND / PULLBACK
+# =========================
 
-# Volume Spread Analysis — stopping volume is directional
-Long when a wide spread down bar closes on its high with very high volume indicating stopping volume
-Short when a wide spread up bar closes on its low with very high volume indicating supply entering
+Long MNQ 4H continuation when price is above 20 EMA and 50 EMA, ATR expansion ratio is above 1.05, and a 15-bar range high breaks, enter on first controlled retest that stays above breakout level, stop below retest low, target 3R, no trade if breakout bar closes with upper wick larger than body
 
-# Volume Spike Reversal — spike direction determines trade
-Long when volume is 3x the 20-bar average on a down bar and price closes in the upper 25 percent of bar range
-Short when volume is 3x the 20-bar average on an up bar and price closes in the lower 25 percent of bar range
+Long MNQ 4H continuation after compression when the prior 10 bars were narrow, ATR begins expanding, and price closes above the compression high while above 50 EMA, enter on first shallow retest, stop below retest low, target 3R, no trade if breakout occurs after three consecutive expansion bars already
 
-# VWAP Reversion — symmetric mean reversion
-Long when price drops more than 2 standard deviations below VWAP and volume is declining, target VWAP
-Short when price rises more than 2 standard deviations above VWAP and volume is declining, target VWAP
+Long MNQ 4H pullback continuation after a strong breakout when price retraces for 2 to 4 bars toward 20 EMA but remains above 50 EMA, enter on bullish reclaim of pullback high, stop below pullback low, target 2.5R, no trade if pullback closes below 50 EMA
 
+Short MNQ 4H continuation when price is below 20 EMA and 50 EMA, ATR expansion ratio is above 1.05, and a 15-bar range low breaks, enter on retest failure below breakdown level, stop above retest high, target 3R, no trade if breakdown bar closes with lower wick larger than body
 
-# ══════════════════════════════════════════════════════════════
-# MEAN REVERSION STRATEGIES
-# Symmetric by nature — both directions valid.
-# ══════════════════════════════════════════════════════════════
+Short MNQ 4H continuation after compression when the prior 10 bars were narrow, ATR begins expanding, and price closes below the compression low while below 50 EMA, enter on first shallow retest, stop above retest high, target 3R, no trade if breakdown occurs after three consecutive expansion bars already
 
-# Z-Score Mean Reversion
-Long when the 20-bar z-score of price drops below negative 2.0, exit when z-score returns to zero
-Short when the 20-bar z-score of price rises above positive 2.0, exit when z-score returns to zero
+Short MNQ 4H pullback continuation after a strong breakdown when price retraces for 2 to 4 bars toward 20 EMA but remains below 50 EMA, enter on bearish rejection of pullback high, stop above pullback high, target 2.5R, no trade if pullback closes above 50 EMA
 
-# RSI Mean Reversion
-Long when RSI drops below 30 and the previous bar RSI was above 30, stop below recent swing low
-Short when RSI rises above 70 and the previous bar RSI was below 70, stop above recent swing high
 
-# Distance from Moving Average
-Long when price is more than 3 percent below the 20 EMA and RSI is below 40, target the 20 EMA
-Short when price is more than 3 percent above the 20 EMA and RSI is above 60, target the 20 EMA
+# =========================
+# MES — 4H TREND / PULLBACK
+# =========================
 
-# Bollinger Band Bounce
-Long when price touches the lower Bollinger Band with RSI below 35, target middle band
-Short when price touches the upper Bollinger Band with RSI above 65, target middle band
+Long MES 4H continuation when 20 EMA is above 50 EMA and both slopes are positive, price breaks above a 20-bar range high with ATR expansion, enter on retest hold, stop below retest low, target 2.5R, no trade if breakout bar body is too small
 
+Long MES 4H pullback continuation when trend is bullish and price retraces for 2 to 4 bars toward 20 EMA while staying above 50 EMA, enter on reclaim of pullback high, stop below pullback low, target 2.25R, no trade if pullback closes below 50 EMA
 
-# ══════════════════════════════════════════════════════════════
-# MOMENTUM STRATEGIES
-# Momentum works equally in both directions.
-# ══════════════════════════════════════════════════════════════
+Long MES 4H continuation after previous weekly high reclaim when 20 EMA is above 50 EMA and ATR expansion begins, enter on retest hold above reclaimed level, stop below retest low, target 2.5R, no trade if reclaim candle has weak close
 
-# Dual Momentum — trend-following in both directions
-Long when price is above both the 10-bar and 20-bar EMA and both EMAs are rising, hold until both flatten
-Short when price is below both the 10-bar and 20-bar EMA and both EMAs are falling, hold until both flatten
+Short MES 4H continuation when 20 EMA is below 50 EMA and both slopes are negative, price breaks below a 20-bar range low with ATR expansion, enter on retest failure, stop above retest high, target 2.5R, no trade if breakdown bar body is too small
 
-# Price Rate of Change
-Long when 14-bar rate of change crosses above zero from below and price is above the 50 EMA
-Short when 14-bar rate of change crosses below zero from above and price is below the 50 EMA
+Short MES 4H pullback continuation when trend is bearish and price retraces for 2 to 4 bars toward 20 EMA while staying below 50 EMA, enter on bearish rejection of pullback high, stop above pullback high, target 2.25R, no trade if pullback closes above 50 EMA
 
-# Relative Strength vs BTC
-Long the asset when its 20-bar return is greater than the 20-bar return of BTC indicating relative outperformance
-Short the asset when its 20-bar return is less than the 20-bar return of BTC by more than 5 percent
+Short MES 4H continuation after previous weekly low loss when 20 EMA is below 50 EMA and ATR expansion begins, enter on retest failure below lost level, stop above retest high, target 2.5R, no trade if loss candle has weak close
 
 
-# ══════════════════════════════════════════════════════════════
-# CRYPTO-SPECIFIC STRATEGIES
-# Funding and OI signals have specific directional logic — handled carefully.
-# ══════════════════════════════════════════════════════════════
+# =========================
+# MYM — 4H TREND / PULLBACK
+# =========================
 
-# Funding Rate Mean Reversion — RSI guards direction
-Long when funding rate has been negative for 3 consecutive 8-hour periods meaning shorts are paying longs and RSI is below 40
-Short when funding rate has been positive for 3 consecutive 8-hour periods meaning longs are paying shorts and RSI is above 60
+Long MYM 4H continuation when price is above 20 EMA and 50 EMA, the prior 15-bar range high breaks with ATR expansion, enter on retest that holds above range high, stop below retest low, target 2.75R, no trade if retest exceeds half of breakout candle
 
-# Liquidation Cascade Reversal — direction set by which side was liquidated
-Long immediately after long liquidations exceed 10 million USD in 15 minutes meaning sell pressure is exhausted
-Short immediately after short liquidations exceed 10 million USD in 15 minutes meaning buy pressure is exhausted
+Long MYM 4H pullback continuation when trend is bullish with positive 20 EMA and 50 EMA slope, a 2 to 4 bar pullback holds above prior broken resistance, enter on reclaim of pullback high, stop below pullback low, target 2.5R, no trade in ranging regime
 
-# Open Interest Divergence — OI drop signals exhaustion of the prevailing move
-Long when price makes a new low but open interest drops significantly indicating shorts are covering
-Short when price makes a new high but open interest drops significantly indicating longs are closing
+Short MYM 4H continuation when price is below 20 EMA and 50 EMA, the prior 15-bar range low breaks with ATR expansion, enter on retest that fails below range low, stop above retest high, target 2.75R, no trade if retest exceeds half of breakdown candle
 
-# High Funding Carry — SHORT ONLY by design, do not add a long version
-# Logic: When funding is very high and positive, longs are paying shorts.
-# You short the perpetual to collect that payment. A long carry equivalent
-# (very negative funding) is already covered by the Funding Rate Mean
-# Reversion long entry above. Adding a long here would duplicate that idea.
-Short the perpetual when funding rate exceeds 0.1 percent per 8 hours annualised above 50 percent, hold until funding normalises below 0.05 percent per 8 hours
+Short MYM 4H pullback continuation when trend is bearish with negative 20 EMA and 50 EMA slope, a 2 to 4 bar pullback holds below prior broken support, enter on break of pullback low, stop above pullback high, target 2.5R, no trade in ranging regime
 
 
-# ══════════════════════════════════════════════════════════════
-# GAP TRADING STRATEGIES
-# Gaps fill in both directions.
-# ══════════════════════════════════════════════════════════════
+# =========================
+# 15M EXECUTION ONLY UNDER 1H BIAS
+# =========================
 
-# Gap Fill
-Long when price opens more than 1 percent below the previous close creating a gap down and RSI is below 45, target the previous close
-Short when price opens more than 1 percent above the previous close creating a gap up and RSI is above 55, target the previous close
+Long MNQ 15m execution within bullish 1H regime when 1H 20 EMA is above 50 EMA and 15m breaks above the prior 20-bar high during the first two hours of New York session with ATR expansion, enter only after a clean retest and reclaim on 15m, stop below retest low, target 1.8R, no trade during flat 1H EMA conditions
 
+Short MNQ 15m execution within bearish 1H regime when 1H 20 EMA is below 50 EMA and 15m breaks below the prior 20-bar low during the first two hours of New York session with ATR expansion, enter only after a clean retest and rejection on 15m, stop above retest high, target 1.8R, no trade during flat 1H EMA conditions
 
-# ══════════════════════════════════════════════════════════════
-# TREND FOLLOWING STRATEGIES
-# ══════════════════════════════════════════════════════════════
+Long MES 15m execution within bullish 1H regime when 1H 20 EMA is above 50 EMA and 15m breaks above the prior 20-bar high during New York opening range expansion, enter only after a clean retest and reclaim, stop below retest low, target 1.8R, no trade after midday New York time
 
-# Classic Donchian Breakout
-Long when price closes above the 20-period highest high, hold with trailing stop based on the lowest low of the prior 10 bars
-Short when price closes below the 20-period lowest low, hold with trailing stop based on the highest high of the prior 10 bars
+Short MES 15m execution within bearish 1H regime when 1H 20 EMA is below 50 EMA and 15m breaks below the prior 20-bar low during New York opening range expansion, enter only after a clean retest and rejection, stop above retest high, target 1.8R, no trade after midday New York time
 
-# Triple EMA Trend Stack
-Long when 9 EMA crosses above 21 EMA which is above 55 EMA and all three are pointing up
-Short when 9 EMA crosses below 21 EMA which is below 55 EMA and all three are pointing down
+Long MYM 15m execution within bullish 1H regime when 1H 20 EMA is above 50 EMA and 15m reclaims previous day high during the first half of New York session, enter on retest hold, stop below retest low, target 1.8R, no trade if reclaim occurs late session
 
+Short MYM 15m execution within bearish 1H regime when 1H 20 EMA is below 50 EMA and 15m loses previous day low during the first half of New York session, enter on retest failure, stop above retest high, target 1.8R, no trade if breakdown occurs late session
 
-# ══════════════════════════════════════════════════════════════
-# QUANTITATIVE STRATEGIES
-# Symmetric by construction.
-# ══════════════════════════════════════════════════════════════
 
-# Volatility Breakout from Open
-Long when price moves more than 1.5 ATR above the open within the first 3 bars, stop at the open
-Short when price moves more than 1.5 ATR below the open within the first 3 bars, stop at the open
+# =========================
+# REVERSALS WITH CONTEXT ONLY
+# =========================
 
-# Mean Reversion after Extreme Move
-Long when price drops more than 2 ATR in a single bar and then forms a bullish inside bar signalling exhaustion
-Short when price rises more than 2 ATR in a single bar and then forms a bearish inside bar signalling exhaustion
+Long MNQ 4H reversal only when price sweeps the prior swing low, closes back above it, then breaks above the reclaim candle high while 20 EMA flattens and ATR begins expanding, stop below sweep low, target 2.5R, no trade if price remains below 50 EMA after trigger
 
-# Regime-Adjusted EMA Cross — only trades in low volatility trending environments
-Long when 20 EMA crosses above 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
-Short when 20 EMA crosses below 50 EMA and ATR is below the 20-bar ATR average indicating low volatility trend
+Short MNQ 4H reversal only when price sweeps the prior swing high, closes back below it, then breaks below the reclaim candle low while 20 EMA turns down and ATR expands, stop above sweep high, target 2.5R, no trade if price remains above 50 EMA after trigger
 
+Long MES 1H reversal only after a clear downtrend, when price forms a higher low against the previous swing low and closes above the intermediate swing high during New York session with 20 EMA crossing above 50 EMA, stop below higher low, target 2R, no trade if ATR is contracting
 
-# ══════════════════════════════════════════════════════════════
-# HYPOMENO MODEL STRATEGIES
-# Based on the 2Quartersin framework: Sweep → Time → Entry (IFVG)
-# All concepts translated into measurable code-able conditions
-# ══════════════════════════════════════════════════════════════
+Short MES 1H reversal only after a clear uptrend, when price forms a lower high against the previous swing high and closes below the intermediate swing low during New York session with 20 EMA crossing below 50 EMA, stop above lower high, target 2R, no trade if ATR is contracting
 
-# ── Inverse Fair Value Gap (IFVG) ─────────────────────────────
-# Core entry mechanic of the Hypomeno Model.
-# A bearish FVG that gets closed above becomes a bullish IFVG.
-# A bullish FVG that gets closed below becomes a bearish IFVG.
-# Price returns to that zone for the entry.
+Long MYM 1H reversal only when previous day low is swept and reclaimed during New York RTH, then price breaks above reclaim candle high while 20 EMA flattens upward, stop below sweep low, target 2R, no trade if reclaim stalls below 50 EMA
 
-Long when price drops at least 1.5 ATR over 3 consecutive bars creating a downward imbalance then a candle closes above the high of that 3-bar down move inverting the gap, enter long when price pulls back to the midpoint of the original 3-bar range with stop below the lowest point of the 3-bar move
-Short when price rises at least 1.5 ATR over 3 consecutive bars creating an upward imbalance then a candle closes below the low of that 3-bar up move inverting the gap, enter short when price pulls back to the midpoint of the original 3-bar range with stop above the highest point of the 3-bar move
-
-# ── Breaker Block ─────────────────────────────────────────────
-# Forms after a liquidity sweep followed by strong displacement.
-# The last opposing candle before the strong move is the breaker.
-# Smart money returns to that candle body to mitigate positions.
-
-Long when price makes a new 20-bar low sweeping liquidity then reverses upward by at least 1.5 ATR within the next 3 bars, enter long when price retraces to the open of the first bullish candle in that reversal with stop below the 20-bar low
-Short when price makes a new 20-bar high sweeping liquidity then reverses downward by at least 1.5 ATR within the next 3 bars, enter short when price retraces to the open of the first bearish candle in that reversal with stop above the 20-bar high
-
-# ── Session Sweep Reversal ────────────────────────────────────
-# Asia/London/NY sessions sweep liquidity then reverse.
-# Approximated as: early move sweeps an extreme then reverses
-# to close back through the opening price of the last 8 bars.
-
-Long when price makes a new 15-bar low then within the next 5 bars closes above the high of the candle that made the 15-bar low indicating a failed sweep and reversal, enter long at the close with stop at the 15-bar low
-Short when price makes a new 15-bar high then within the next 5 bars closes below the low of the candle that made the 15-bar high indicating a failed sweep and reversal, enter short at the close with stop at the 15-bar high
-
-# ── CISD+ / CISD- (Change in State of Delivery) ──────────────
-# A sequence of directional candles followed by a candle that
-# closes beyond the entire sequence — confirming the shift.
-
-Long when at least 3 consecutive candles each close lower than the previous forming a down sequence then a bullish candle closes above the open of the first candle in that down sequence confirming a change in delivery, enter long at that candle close with stop below the lowest low of the sequence
-Short when at least 3 consecutive candles each close higher than the previous forming an up sequence then a bearish candle closes below the open of the first candle in that up sequence confirming a change in delivery, enter short at that candle close with stop above the highest high of the sequence
-
-# ── Premium Wicks (PW+ / PW-) ────────────────────────────────
-# A candle wick that pierces beyond the 50% equilibrium of the
-# 20-bar range but the candle body closes back inside — signals
-# a liquidity sweep and likely reversal.
-
-Long when a candle low extends below the midpoint of the 20-bar high-low range but the candle closes above that midpoint indicating the lower wick swept discount liquidity and rejected, enter long at the candle close with stop at the candle low
-Short when a candle high extends above the midpoint of the 20-bar high-low range but the candle closes below that midpoint indicating the upper wick swept premium liquidity and rejected, enter short at the candle close with stop at the candle high
-
-# ── Unicorn Model ─────────────────────────────────────────────
-# Highest probability Hypomeno setup: sweep + strong displacement
-# + FVG forming inside the reversal = triple confluence.
-# Simplified: sweep of extreme + displacement candle body > 70%
-# of its range + retracement to displacement candle midpoint.
-
-Long when price sweeps the 20-bar low then the very next candle is a strong bullish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter long when price retraces to the midpoint of that strong bullish candle with stop below the sweep low
-Short when price sweeps the 20-bar high then the very next candle is a strong bearish candle with body greater than 70 percent of its total range and size greater than 1.5 ATR, enter short when price retraces to the midpoint of that strong bearish candle with stop above the sweep high
-
-# ── Protected Swing Double Test ───────────────────────────────
-# A Protected Low/High is a swing extreme that gets tested twice
-# but holds both times — confirming strong support or resistance.
-# Stop goes just beyond the protected level.
-
-Long when the lowest low of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that low again but closes above it on both tests, enter long on the second successful hold with stop 0.5 ATR below the protected low
-Short when the highest high of the past 20 bars is tested a second time meaning price touches within 0.25 ATR of that high again but closes below it on both tests, enter short on the second successful hold with stop 0.5 ATR above the protected high
-
-# ── IRL to ERL / ERL to IRL ──────────────────────────────────
-# Market moves from internal liquidity (FVG) to external
-# liquidity (swing high/low) and back. Trade the transition.
-
-Long when price retraces into the midpoint of the lowest gap in the past 20 bars where no candle body has closed inside that gap, enter long at the midpoint targeting the 20-bar high as the ERL target with stop below the gap low
-Short when price retraces into the midpoint of the highest gap in the past 20 bars where no candle body has closed inside that gap, enter short at the midpoint targeting the 20-bar low as the ERL target with stop above the gap high
-
-# ── Macro Momentum Entry ──────────────────────────────────────
-# Macros are 20-minute windows around each hour turn.
-# 9:50-10:10 AM EST is most important — start of 4H candle.
-# Approximated as: strong directional move at the open of a new
-# 4-bar cycle that breaks the prior 4-bar range high or low.
-
-Long when price breaks above the highest high of the prior 4 bars with a bullish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter long at the break with stop below the prior 4-bar low target prior 4-bar range projected upward
-Short when price breaks below the lowest low of the prior 4 bars with a bearish candle whose body is greater than 0.8 ATR indicating strong momentum at a new cycle open, enter short at the break with stop above the prior 4-bar high target prior 4-bar range projected downward
-
-
-# ══════════════════════════════════════════════════════════════
-# TOPTICK TYPE 1 — ICT SESSION SWEEP + REJECTION BLOCK
-# 6-step model: ERL Sweep → Rejection Block → C.E refinement
-# → SIBI entry → COS confirmation → STDV targets
-# ══════════════════════════════════════════════════════════════
-
-# ── Step 1-3: Session Sweep + Rejection Block at C.E ─────────
-# Price sweeps a 20-bar high (ERL), the sweep candle then
-# closes back below the prior candle high (rejection).
-# Price retraces to the 50% C.E of that sweep candle body.
-# Entry at C.E with stop above the sweep high.
-
-Short when price makes a new 20-bar high and the candle that makes the high closes below the high of the previous candle indicating a rejection of the sweep, then price retraces back up to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter short at that midpoint with stop above the 20-bar high targeting the 20-bar low
-Long when price makes a new 20-bar low and the candle that makes the low closes above the low of the previous candle indicating a rejection of the sweep, then price retraces back down to the 50 percent midpoint of the sweep candle high-low range within the next 10 bars, enter long at that midpoint with stop below the 20-bar low targeting the 20-bar high
-
-# ── Step 4: SIBI Entry (Volume Imbalance within Rejection Block)
-# A SIBI is a gap between consecutive candle closes and opens
-# with no overlap — similar to an FVG but specific to the
-# sell-side imbalance. Entry at the 50% of the imbalance gap.
-
-Short when price sweeps a 20-bar high then within 3 bars forms a gap where consecutive bearish candle closes are lower than the next candle opens leaving a visible imbalance, then price retraces up into the midpoint of that gap, enter short at the midpoint of the gap with stop above the top of the gap
-Long when price sweeps a 20-bar low then within 3 bars forms a gap where consecutive bullish candle closes are higher than the next candle opens leaving a visible imbalance, then price retraces down into the midpoint of that gap, enter long at the midpoint of the gap with stop below the bottom of the gap
-
-# ── Step 5: Change of Structure Confirmation ─────────────────
-# After price reaches the entry zone, wait for COS:
-# a candle that closes beyond the most recent opposing swing.
-# This confirms the reversal before committing to the trade.
-
-Short when price makes a new 20-bar high then forms 3 or more lower highs in a row and a candle closes below the lowest low of those lower highs confirming a change of structure, enter short at the break close with stop above the 20-bar high targeting the 20-bar low
-Long when price makes a new 20-bar low then forms 3 or more higher lows in a row and a candle closes above the highest high of those higher lows confirming a change of structure, enter long at the break close with stop below the 20-bar low targeting the 20-bar high
-
-# ── Step 6: STDV Extension Targets ───────────────────────────
-# Targets align with standard deviation extensions of 2-2.5
-# and 4-4.5 from the entry. Approximated as ATR multiples:
-# STDV 2-2.5 ≈ 2x ATR from entry (first target)
-# STDV 4-4.5 ≈ 4x ATR from entry (full target)
-
-Short when price sweeps a 20-bar high and the sweep candle closes in the lower 25 percent of its range indicating strong rejection, enter short on the next candle close with stop above the sweep high and target exit at 3 ATR below entry representing the standard deviation extension zone
-Long when price sweeps a 20-bar low and the sweep candle closes in the upper 25 percent of its range indicating strong rejection, enter long on the next candle close with stop below the sweep low and target exit at 3 ATR above entry representing the standard deviation extension zone
-
-
-# ══════════════════════════════════════════════════════════════
-# RENAISSANCE / INSTITUTIONAL-GRADE STRATEGY IDEAS
-# Based on publicly known RenTec, Two Sigma, Citadel approaches
-# Added for RBI backtester to discover high-frequency edges
-# ══════════════════════════════════════════════════════════════
-
-# ── STATISTICAL ARBITRAGE / MEAN REVERSION (RenTec core) ─────
-
-# Z-Score Pairs Reversion — the core RenTec approach
-Long when the z-score of the price ratio between two correlated assets drops below -2 on a 20-period rolling window, exit when z-score reverts to 0
-Short when the z-score of the price ratio between two correlated assets rises above 2 on a 20-period rolling window, exit when z-score reverts to 0
-
-# Opening gap reversion — RenTec's original 1989 strategy
-Long when price opens more than 0.5% below the prior close on above-average volume and the 5-period RSI is below 35, exit when price returns to prior close
-Short when price opens more than 0.5% above the prior close on above-average volume and the 5-period RSI is above 65, exit when price returns to prior close
-
-# Overnight gap fill on 5-minute bars
-Long when the 5-minute open has a gap down of more than 0.3% from prior close and VWAP is above price, exit when price fills 50% of the gap
-Short when the 5-minute open has a gap up of more than 0.3% from prior close and VWAP is below price, exit when price fills 50% of the gap
-
-# ── HIGH FREQUENCY MEAN REVERSION (5-minute bars) ────────────
-
-# RSI extremes on 5m — fires 3-5x more than 15m version
-Long when 5-minute RSI drops below 25 and price is within 0.5% of the lower Bollinger Band, exit when RSI rises above 45
-Short when 5-minute RSI rises above 75 and price is within 0.5% of the upper Bollinger Band, exit when RSI falls below 55
-
-# MACD histogram flip on 5m
-Long when 5-minute MACD histogram crosses from negative to positive and volume is above the 10-bar average, exit when histogram turns negative again
-Short when 5-minute MACD histogram crosses from positive to negative and volume is above the 10-bar average, exit when histogram turns positive again
-
-# VWAP deviation reversion on 5m
-Long when price is more than 0.8% below VWAP on 5-minute bars and RSI is below 40, exit when price returns to VWAP
-Short when price is more than 0.8% above VWAP on 5-minute bars and RSI is above 60, exit when price returns to VWAP
-
-# EMA distance reversion on 5m
-Long when price drops more than 1.5% below the 20-period EMA on 5-minute bars, exit when price touches the 20 EMA
-Short when price rises more than 1.5% above the 20-period EMA on 5-minute bars, exit when price touches the 20 EMA
-
-# Stochastic oversold on 5m
-Long when 5-minute stochastic K drops below 15 and D is also below 20 and price is above 50 EMA, exit when stochastic K crosses above 30
-Short when 5-minute stochastic K rises above 85 and D is also above 80 and price is below 50 EMA, exit when stochastic K crosses below 70
-
-# Keltner Channel reversion on 5m
-Long when price closes below the lower Keltner Channel on 5-minute bars and the previous bar closed inside the channel, exit when price returns to midline
-Short when price closes above the upper Keltner Channel on 5-minute bars and the previous bar closed inside the channel, exit when price returns to midline
-
-# ── MOMENTUM STRATEGIES (Two Sigma / Citadel approach) ────────
-
-# Momentum burst on 5m — capture the first 15 minutes of a move
-Long when price breaks above the prior 10-bar high on 5-minute bars with volume 2x the 10-bar average and ADX above 25, exit after 3 bars or when momentum stalls
-Short when price breaks below the prior 10-bar low on 5-minute bars with volume 2x the 10-bar average and ADX above 25, exit after 3 bars or when momentum stalls
-
-# Opening range breakout on 5m — institutional staple
-Long when price breaks above the first 30 minutes high on 5-minute bars with volume confirmation, stop at opening range low, target 1.5x opening range
-Short when price breaks below the first 30 minutes low on 5-minute bars with volume confirmation, stop at opening range high, target 1.5x opening range
-
-# Trend acceleration on 5m — catch second leg of moves
-Long when 5-minute price makes a higher high while RSI makes a higher high and MACD is positive and rising, exit when RSI diverges
-Short when 5-minute price makes a lower low while RSI makes a lower low and MACD is negative and falling, exit when RSI diverges
-
-# ── VOLATILITY-BASED STRATEGIES ───────────────────────────────
-
-# ATR expansion entry on 5m
-Long when the 5-minute bar range exceeds 2x the 14-period ATR to the upside with close in the top 25% of the bar, exit when price retraces 50% of the expansion bar
-Short when the 5-minute bar range exceeds 2x the 14-period ATR to the downside with close in the bottom 25% of the bar, exit when price retraces 50% of the expansion bar
-
-# Volatility contraction breakout on 15m
-Long when the 15-minute ATR drops to a 20-bar low squeeze and price breaks above the 10-bar high, stop at 10-bar low, target 2x ATR
-Short when the 15-minute ATR drops to a 20-bar low squeeze and price breaks below the 10-bar low, stop at 10-bar high, target 2x ATR
-
-# ── CROSS-ASSET CORRELATION (RenTec multi-signal) ─────────────
-
-# BTC lead signal for altcoins on 5m
-Long when Bitcoin 5-minute RSI rises above 55 from below 45 and target altcoin RSI is still below 50, exit when altcoin RSI reaches 60
-Short when Bitcoin 5-minute RSI falls below 45 from above 55 and target altcoin RSI is still above 50, exit when altcoin RSI reaches 40
-
-# Funding rate extreme reversion
-Long when the perpetual futures funding rate drops below -0.05% (heavily negative shorts paying longs) and RSI is below 40, exit when funding rate normalises above -0.01%
-Short when the perpetual futures funding rate rises above 0.1% (heavily positive longs paying shorts) and RSI is above 60, exit when funding rate normalises below 0.05%
-
-# ── MICROSTRUCTURE / ORDERFLOW (Citadel approach) ─────────────
-
-# Volume delta reversal on 5m
-Long when cumulative delta (buy volume minus sell volume) over 5 bars is strongly negative but price is flat or rising, indicating absorption, exit when delta turns positive
-Short when cumulative delta over 5 bars is strongly positive but price is flat or falling, indicating distribution, exit when delta turns negative
-
-# Relative volume spike reversion on 5m
-Long when 5-minute volume spikes to 3x the 20-bar average and price drops more than 0.5% on that bar, suggesting forced selling, exit when price recovers 50%
-Short when 5-minute volume spikes to 3x the 20-bar average and price rises more than 0.5% on that bar, suggesting forced buying, exit when price retraces 50%
-
-# ── HIDDEN MARKOV / REGIME CONDITIONAL STRATEGIES ─────────────
-
-# Regime-conditional mean reversion
-Long when the 20-day rolling Sharpe of price returns is below -0.5 (in drawdown regime) and current 5-minute RSI drops below 30, exit when RSI returns to 50
-Short when the 20-day rolling Sharpe of price returns is above 1.5 (in extended rally regime) and current 5-minute RSI rises above 70, exit when RSI returns to 50
-
-# Trend regime momentum
-Long when the 20-period ADX on 1-hour bars is above 30 (strong trend) and price pulls back to the 8 EMA on 5-minute bars with RSI between 40-55, exit when ADX drops below 25
-Short when the 20-period ADX on 1-hour bars is above 30 (strong trend down) and price bounces to the 8 EMA on 5-minute bars with RSI between 45-60, exit when ADX drops below 25
-
-# ── KELLY CRITERION OPTIMISED (RenTec position sizing) ────────
-
-# High conviction momentum scalp on 5m — sized by Kelly
-Long when three consecutive 5-minute bars close above their opens and volume is rising each bar and MACD is positive, size position at half-Kelly based on 20-trade win rate, exit after 2 bars
-Short when three consecutive 5-minute bars close below their opens and volume is rising each bar and MACD is negative, size position at half-Kelly based on 20-trade win rate, exit after 2 bars
-
-# ── MARKET NEUTRAL PAIRS (Hyperliquid personal account only) ──
-
-# Crypto sector pair — AI tokens
-Long TAO when TAO/FET ratio z-score drops below -1.5 on a 30-period rolling window and short FET simultaneously, exit when ratio z-score returns to 0
-Long FET when FET/TAO ratio z-score drops below -1.5 on a 30-period rolling window and short TAO simultaneously, exit when ratio z-score returns to 0
-
-# Crypto sector pair — meme tokens  
-Long PEPE when PEPE/WIF ratio z-score drops below -1.5 on 30-period rolling window and short WIF simultaneously, exit when ratio z-score returns to 0
-Long WIF when WIF/PEPE ratio z-score drops below -1.5 on 30-period rolling window and short PEPE simultaneously, exit when ratio z-score returns to 0
-
-# Layer 1 pair
-Long SOL when SOL/AVAX ratio z-score drops below -2 on 20-period rolling window and short AVAX simultaneously, exit when ratio z-score returns to 0
-Long AVAX when AVAX/SOL ratio z-score drops below -2 on 20-period rolling window and short SOL simultaneously, exit when ratio z-score returns to 0
-
-
-
-# ══════════════════════════════════════════════════════════════
-# SPX PERPETUAL STRATEGIES (Hyperliquid via Trade[XYZ])
-# Same underlying as MES/ES but 24/7, no prop firm restrictions
-# Backtested using MES as proxy — same S&P 500 price behaviour
-# ══════════════════════════════════════════════════════════════
-
-# ── SESSIONS EXTENDED (the core SPX perp advantage) ──────────
-
-# Asian session S&P mean reversion on 15m
-Long when SPX price drops more than 0.4% from the prior NYSE close during Asian session hours and RSI is below 35, exit when price recovers 0.2% or at NYSE open
-Short when SPX price rises more than 0.4% from the prior NYSE close during Asian session hours and RSI is above 65, exit when price drops 0.2% or at NYSE open
-
-# Weekend gap fade — unique to 24/7 index perp
-Long when SPX opens Monday more than 0.3% below Friday close due to weekend news and RSI is below 40, exit when 50% of gap is filled
-Short when SPX opens Monday more than 0.3% above Friday close due to weekend news and RSI is above 60, exit when 50% of gap is filled
-
-# ── INTRADAY SPX PATTERNS (match MES vault strategies) ────────
-
-# Histogram fade on SPX 15m — same logic as HistogramFade MES
-Long when SPX 15-minute MACD histogram is below zero and turns up for the first time in 3 bars and price is above the 50 EMA, exit when histogram reaches zero
-Short when SPX 15-minute MACD histogram is above zero and turns down for the first time in 3 bars and price is below the 50 EMA, exit when histogram reaches zero
-
-# RSI overbought/oversold on SPX 15m — same as RSIOverbought MES
-Long when SPX 15-minute RSI drops below 30 and the prior 3 bars show declining volume, exit when RSI rises above 50
-Short when SPX 15-minute RSI rises above 70 and the prior 3 bars show declining volume, exit when RSI falls below 50
-
-# Z-score reversion on SPX 4H — same as ZScoreReversion MES
-Long when SPX 4-hour price drops more than 2 standard deviations below the 20-period mean and volume is below the 10-bar average, exit when price returns to the mean
-Short when SPX 4-hour price rises more than 2 standard deviations above the 20-period mean and volume is below the 10-bar average, exit when price returns to the mean
-
-# Volume spike fade on SPX 15m — same as VolumeSpikeFade MES
-Long when SPX 15-minute volume spikes to 3x the 20-bar average and price drops more than 0.2% on that bar, indicating forced selling, exit when price recovers 0.15%
-Short when SPX 15-minute volume spikes to 3x the 20-bar average and price rises more than 0.2% on that bar, indicating forced buying, exit when price retraces 0.15%
-
-# Opening range breakout on SPX 5m — powerful intraday setup
-Long when SPX breaks above the first 30-minute high after NYSE open on 5-minute bars with volume 1.5x average, stop at opening range low, target 1.5x range
-Short when SPX breaks below the first 30-minute low after NYSE open on 5-minute bars with volume 1.5x average, stop at opening range high, target 1.5x range
-
-# ── MACRO EVENT PLAYS (unique to 24/7 perp) ──────────────────
-
-# Pre-FOMC positioning on SPX 1H
-Long when SPX drops more than 0.5% in the 2 hours before FOMC announcement and RSI is below 35, hold through announcement, exit on 0.3% bounce or if it continues falling
-Short when SPX rises more than 0.5% in the 2 hours before FOMC announcement and RSI is above 65, hold through announcement, exit on 0.3% drop
-
-# Post-news reversion on SPX 5m
-Long when SPX drops more than 1% within 5 minutes of major economic data release and the 5-minute RSI is below 25, exit when RSI returns to 45
-Short when SPX rises more than 1% within 5 minutes of major economic data release and the 5-minute RSI is above 75, exit when RSI returns to 55
-
-
-# ══════════════════════════════════════════════════════════════
-# HIGH FREQUENCY SCALPING — 1-MINUTE AND 5-MINUTE BARS
-# Target: 50-200 trades/day | Hold: 1-15 minutes
-# Works on: MES/MNQ/MYM (futures) + crypto on Hyperliquid
-# RBI will backtest all — only Sharpe > 1.5 get vaulted
-# ══════════════════════════════════════════════════════════════
-
-# ── 1-MINUTE MEAN REVERSION (highest frequency) ───────────────
-
-# RSI snap-back on 1m — fires constantly on liquid markets
-Long when 1-minute RSI drops below 20 and the prior 3 bars closed red and price is above the 200 EMA on 5-minute chart, exit when 1-minute RSI rises above 40
-Short when 1-minute RSI rises above 80 and the prior 3 bars closed green and price is below the 200 EMA on 5-minute chart, exit when 1-minute RSI falls below 60
-
-# Micro VWAP reversion on 1m — catches over-extensions
-Long when price drops more than 0.15% below VWAP on 1-minute bars and volume on that bar is 2x the 5-bar average, exit when price returns to VWAP
-Short when price rises more than 0.15% above VWAP on 1-minute bars and volume on that bar is 2x the 5-bar average, exit when price returns to VWAP
-
-# 1-minute EMA distance snap
-Long when price is more than 0.3% below the 9 EMA on 1-minute bars and the 9 EMA slope is still positive, exit when price touches the 9 EMA
-Short when price is more than 0.3% above the 9 EMA on 1-minute bars and the 9 EMA slope is still negative, exit when price touches the 9 EMA
-
-# Stochastic cross on 1m
-Long when 1-minute stochastic K crosses above D from below 20 and price is above the 50 EMA on the 5-minute chart, exit when stochastic reaches 60
-Short when 1-minute stochastic K crosses below D from above 80 and price is below the 50 EMA on the 5-minute chart, exit when stochastic reaches 40
-
-# 1m hammer candle with volume
-Long when a 1-minute bar has a lower wick at least 2x the body size and volume is 3x the 10-bar average, indicating rejection of lows, exit at 0.15% profit or after 5 bars
-Short when a 1-minute bar has an upper wick at least 2x the body size and volume is 3x the 10-bar average, indicating rejection of highs, exit at 0.15% profit or after 5 bars
-
-# Micro support bounce on 1m
-Long when price touches a level that held 3 times in the prior 30 bars on 1-minute chart and the current bar closes with a bullish candle above that level, exit when price rises 0.2%
-Short when price touches a level that rejected 3 times in the prior 30 bars on 1-minute chart and the current bar closes with a bearish candle below that level, exit when price falls 0.2%
-
-# 1-minute consecutive close momentum
-Long when 3 consecutive 1-minute bars all close higher than their opens and total range is less than 0.3% preventing overextension, exit when first red bar closes below its open
-Short when 3 consecutive 1-minute bars all close lower than their opens and total range is less than 0.3%, exit when first green bar closes above its open
-
-# ── 5-MINUTE SCALPING STRATEGIES ─────────────────────────────
-
-# Opening 5-minute candle continuation
-Long when the first 5-minute candle of the session closes bullish with volume 2x the 20-bar average, enter on the second bar open with stop below the first bar low, exit at 0.3% profit
-Short when the first 5-minute candle of the session closes bearish with volume 2x the 20-bar average, enter on the second bar open with stop above the first bar high, exit at 0.3% profit
-
-# 5m Bollinger squeeze breakout scalp
-Long when 5-minute Bollinger Band width drops to a 20-bar low and price breaks above the upper band on the next bar with volume, stop at middle band, exit after 2 bars
-Short when 5-minute Bollinger Band width drops to a 20-bar low and price breaks below the lower band on the next bar with volume, stop at middle band, exit after 2 bars
-
-# 5m higher low momentum entry
-Long when 5-minute chart forms a higher low above prior swing low and MACD is positive and rising, enter on the break above the prior swing high, stop at the higher low, exit at 1:1.5 R:R
-Short when 5-minute chart forms a lower high below prior swing high and MACD is negative and falling, enter on the break below the prior swing low, stop at the lower high, exit at 1:1.5 R:R
-
-# 5m VWAP standard deviation extremes
-Long when price touches 2 standard deviations below VWAP on 5-minute bars and RSI is below 30, exit when price returns to 1 standard deviation below VWAP
-Short when price touches 2 standard deviations above VWAP on 5-minute bars and RSI is above 70, exit when price returns to 1 standard deviation above VWAP
-
-# 5m volume climax reversal
-Long when 5-minute volume is 5x the 20-bar average and the bar closes in the upper 25% of its range after initially dropping, indicating capitulation buying, exit after 3 bars
-Short when 5-minute volume is 5x the 20-bar average and the bar closes in the lower 25% of its range after initially rising, indicating distribution selling, exit after 3 bars
-
-# 5m order flow absorption
-Long when 3 consecutive 5-minute bars have above-average volume but price barely moved lower, indicating strong buyers absorbing supply, exit when price breaks 0.2% above the range
-Short when 3 consecutive 5-minute bars have above-average volume but price barely moved higher, indicating strong sellers absorbing demand, exit when price breaks 0.2% below the range
-
-# ── ICT-STYLE 1-5 MINUTE ENTRIES ─────────────────────────────
-
-# Liquidity sweep and reversal on 1m
-Long when 1-minute price sweeps below a prior swing low by 0.1-0.3% then reverses and closes above that low within 2 bars, stop below the sweep low, target prior swing high
-Short when 1-minute price sweeps above a prior swing high by 0.1-0.3% then reverses and closes below that high within 2 bars, stop above the sweep high, target prior swing low
-
-# Fair value gap fill on 5m — fast version
-Long when a 5-minute bullish fair value gap forms (gap between bar 1 high and bar 3 low) and price retraces into the gap on the next 1-3 bars, exit when gap is fully filled or at prior high
-Short when a 5-minute bearish fair value gap forms (gap between bar 1 low and bar 3 high) and price retraces into the gap on the next 1-3 bars, exit when gap is fully filled or at prior low
-
-# Kill zone scalp — London open 1m (3am EST / 10am EAT)
-Long when price drops into a 1-minute demand zone in the first 30 minutes of London session and RSI is below 35, exit when RSI reaches 55 or after 15 bars
-Short when price rises into a 1-minute supply zone in the first 30 minutes of London session and RSI is above 65, exit when RSI reaches 45 or after 15 bars
-
-# Kill zone scalp — NY open 1m (9:30am EST / 4:30pm EAT)
-Long when price drops sharply in the first 5 minutes of NY session by more than 0.2% and then forms a 1-minute bullish candle with volume, exit after 0.2% recovery
-Short when price rises sharply in the first 5 minutes of NY session by more than 0.2% and then forms a 1-minute bearish candle with volume, exit after 0.2% decline
-
-# ── CRYPTO-SPECIFIC SCALPS (1-5m on Hyperliquid) ─────────────
-
-# BTC 1m momentum scalp — leads altcoins by 15-60 seconds
-Long when Bitcoin 1-minute RSI rises from below 30 to above 40 and closes a green bar, enter on next altcoin bar showing same RSI pattern, exit when altcoin RSI reaches 55
-Short when Bitcoin 1-minute RSI falls from above 70 to below 60 and closes a red bar, enter on next altcoin bar showing same RSI pattern, exit when altcoin RSI reaches 45
-
-# Funding rate extreme + 5m entry
-Long when perpetual funding rate is below -0.04% and 5-minute RSI drops below 35 and price is above the 50 EMA, hold until RSI recovers to 55 or funding normalises
-Short when perpetual funding rate is above 0.08% and 5-minute RSI rises above 65 and price is below the 50 EMA, hold until RSI drops to 45 or funding normalises
-
-# 5m liquidation cascade fade
-Long when price drops more than 0.5% in a single 5-minute bar with volume 4x average suggesting liquidation cascade, enter on the next bar if it forms a bullish reversal candle, exit at 0.3%
-Short when price rises more than 0.5% in a single 5-minute bar with volume 4x average suggesting short squeeze, enter on the next bar if it forms a bearish reversal candle, exit at 0.3%
-
-# 5m perpetual vs spot divergence
-Long when spot price of crypto is 0.1-0.3% above perpetual price indicating positive funding and RSI is below 45 on both, exit when gap narrows to 0.05%
-Short when spot price of crypto is 0.1-0.3% below perpetual price indicating negative funding and RSI is above 55 on both, exit when gap narrows to 0.05%
-
-# ── FUTURES SCALPS (MES/MNQ/MYM — works with Apex intraday) ──
-
-# MES/MNQ 1m pullback in trend
-Long when MES 5-minute trend is up (price above 20 EMA on 5m) and 1-minute RSI pulls back to 40-50 and forms a bullish reversal candle, stop below the 1-minute low, target 2:1 R:R
-Short when MES 5-minute trend is down (price below 20 EMA on 5m) and 1-minute RSI rises to 50-60 and forms a bearish reversal candle, stop above the 1-minute high, target 2:1 R:R
-
-# MES 5m pre-market level respect
-Long when MES opens below pre-market high, rallies to test it, pulls back slightly and forms a bullish 5-minute bar above that level, stop below level, target 0.2% above entry
-Short when MES opens above pre-market low, falls to test it, bounces slightly and forms a bearish 5-minute bar below that level, stop above level, target 0.2% below entry
-
-# MNQ 5m fail-to-follow scalp
-Long when NQ makes a lower low on 5-minute bars but RSI makes a higher low confirming positive divergence, enter on next green candle close, stop at the low, target prior swing high
-Short when NQ makes a higher high on 5-minute bars but RSI makes a lower high confirming negative divergence, enter on next red candle close, stop at the high, target prior swing low
-
-# MES range high/low scalp
-Long when MES breaks above the prior 10-bar 5-minute high with a large green bar and volume, pullback to that broken level and bounces, stop below the level, target 1:2 R:R
-Short when MES breaks below the prior 10-bar 5-minute low with a large red bar and volume, retests that broken level and reverses, stop above the level, target 1:2 R:R
-
+Short MYM 1H reversal only when previous day high is swept and rejected during New York RTH, then price breaks below reclaim candle low while 20 EMA flattens downward, stop above sweep high, target 2R, no trade if rejection stalls above 50 EMA

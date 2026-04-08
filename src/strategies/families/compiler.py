@@ -23,6 +23,7 @@ from src.strategies.families.wrappers import (
     ind_bb_high,
     ind_bb_mid,
 )
+from src.strategies.families.ict_features import build_ict_feature_frame
 """.strip()
 
 
@@ -87,6 +88,9 @@ class {name}(Strategy):
     partial_tp_at_r = {_schema_num(schema, ("setup_params", "partial_tp_at_r"), 0.0)}
     partial_tp_size = {_schema_num(schema, ("setup_params", "partial_tp_size"), 0.0)}
     trail_atr_after_r = {_schema_num(schema, ("setup_params", "trail_atr_after_r"), 0.0)}
+    fvg_gap_pct = {_schema_num(schema, ("setup_params", "fvg_gap_pct"), 0.0)}
+    displacement_atr_mult = {_schema_num(schema, ("setup_params", "displacement_atr_mult"), 1.0)}
+    pd_lookback = {_schema_num(schema, ("setup_params", "pd_lookback"), 20)}
 
     retest_required = {_schema_bool(schema, ("setup_params", "retest_required"), False)}
     volume_confirmation = {_schema_bool(schema, ("setup_params", "volume_confirmation"), False)}
@@ -99,6 +103,15 @@ class {name}(Strategy):
     use_session_filter = {"True" if session_filter_default else "False"}
     use_volatility_filter = {_schema_bool(schema, ("setup_params", "use_volatility_filter"), True)}
     use_trend_filter = {"True" if trend_filter_default else "False"}
+
+    uses_fvg = {_schema_bool(schema, ("filters", "uses_fvg"), False)}
+    uses_cisd = {_schema_bool(schema, ("filters", "uses_cisd"), False)}
+    uses_smt = {_schema_bool(schema, ("filters", "uses_smt"), False)}
+    uses_pd_array = {_schema_bool(schema, ("filters", "uses_pd_array"), False)}
+    uses_liquidity_sweep = {_schema_bool(schema, ("filters", "uses_liquidity_sweep"), False)}
+    uses_displacement = {_schema_bool(schema, ("filters", "uses_displacement"), False)}
+    requires_reclaim = {_schema_bool(schema, ("filters", "requires_reclaim"), False)}
+    requires_rejection = {_schema_bool(schema, ("filters", "requires_rejection"), False)}
 
     direction = {repr(getattr(schema, "direction", "long_only"))}
     timeframe_hint = {repr(tf_hint)}
@@ -115,6 +128,14 @@ class {name}(Strategy):
         self.bb_low = self.I(lambda x: ind_bb_low(x, window=self.bb_window, window_dev=self.bb_std), self.data.Close)
         self.bb_high = self.I(lambda x: ind_bb_high(x, window=self.bb_window, window_dev=self.bb_std), self.data.Close)
         self.bb_mid = self.I(lambda x: ind_bb_mid(x, window=self.bb_window, window_dev=self.bb_std), self.data.Close)
+
+        self.ict = build_ict_feature_frame(
+            self.data.df,
+            fvg_gap_pct=self.fvg_gap_pct,
+            atr_period=self.atr_window,
+            displacement_atr_mult=self.displacement_atr_mult,
+            pd_lookback=self.pd_lookback,
+        )
 
         self.breakout_state = 0
         self.breakout_level = np.nan
@@ -230,6 +251,58 @@ class {name}(Strategy):
         except Exception:
             return True
 
+    def _ict_long_ok(self):
+        i = len(self.data.Close) - 1
+        if i <= 0:
+            return False
+
+        long_ok = True
+
+        bullish_fvg_ok = bool(self.ict["bullish_fvg"].iloc[i]) or bool(self.ict["bullish_fvg"].shift(1).iloc[i])
+        bullish_cisd_ok = bool(self.ict["bullish_cisd"].iloc[i])
+        discount_ok = bool(self.ict["in_discount"].iloc[i])
+        bullish_disp_ok = bool(self.ict["bullish_displacement"].iloc[i])
+        bullish_shift_ok = bool(self.ict["bullish_structure_shift"].iloc[i])
+
+        if self.uses_fvg:
+            long_ok = long_ok and bullish_fvg_ok
+        if self.uses_cisd:
+            long_ok = long_ok and bullish_cisd_ok
+        if self.uses_pd_array:
+            long_ok = long_ok and discount_ok
+        if self.uses_displacement:
+            long_ok = long_ok and bullish_disp_ok
+        if self.requires_reclaim:
+            long_ok = long_ok and bullish_shift_ok
+
+        return long_ok
+
+    def _ict_short_ok(self):
+        i = len(self.data.Close) - 1
+        if i <= 0:
+            return False
+
+        short_ok = True
+
+        bearish_fvg_ok = bool(self.ict["bearish_fvg"].iloc[i]) or bool(self.ict["bearish_fvg"].shift(1).iloc[i])
+        bearish_cisd_ok = bool(self.ict["bearish_cisd"].iloc[i])
+        premium_ok = bool(self.ict["in_premium"].iloc[i])
+        bearish_disp_ok = bool(self.ict["bearish_displacement"].iloc[i])
+        bearish_shift_ok = bool(self.ict["bearish_structure_shift"].iloc[i])
+
+        if self.uses_fvg:
+            short_ok = short_ok and bearish_fvg_ok
+        if self.uses_cisd:
+            short_ok = short_ok and bearish_cisd_ok
+        if self.uses_pd_array:
+            short_ok = short_ok and premium_ok
+        if self.uses_displacement:
+            short_ok = short_ok and bearish_disp_ok
+        if self.requires_rejection:
+            short_ok = short_ok and bearish_shift_ok
+
+        return short_ok
+
     def _enter_long(self, sl, entry=None):
         entry_price = float(self.data.Close[-1] if entry is None else entry)
         risk = entry_price - sl
@@ -238,9 +311,9 @@ class {name}(Strategy):
         tp = entry_price + (risk * self.tp_r_multiple)
         if self.position.is_short:
             self.position.close()
-        if not self.position:
-            self.active_risk_per_unit = risk
-            self.buy(size=self.fixed_size, sl=sl, tp=tp)
+        self.buy(size=self.fixed_size, sl=sl, tp=tp)
+        self.active_risk_per_unit = risk
+        self.active_breakout_level = entry_price
 
     def _enter_short(self, sl, entry=None):
         entry_price = float(self.data.Close[-1] if entry is None else entry)
@@ -250,370 +323,192 @@ class {name}(Strategy):
         tp = entry_price - (risk * self.tp_r_multiple)
         if self.position.is_long:
             self.position.close()
-        if not self.position:
-            self.active_risk_per_unit = risk
-            self.sell(size=self.fixed_size, sl=sl, tp=tp)
+        self.sell(size=self.fixed_size, sl=sl, tp=tp)
+        self.active_risk_per_unit = risk
+        self.active_breakout_level = entry_price
 
-    def _reset_breakout_state(self):
-        self.breakout_state = 0
-        self.breakout_level = np.nan
-        self.breakout_bar_index = -1
-        self.breakout_direction = ""
-        self.breakout_trigger_high = np.nan
-        self.breakout_trigger_low = np.nan
-
-    def _breakout_state_expired(self):
-        if self.breakout_state == 0:
-            return False
-        return (self._bar_index() - self.breakout_bar_index) > self.max_retest_bars
-
-    def _manage_open_position(self):
+    def _manage_open_trade(self):
         trade = self._latest_trade()
-        if trade is None:
-            return
-        if not (self.active_risk_per_unit == self.active_risk_per_unit) or self.active_risk_per_unit <= 0:
+        if trade is None or not self.position:
             return
 
-        close = float(self.data.Close[-1])
-        atr = float(self.atr[-1])
+        price = float(self.data.Close[-1])
+        atr_now = float(self.atr[-1]) if self.atr[-1] == self.atr[-1] else 0.0
 
-        if getattr(trade, "is_long", False):
-            entry = float(trade.entry_price)
-            progress_r = (close - entry) / self.active_risk_per_unit
+        if self.active_risk_per_unit and self.active_risk_per_unit == self.active_risk_per_unit:
+            if self.position.is_long:
+                r_now = (price - float(trade.entry_price)) / self.active_risk_per_unit
+                if self.failure_exit_on_level_reclaim and self.active_breakout_level == self.active_breakout_level:
+                    if price < self.active_breakout_level * (1 - self.retest_tolerance_pct):
+                        self.position.close()
+                        return
+                if self.move_to_be_at_r > 0 and r_now >= self.move_to_be_at_r and trade.sl is not None:
+                    try:
+                        trade.sl = max(float(trade.sl), float(trade.entry_price))
+                    except Exception:
+                        pass
+                if self.trail_atr_after_r > 0 and r_now >= self.trail_atr_after_r and atr_now > 0:
+                    try:
+                        trail_sl = price - atr_now * self.sl_atr_mult
+                        trade.sl = max(float(trade.sl) if trade.sl is not None else -np.inf, trail_sl)
+                    except Exception:
+                        pass
 
-            if self.move_to_be_at_r > 0 and progress_r >= self.move_to_be_at_r:
-                try:
-                    if trade.sl is None or float(trade.sl) < entry:
-                        trade.sl = entry
-                except Exception:
-                    pass
+            if self.position.is_short:
+                r_now = (float(trade.entry_price) - price) / self.active_risk_per_unit
+                if self.failure_exit_on_level_reclaim and self.active_breakout_level == self.active_breakout_level:
+                    if price > self.active_breakout_level * (1 + self.retest_tolerance_pct):
+                        self.position.close()
+                        return
+                if self.move_to_be_at_r > 0 and r_now >= self.move_to_be_at_r and trade.sl is not None:
+                    try:
+                        trade.sl = min(float(trade.sl), float(trade.entry_price))
+                    except Exception:
+                        pass
+                if self.trail_atr_after_r > 0 and r_now >= self.trail_atr_after_r and atr_now > 0:
+                    try:
+                        trail_sl = price + atr_now * self.sl_atr_mult
+                        trade.sl = min(float(trade.sl) if trade.sl is not None else np.inf, trail_sl)
+                    except Exception:
+                        pass
 
-            if self.trail_atr_after_r > 0 and progress_r >= self.trail_atr_after_r:
-                new_sl = close - atr
-                try:
-                    if trade.sl is None or new_sl > float(trade.sl):
-                        trade.sl = new_sl
-                except Exception:
-                    pass
-
-            if self.failure_exit_on_level_reclaim and self.active_breakout_level == self.active_breakout_level:
-                if close < float(self.active_breakout_level):
-                    trade.close()
-
-        elif getattr(trade, "is_short", False):
-            entry = float(trade.entry_price)
-            progress_r = (entry - close) / self.active_risk_per_unit
-
-            if self.move_to_be_at_r > 0 and progress_r >= self.move_to_be_at_r:
-                try:
-                    if trade.sl is None or float(trade.sl) > entry:
-                        trade.sl = entry
-                except Exception:
-                    pass
-
-            if self.trail_atr_after_r > 0 and progress_r >= self.trail_atr_after_r:
-                new_sl = close + atr
-                try:
-                    if trade.sl is None or new_sl < float(trade.sl):
-                        trade.sl = new_sl
-                except Exception:
-                    pass
-
-            if self.failure_exit_on_level_reclaim and self.active_breakout_level == self.active_breakout_level:
-                if close > float(self.active_breakout_level):
-                    trade.close()
+    def next(self):
+        self._manage_open_trade()
 """).strip()
 
 
-def _double_bottom(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    close = float(self.data.Close[-1])
-    low_now = float(self.data.Low[-1])
-    low_prev = float(min(self.data.Low[-self.lookback:-4]))
-    mid_high = float(max(self.data.High[-8:-1]))
-    tol = close * self.price_tolerance_pct
-
-    double_bottom = abs(low_now - low_prev) <= tol
-    rsi_confirm = self.rsi[-1] > self.rsi[-2] and self.rsi[-1] > 40
-
-    if self._allow_long() and self._trend_long_ok() and double_bottom and rsi_confirm and close > mid_high:
-        sl = low_now - (float(self.atr[-1]) * self.sl_atr_mult)
-        self._enter_long(sl=sl, entry=close)
-
-    if self._allow_short() and self._trend_short_ok():
-        high_now = float(self.data.High[-1])
-        high_prev = float(max(self.data.High[-self.lookback:-4]))
-        mid_low = float(min(self.data.Low[-8:-1]))
-        double_top = abs(high_now - high_prev) <= tol
-        rsi_confirm_short = self.rsi[-1] < self.rsi[-2] and self.rsi[-1] < 60
-        if double_top and rsi_confirm_short and close < mid_low:
-            sl = high_now + (float(self.atr[-1]) * self.sl_atr_mult)
-            self._enter_short(sl=sl, entry=close)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _inside_bar(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    mother_high = float(self.data.High[-3])
-    mother_low = float(self.data.Low[-3])
-    inside_high = float(self.data.High[-2])
-    inside_low = float(self.data.Low[-2])
-    close = float(self.data.Close[-1])
-
-    is_inside = inside_high <= mother_high and inside_low >= mother_low
-    if not is_inside:
-        return
-
-    if self.large_bar_confirmation:
-        if not (self._bar_body_large_bull() or self._bar_body_large_bear()):
-            return
-
-    if not self._volume_ok():
-        return
-
-    if self._allow_long() and self._trend_long_ok() and close > inside_high:
-        sl = inside_low - (float(self.atr[-1]) * 0.25)
-        self._enter_long(sl=sl, entry=close)
-    elif self._allow_short() and self._trend_short_ok() and close < inside_low:
-        sl = inside_high + (float(self.atr[-1]) * 0.25)
-        self._enter_short(sl=sl, entry=close)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _three_bar(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    o1, h1, l1, c1 = float(self.data.Open[-3]), float(self.data.High[-3]), float(self.data.Low[-3]), float(self.data.Close[-3])
-    o2, h2, l2, c2 = float(self.data.Open[-2]), float(self.data.High[-2]), float(self.data.Low[-2]), float(self.data.Close[-2])
-    o3, h3, l3, c3 = float(self.data.Open[-1]), float(self.data.High[-1]), float(self.data.Low[-1]), float(self.data.Close[-1])
-
-    range2 = max(h2 - l2, 1e-9)
-    doji = abs(c2 - o2) / range2 <= 0.35
-
-    bullish = c1 < o1 and (h1 - l1) >= float(self.atr[-1]) and doji and c3 > h2
-    bearish = c1 > o1 and (h1 - l1) >= float(self.atr[-1]) and doji and c3 < l2
-
-    if self._allow_long() and self._trend_long_ok() and bullish and self._volume_ok():
-        sl = l2 - (float(self.atr[-1]) * 0.25)
-        self._enter_long(sl=sl, entry=c3)
-    elif self._allow_short() and self._trend_short_ok() and bearish and self._volume_ok():
-        sl = h2 + (float(self.atr[-1]) * 0.25)
-        self._enter_short(sl=sl, entry=c3)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _mean_reversion(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    close = float(self.data.Close[-1])
-
-    long_signal = self._allow_long() and self._trend_long_ok() and self.rsi[-1] < 28 and close < self.bb_low[-1]
-    short_signal = self._allow_short() and self._trend_short_ok() and self.rsi[-1] > 72 and close > self.bb_high[-1]
-
-    if self.large_bar_confirmation:
-        long_signal = long_signal and self._bar_body_large_bull()
-        short_signal = short_signal and self._bar_body_large_bear()
-
-    if not self._volume_ok():
-        return
-
-    if long_signal:
-        sl = float(self.data.Low[-1]) - (float(self.atr[-1]) * self.sl_atr_mult)
-        self._enter_long(sl=sl, entry=close)
-    elif short_signal:
-        sl = float(self.data.High[-1]) + (float(self.atr[-1]) * self.sl_atr_mult)
-        self._enter_short(sl=sl, entry=close)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _breakout(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-
-    self._manage_open_position()
-
-    close = float(self.data.Close[-1])
-    high = float(self.data.High[-1])
-    low = float(self.data.Low[-1])
-
-    lookback_high = float(max(self.data.High[-(self.lookback + 1):-1]))
-    lookback_low = float(min(self.data.Low[-(self.lookback + 1):-1]))
-
-    broke_above_now = close > lookback_high * (1 + self.break_buffer_pct)
-    broke_below_now = close < lookback_low * (1 - self.break_buffer_pct)
-
-    if self._breakout_state_expired():
-        self._reset_breakout_state()
-
-    if self.breakout_state == 0:
-        if self._allow_long() and self._trend_long_ok() and self._regime_long_ok() and broke_above_now and self._bar_range_ok():
-            if (not self.large_bar_confirmation) or self._bar_body_large_bull():
-                if self._volume_ok():
-                    self.breakout_state = 1
-                    self.breakout_level = lookback_high
-                    self.breakout_bar_index = self._bar_index()
-                    self.breakout_direction = "long"
-                    self.breakout_trigger_high = high
-                    self.breakout_trigger_low = low
-
-        elif self._allow_short() and self._trend_short_ok() and self._regime_short_ok() and broke_below_now and self._bar_range_ok():
-            if (not self.large_bar_confirmation) or self._bar_body_large_bear():
-                if self._volume_ok():
-                    self.breakout_state = 1
-                    self.breakout_level = lookback_low
-                    self.breakout_bar_index = self._bar_index()
-                    self.breakout_direction = "short"
-                    self.breakout_trigger_high = high
-                    self.breakout_trigger_low = low
-
-        if not self.retest_required:
-            if self._allow_long() and self._trend_long_ok() and self._regime_long_ok() and broke_above_now and self._volume_ok():
-                sl = min(low, lookback_high) - (float(self.atr[-1]) * self.sl_atr_mult)
-                self.active_breakout_level = lookback_high
-                self._enter_long(sl=sl, entry=close)
-            elif self._allow_short() and self._trend_short_ok() and self._regime_short_ok() and broke_below_now and self._volume_ok():
-                sl = max(high, lookback_low) + (float(self.atr[-1]) * self.sl_atr_mult)
-                self.active_breakout_level = lookback_low
-                self._enter_short(sl=sl, entry=close)
-            return
-
-    if self.breakout_state != 1:
-        return
-
-    level = float(self.breakout_level)
-    if self.breakout_direction == "long":
-        touched = low <= level * (1 + self.retest_tolerance_pct)
-        rejection = low <= level and close > level
-        close_ok = close > level if self.close_confirmation else True
-        signal = touched
-        if self.rejection_confirmation:
-            signal = signal and rejection
-        signal = signal and close_ok and self._trend_long_ok() and self._regime_long_ok() and self._volume_ok()
-        if signal:
-            sl = min(low, level) - (float(self.atr[-1]) * self.sl_atr_mult)
-            self.active_breakout_level = level
-            self._enter_long(sl=sl, entry=close)
-            self._reset_breakout_state()
-        elif close < level * (1 - self.retest_tolerance_pct * 2):
-            self._reset_breakout_state()
-
-    elif self.breakout_direction == "short":
-        touched = high >= level * (1 - self.retest_tolerance_pct)
-        rejection = high >= level and close < level
-        close_ok = close < level if self.close_confirmation else True
-        signal = touched
-        if self.rejection_confirmation:
-            signal = signal and rejection
-        signal = signal and close_ok and self._trend_short_ok() and self._regime_short_ok() and self._volume_ok()
-        if signal:
-            sl = max(high, level) + (float(self.atr[-1]) * self.sl_atr_mult)
-            self.active_breakout_level = level
-            self._enter_short(sl=sl, entry=close)
-            self._reset_breakout_state()
-        elif close > level * (1 + self.retest_tolerance_pct * 2):
-            self._reset_breakout_state()
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _ict_fvg(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    h1 = float(self.data.High[-3])
-    l1 = float(self.data.Low[-3])
-    h3 = float(self.data.High[-1])
-    l3 = float(self.data.Low[-1])
-    close = float(self.data.Close[-1])
-
-    bullish_gap_exists = l3 > h1
-    bearish_gap_exists = h3 < l1
-
-    bull_displacement = float(self.data.Close[-2]) > h1 and self._trend_long_ok() and self.rsi[-1] > 50
-    bear_displacement = float(self.data.Close[-2]) < l1 and self._trend_short_ok() and self.rsi[-1] < 50
-
-    if self._allow_long() and bullish_gap_exists and bull_displacement and self._volume_ok():
-        sl = l3 - (float(self.atr[-1]) * 0.5)
-        self._enter_long(sl=sl, entry=close)
-
-    elif self._allow_short() and bearish_gap_exists and bear_displacement and self._volume_ok():
-        sl = h3 + (float(self.atr[-1]) * 0.5)
-        self._enter_short(sl=sl, entry=close)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def _ict_liquidity(name: str, schema) -> str:
-    body = """
-def next(self):
-    if not self._base_ok():
-        return
-    self._manage_open_position()
-
-    prev_high = float(max(self.data.High[-15:-1]))
-    prev_low = float(min(self.data.Low[-15:-1]))
-    close = float(self.data.Close[-1])
-    high = float(self.data.High[-1])
-    low = float(self.data.Low[-1])
-
-    bullish_sweep = low < prev_low and close > prev_low and self._trend_long_ok() and self.rsi[-1] > self.rsi[-2]
-    bearish_sweep = high > prev_high and close < prev_high and self._trend_short_ok() and self.rsi[-1] < self.rsi[-2]
-
-    if not self._volume_ok():
-        return
-
-    if self._allow_long() and bullish_sweep:
-        sl = low - (float(self.atr[-1]) * 0.5)
-        self._enter_long(sl=sl, entry=close)
-
-    elif self._allow_short() and bearish_sweep:
-        sl = high + (float(self.atr[-1]) * 0.5)
-        self._enter_short(sl=sl, entry=close)
-"""
-    return _append_class_methods(_common_header(name, schema), body)
-
-
-def compile_strategy_class(schema, class_name: str = "GeneratedStrategy") -> str:
+def compile_strategy_class(schema: StrategySchema, class_name: str = "GeneratedStrategy") -> str:
     family = getattr(schema, "family", "mean_reversion")
+    code = _common_header(class_name, schema)
 
-    if family == "double_bottom":
-        return _double_bottom(class_name, schema)
-    if family == "inside_bar":
-        return _inside_bar(class_name, schema)
-    if family == "three_bar":
-        return _three_bar(class_name, schema)
     if family == "breakout":
-        return _breakout(class_name, schema)
-    if family == "ict_fvg":
-        return _ict_fvg(class_name, schema)
-    if family == "ict_liquidity_sweep":
-        return _ict_liquidity(class_name, schema)
+        methods = f"""
+def next(self):
+    self._manage_open_trade()
+    if not self._base_ok():
+        return
+    if len(self.data) < self.lookback + 3:
+        return
 
-    return _mean_reversion(class_name, schema)
+    highs = np.array(self.data.High[-self.lookback-1:-1], dtype=float)
+    lows = np.array(self.data.Low[-self.lookback-1:-1], dtype=float)
+
+    breakout_high = float(np.max(highs))
+    breakout_low = float(np.min(lows))
+
+    close_now = float(self.data.Close[-1])
+    high_now = float(self.data.High[-1])
+    low_now = float(self.data.Low[-1])
+
+    long_signal = (
+        self._allow_long()
+        and self._trend_long_ok()
+        and self._regime_long_ok()
+        and self._bar_body_large_bull()
+        and self._bar_range_ok()
+        and self._volume_ok()
+        and close_now > breakout_high * (1 + self.break_buffer_pct)
+    )
+
+    short_signal = (
+        self._allow_short()
+        and self._trend_short_ok()
+        and self._regime_short_ok()
+        and self._bar_body_large_bear()
+        and self._bar_range_ok()
+        and self._volume_ok()
+        and close_now < breakout_low * (1 - self.break_buffer_pct)
+    )
+
+    if self.retest_required:
+        if long_signal:
+            self.breakout_state = 1
+            self.breakout_direction = "long"
+            self.breakout_level = breakout_high
+            self.breakout_bar_index = self._bar_index()
+            self.breakout_trigger_high = high_now
+            self.breakout_trigger_low = low_now
+
+        if short_signal:
+            self.breakout_state = 1
+            self.breakout_direction = "short"
+            self.breakout_level = breakout_low
+            self.breakout_bar_index = self._bar_index()
+            self.breakout_trigger_high = high_now
+            self.breakout_trigger_low = low_now
+
+        if self.breakout_state == 1 and (self._bar_index() - self.breakout_bar_index) > self.max_retest_bars:
+            self.breakout_state = 0
+            self.breakout_level = np.nan
+            self.breakout_direction = ""
+
+        if self.breakout_state == 1 and self.breakout_direction == "long":
+            touched = low_now <= self.breakout_level * (1 + self.retest_tolerance_pct)
+            confirm = close_now > self.breakout_level if self.close_confirmation else touched
+            if self.rejection_confirmation:
+                confirm = confirm and (close_now > float(self.data.Open[-1]))
+            if confirm and self._ict_long_ok() and not self.position:
+                sl = min(low_now, self.breakout_trigger_low) - float(self.atr[-1]) * self.sl_atr_mult * 0.25
+                self._enter_long(sl=sl, entry=close_now)
+                self.breakout_state = 0
+                self.breakout_direction = ""
+
+        if self.breakout_state == 1 and self.breakout_direction == "short":
+            touched = high_now >= self.breakout_level * (1 - self.retest_tolerance_pct)
+            confirm = close_now < self.breakout_level if self.close_confirmation else touched
+            if self.rejection_confirmation:
+                confirm = confirm and (close_now < float(self.data.Open[-1]))
+            if confirm and self._ict_short_ok() and not self.position:
+                sl = max(high_now, self.breakout_trigger_high) + float(self.atr[-1]) * self.sl_atr_mult * 0.25
+                self._enter_short(sl=sl, entry=close_now)
+                self.breakout_state = 0
+                self.breakout_direction = ""
+        return
+
+    if long_signal and self._ict_long_ok() and not self.position:
+        sl = low_now - float(self.atr[-1]) * self.sl_atr_mult
+        self._enter_long(sl=sl, entry=close_now)
+        return
+
+    if short_signal and self._ict_short_ok() and not self.position:
+        sl = high_now + float(self.atr[-1]) * self.sl_atr_mult
+        self._enter_short(sl=sl, entry=close_now)
+        return
+"""
+        return _append_class_methods(code, methods)
+
+    methods = """
+def next(self):
+    self._manage_open_trade()
+    if not self._base_ok():
+        return
+    if len(self.data) < max(self.lookback + 3, 30):
+        return
+
+    close_now = float(self.data.Close[-1])
+    low_now = float(self.data.Low[-1])
+    high_now = float(self.data.High[-1])
+
+    if self.direction in ("long_only", "both"):
+        long_signal = (
+            self._trend_long_ok()
+            and self._regime_long_ok()
+            and close_now < float(self.bb_low[-1]) * (1 + self.price_tolerance_pct)
+        )
+        if long_signal and self._ict_long_ok() and not self.position:
+            sl = low_now - float(self.atr[-1]) * self.sl_atr_mult
+            self._enter_long(sl=sl, entry=close_now)
+            return
+
+    if self.direction in ("short_only", "both"):
+        short_signal = (
+            self._trend_short_ok()
+            and self._regime_short_ok()
+            and close_now > float(self.bb_high[-1]) * (1 - self.price_tolerance_pct)
+        )
+        if short_signal and self._ict_short_ok() and not self.position:
+            sl = high_now + float(self.atr[-1]) * self.sl_atr_mult
+            self._enter_short(sl=sl, entry=close_now)
+            return
+"""
+    return _append_class_methods(code, methods)

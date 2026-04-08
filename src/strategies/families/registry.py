@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from src.strategies.families.ict_features import parse_ict_flags_from_idea
+
 
 def _extract_timeframe(text: str) -> str:
     patterns = [
@@ -38,6 +40,9 @@ def _extract_lookback(text: str, default: int = 20) -> int:
 
 def _extract_rr(text: str, default: float = 1.5) -> float:
     m = re.search(r"1\s*:\s*([0-9]+(?:\.[0-9]+)?)", text)
+    if m:
+        return float(m.group(1))
+    m = re.search(r"target\s+([0-9]+(?:\.[0-9]+)?)r", text)
     if m:
         return float(m.group(1))
     return default
@@ -123,6 +128,11 @@ def heuristic_schema_from_idea(idea: str):
         "partial_tp_size": 0.5 if family == "breakout" else 0.0,
         "trail_atr_after_r": 1.0 if family == "breakout" else 0.0,
         "failure_exit_on_level_reclaim": family == "breakout",
+        "fvg_gap_pct": 0.0,
+        "displacement_atr_mult": 1.0,
+        "pd_lookback": 20,
+        "swing_left": 2,
+        "swing_right": 2,
     }
 
     risk_params = {
@@ -143,6 +153,8 @@ def heuristic_schema_from_idea(idea: str):
         setup_params["retest_required"] = True
         setup_params["rejection_confirmation"] = True
 
+    filters = parse_ict_flags_from_idea(idea)
+
     return {
         "family": family,
         "name": family.replace("_", " ").title().replace("Ict", "ICT"),
@@ -153,6 +165,7 @@ def heuristic_schema_from_idea(idea: str):
         "indicator_params": indicator_params,
         "setup_params": setup_params,
         "risk_params": risk_params,
+        "filters": filters,
         "family_confidence": 0.84,
         "codifiability_score": 8.0,
         "ambiguity_score": 2.2,
