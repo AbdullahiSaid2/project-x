@@ -1,25 +1,29 @@
 # ============================================================
-# ICT-NATIVE OIL IDEA SET
+# OIL V2 — TIGHT MCL RESEARCH SET
 # Product:
 # - MCL
-# Focus:
-# - displacement
-# - liquidity raids
-# - retrace into displacement range
+# Design:
+# - focus on 1H first
+# - displacement + compression + session-driven continuation
+# - fewer low-quality reversals
 # ============================================================
 
-Long MCL 15m continuation when 1H 20 EMA is above 50 EMA, price sweeps below the prior 10-bar low and then closes back above it with a bullish displacement candle, enter on break above displacement candle high, stop below sweep low, target 2.2R, no trade if reclaim candle upper wick is larger than body
+Long MCL 1H continuation when 4H 20 EMA is above 50 EMA, a strong bullish displacement candle breaks the prior 15-bar high with ATR expansion, then price retraces into the lower half of the displacement candle and reclaims its midpoint within 3 bars, stop below retracement low, target 2.3R, no trade if retracement closes below the displacement low
 
-Short MCL 15m continuation when 1H 20 EMA is below 50 EMA, price sweeps above the prior 10-bar high and then closes back below it with a bearish displacement candle, enter on break below displacement candle low, stop above sweep high, target 2.2R, no trade if rejection candle lower wick is larger than body
+Short MCL 1H continuation when 4H 20 EMA is below 50 EMA, a strong bearish displacement candle breaks the prior 15-bar low with ATR expansion, then price retraces into the upper half of the displacement candle and rejects its midpoint within 3 bars, stop above retracement high, target 2.3R, no trade if retracement closes above the displacement high
 
-Long MCL 1H continuation when 4H bias is bullish, a strong bullish displacement candle breaks the prior 15-bar high with ATR expansion, then price retraces into the lower half of the displacement candle and reclaims its midpoint, stop below retracement low, target 2.5R, no trade if retracement closes below the displacement low
+Long MCL 1H continuation after compression when the prior 10 bars are narrow relative to ATR, price breaks the compression high with a bullish displacement candle that closes near its high, enter on retracement that holds above the midpoint of that displacement candle, stop below retracement low, target 2.5R, no trade if retracement lasts more than 3 bars
 
-Short MCL 1H continuation when 4H bias is bearish, a strong bearish displacement candle breaks the prior 15-bar low with ATR expansion, then price retraces into the upper half of the displacement candle and rejects its midpoint, stop above retracement high, target 2.5R, no trade if retracement closes above the displacement high
+Short MCL 1H continuation after compression when the prior 10 bars are narrow relative to ATR, price breaks the compression low with a bearish displacement candle that closes near its low, enter on retracement that holds below the midpoint of that displacement candle, stop above retracement high, target 2.5R, no trade if retracement lasts more than 3 bars
 
-Long MCL 1H continuation after compression when the prior 10 bars are narrow and ATR begins expanding, price breaks the compression high with a displacement candle and closes near its high, enter on retracement that stays above the midpoint of that displacement candle, stop below retracement low, target 2.5R, no trade if retracement lasts more than 4 bars
+Long MCL 1H continuation when 4H bias is bullish, New York session sweeps the prior 10-bar low in the first half of the session and then reclaims it with a bullish displacement candle, enter on break above reclaim candle high, stop below sweep low, target 2.1R, no trade if reclaim candle upper wick is larger than body or if trigger happens after 13:00 New York time
 
-Short MCL 1H continuation after compression when the prior 10 bars are narrow and ATR begins expanding, price breaks the compression low with a displacement candle and closes near its low, enter on retracement that stays below the midpoint of that displacement candle, stop above retracement high, target 2.5R, no trade if retracement lasts more than 4 bars
+Short MCL 1H continuation when 4H bias is bearish, New York session sweeps the prior 10-bar high in the first half of the session and then rejects it with a bearish displacement candle, enter on break below rejection candle low, stop above sweep high, target 2.1R, no trade if rejection candle lower wick is larger than body or if trigger happens after 13:00 New York time
 
-Long MCL 1H reversal only when price sweeps a prior swing low, immediately reclaims it, and then breaks above the reclaim candle high while 20 EMA flattens upward and ATR expands, stop below sweep low, target 2R, no trade if price stalls below 50 EMA
+Long MCL 15m continuation only when 4H and 1H are both bullish, price sweeps below the prior 10-bar low during New York morning and reclaims it with a bullish displacement candle, enter on break above reclaim candle high, stop below sweep low, target 1.8R, no trade if reclaim occurs outside New York morning or if 1H closes below 20 EMA
 
-Short MCL 1H reversal only when price sweeps a prior swing high, immediately rejects it, and then breaks below the rejection candle low while 20 EMA flattens downward and ATR expands, stop above sweep high, target 2R, no trade if price stalls above 50 EMA
+Short MCL 15m continuation only when 4H and 1H are both bearish, price sweeps above the prior 10-bar high during New York morning and rejects it with a bearish displacement candle, enter on break below rejection candle low, stop above sweep high, target 1.8R, no trade if rejection occurs outside New York morning or if 1H closes above 20 EMA
+
+Long MCL 1H reversal only when price sweeps a prior swing low, immediately reclaims it with a bullish displacement candle, and then breaks above the reclaim candle high while 20 EMA flattens upward and ATR expands, stop below sweep low, target 1.8R, no trade if price stalls below 50 EMA or if reclaim candle closes in its lower half
+
+Short MCL 1H reversal only when price sweeps a prior swing high, immediately rejects it with a bearish displacement candle, and then breaks below the rejection candle low while 20 EMA flattens downward and ATR expands, stop above sweep high, target 1.8R, no trade if price stalls above 50 EMA or if rejection candle closes in its upper half

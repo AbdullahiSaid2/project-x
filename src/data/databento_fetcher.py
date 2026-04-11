@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
-import pandas as pd
 import databento as db
+import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
@@ -31,7 +31,7 @@ FUTURES_DB_MAP: Dict[str, str] = {
 }
 
 SUPPORTED_DIRECT_TIMEFRAMES = {"1m", "1H", "1D"}
-SUPPORTED_RESAMPLE_TIMEFRAMES = {"5m", "15m", "4H"}
+SUPPORTED_RESAMPLE_TIMEFRAMES = {"3m", "5m", "15m", "4H"}
 SUPPORTED_TIMEFRAMES = SUPPORTED_DIRECT_TIMEFRAMES | SUPPORTED_RESAMPLE_TIMEFRAMES
 
 DEFAULT_HISTORICAL_LAG_HOURS = 48
@@ -41,6 +41,7 @@ def _normalize_timeframe(timeframe: str) -> str:
     tf = timeframe.strip()
     allowed = {
         "1m": "1m",
+        "3m": "3m",
         "5m": "5m",
         "15m": "15m",
         "1H": "1H",
@@ -57,7 +58,7 @@ def _normalize_timeframe(timeframe: str) -> str:
 
 def _schema_for_timeframe(timeframe: str) -> str:
     tf = _normalize_timeframe(timeframe)
-    if tf in {"1m", "5m", "15m"}:
+    if tf in {"1m", "3m", "5m", "15m"}:
         return "ohlcv-1m"
     if tf in {"1H", "4H"}:
         return "ohlcv-1h"
@@ -68,6 +69,8 @@ def _schema_for_timeframe(timeframe: str) -> str:
 
 def _resample_rule(timeframe: str) -> Optional[str]:
     tf = _normalize_timeframe(timeframe)
+    if tf == "3m":
+        return "3min"
     if tf == "5m":
         return "5min"
     if tf == "15m":
@@ -125,7 +128,7 @@ def _resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
 
 def _cache_base_timeframe(timeframe: str) -> str:
     tf = _normalize_timeframe(timeframe)
-    if tf in {"1m", "5m", "15m"}:
+    if tf in {"1m", "3m", "5m", "15m"}:
         return "1m"
     if tf in {"1H", "4H"}:
         return "1H"
@@ -298,7 +301,7 @@ def download_and_cache_symbol(
             days_back=days_back,
             force_refresh=force_refresh,
         )
-        path = _cache_path(symbol, tf)
+        path = _cache_path(symbol, _cache_base_timeframe(tf))
         results[tf] = str(path)
         print(f"✅ Cached {symbol} {tf}: {len(df)} rows -> {path}")
 
@@ -323,4 +326,4 @@ def download_and_cache_symbols(
 
 
 if __name__ == "__main__":
-    download_and_cache_symbols(["MCL", "MGC"], years_back=5, force_refresh=True)
+    download_and_cache_symbols(["MNQ", "MES", "MYM", "MCL", "MGC"], years_back=5, force_refresh=True)

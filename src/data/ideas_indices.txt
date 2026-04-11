@@ -1,20 +1,36 @@
 # ============================================================
-# ICT-NATIVE INDICES SUBSET
+# INDICES V2 — TIGHT FUTURES RESEARCH SET
 # Product focus:
 # - MNQ
 # - MES
 # - MYM
-# Use this if you want a smaller futures-only run.
+# Design:
+# - fewer, tighter ideas
+# - session-aware
+# - HTF aligned
+# - continuation first, reversals second
 # ============================================================
 
-Long MNQ 1H continuation when 4H bias is bullish with 20 EMA above 50 EMA, New York session sweeps below previous day low, then closes back above previous day low with a displacement candle, enter when price breaks above the displacement candle high, stop below the sweep low, target 2.5R, no trade if reclaim candle closes below 20 EMA
+Long MNQ 1H continuation when 4H 20 EMA is above 50 EMA, New York session sweeps below previous day low in the first two hours, then closes back above previous day low with a bullish displacement candle that closes in its upper third, enter on break above the displacement candle high, stop below the sweep low, target 2.2R, no trade if reclaim candle closes below 20 EMA or if trigger happens after 11:30 New York time
 
-Short MNQ 1H continuation when 4H bias is bearish with 20 EMA below 50 EMA, New York session sweeps above previous day high, then closes back below previous day high with a displacement candle, enter when price breaks below the displacement candle low, stop above the sweep high, target 2.5R, no trade if rejection candle closes above 20 EMA
+Short MNQ 1H continuation when 4H 20 EMA is below 50 EMA, New York session sweeps above previous day high in the first two hours, then closes back below previous day high with a bearish displacement candle that closes in its lower third, enter on break below the displacement candle low, stop above the sweep high, target 2.2R, no trade if rejection candle closes above 20 EMA or if trigger happens after 11:30 New York time
 
-Long MES 1H continuation when higher timeframe bias is bullish, opening range low is swept and immediately reclaimed during New York morning, enter on break above reclaim candle high, stop below sweep low, target 1.8R, no trade if reclaim candle closes below 20 EMA
+Long MNQ 1H continuation when 4H trend is bullish, the first New York hour forms an opening range, price sweeps below opening range low but quickly reclaims it, then closes above the reclaim candle midpoint with ATR expansion, enter on break above reclaim candle high, stop below the sweep low, target 2R, no trade if reclaim occurs after 11:00 New York time
 
-Short MES 1H continuation when higher timeframe bias is bearish, opening range high is swept and immediately rejected during New York morning, enter on break below rejection candle low, stop above sweep high, target 1.8R, no trade if rejection candle closes above 20 EMA
+Short MNQ 1H continuation when 4H trend is bearish, the first New York hour forms an opening range, price sweeps above opening range high but quickly rejects it, then closes below the rejection candle midpoint with ATR expansion, enter on break below rejection candle low, stop above the sweep high, target 2R, no trade if rejection occurs after 11:00 New York time
 
-Long MYM 4H continuation when bullish 4H bias is intact, price retraces into the lower half of the candle that broke the prior 15-bar high, then closes back above that candle midpoint, stop below retracement low, target 2.75R, no trade if 20 EMA crosses below 50 EMA during retracement
+Long MES 1H continuation when 4H bias is bullish and 1H 20 EMA is above 50 EMA, opening range low is swept and immediately reclaimed during New York morning, the reclaim candle must close above the session open and in its upper half, enter on break above reclaim candle high, stop below sweep low, target 1.8R, no trade if reclaim candle closes below 20 EMA
 
-Short MYM 4H continuation when bearish 4H bias is intact, price retraces into the upper half of the candle that broke the prior 15-bar low, then closes back below that candle midpoint, stop above retracement high, target 2.75R, no trade if 20 EMA crosses above 50 EMA during retracement
+Short MES 1H continuation when 4H bias is bearish and 1H 20 EMA is below 50 EMA, opening range high is swept and immediately rejected during New York morning, the rejection candle must close below the session open and in its lower half, enter on break below rejection candle low, stop above sweep high, target 1.8R, no trade if rejection candle closes above 20 EMA
+
+Long MES 1H continuation when 4H trend is bullish, price breaks above the prior 20-bar high during New York morning with a strong bullish displacement candle and ATR expansion, then retraces no deeper than the midpoint of that displacement candle, enter on first bullish reclaim of the midpoint, stop below retracement low, target 2R, no trade if retracement lasts more than 3 bars
+
+Short MES 1H continuation when 4H trend is bearish, price breaks below the prior 20-bar low during New York morning with a strong bearish displacement candle and ATR expansion, then retraces no deeper than the midpoint of that displacement candle, enter on first bearish rejection of the midpoint, stop above retracement high, target 2R, no trade if retracement lasts more than 3 bars
+
+Long MYM 1H continuation when 4H bias is bullish, New York session sweeps previous day low and reclaims it with a bullish displacement candle while 1H 20 EMA remains above 50 EMA, enter on break above reclaim candle high, stop below sweep low, target 2R, no trade if reclaim candle upper wick is larger than body
+
+Short MYM 1H continuation when 4H bias is bearish, New York session sweeps previous day high and rejects it with a bearish displacement candle while 1H 20 EMA remains below 50 EMA, enter on break below rejection candle low, stop above sweep high, target 2R, no trade if rejection candle lower wick is larger than body
+
+Long MYM 4H continuation when bullish 4H bias is intact, price retraces into the lower half of the candle that broke the prior 15-bar high, then closes back above that candle midpoint while 20 EMA stays above 50 EMA, stop below retracement low, target 2.5R, no trade if retracement closes below 50 EMA or lasts more than 4 bars
+
+Short MYM 4H continuation when bearish 4H bias is intact, price retraces into the upper half of the candle that broke the prior 15-bar low, then closes back below that candle midpoint while 20 EMA stays below 50 EMA, stop above retracement high, target 2.5R, no trade if retracement closes above 50 EMA or lasts more than 4 bars

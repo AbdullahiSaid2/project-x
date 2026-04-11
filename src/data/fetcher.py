@@ -49,8 +49,10 @@ FUTURES_YF_MAP = {
 FUTURES_SYMBOLS = set(FUTURES_YF_MAP.keys())
 
 # ── Timeframe map ─────────────────────────────────────────────
+# 3m is derived from 1m
 YF_INTERVAL_MAP = {
     "1m": "1m",
+    "3m": "1m",
     "5m": "5m",
     "15m": "15m",
     "1H": "1h",
@@ -90,6 +92,21 @@ def _resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
 
     if tf in {"1m", "5m", "15m", "1H", "1D", "1W"}:
         return df
+
+    if tf == "3m":
+        return (
+            df.resample("3min")
+            .agg(
+                {
+                    "Open": "first",
+                    "High": "max",
+                    "Low": "min",
+                    "Close": "last",
+                    "Volume": "sum",
+                }
+            )
+            .dropna()
+        )
 
     if tf == "4H":
         return (
