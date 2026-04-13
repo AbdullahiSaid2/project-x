@@ -1,0 +1,31 @@
+V468 implementation summary
+
+Core goal
+- keep the V467 aggressive opportunity restoration
+- add a hard minimum projected profit gate so every accepted trade targets at least $500 gross at the intended MNQ size
+- push the engine toward higher-dollar trades by rejecting low-value setups before they arm
+
+Main changes
+- built from V467 aggressive 5/10 MNQ framework
+- adds hard pre-trade filter: projected target dollars must be >= $500
+- projected target dollars = abs(target - entry) * $2 * contracts for MNQ
+- gate is checked using the intended dynamic contract size before a pending order is armed
+- low-dollar setups are rejected with debug counters:
+  - reject_min_projected_profit_500
+  - reject_min_projected_profit_500_long
+  - reject_min_projected_profit_500_short
+- keeps V467 restored buckets:
+  - NYPM_CONTINUATION + C2C3 restored
+  - CISD continuation buckets restored
+  - LONDON_CONTINUATION + iFVG promoted back
+- keeps aggressive trade management from V467:
+  - 4.5R runner
+  - 0.75R partial
+  - 10% partial size
+  - later breakeven confirmation
+
+Expected effect
+- fewer small-dollar trades
+- higher average trade dollars
+- more pressure toward 10-MNQ qualification on accepted trades
+- lower trade count but cleaner dollar capture

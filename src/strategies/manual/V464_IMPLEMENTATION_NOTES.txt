@@ -1,0 +1,15 @@
+V464 implementation summary
+
+Core goals
+- real follow-up to v463
+- keep 5 MNQ on standard setups
+- keep 10 MNQ only on strongest setups
+- prune weak buckets that diluted average trade quality
+
+Main changes
+- blocks NYPM_CONTINUATION + C2C3 from ranked execution
+- blocks CISD continuation buckets from ranked execution
+- demotes LONDON_CONTINUATION + iFVG from A to B
+- tighter 10-MNQ size-up: A-tier only, liquid sessions only, RR >= 4.5, stop <= 32
+- London iFVG only sizes up when RR >= 6.0
+- slightly stronger runner management: 3.5R target, 20% partial, BE after 2.0R confirmation

@@ -1,0 +1,2 @@
+exit_month_et,trades,gross_pnl_dollars,gross_points,avg_trade_dollars,avg_points_per_trade,win_rate_pct,trading_days,green_days,red_days,worst_day_dollars,best_day_dollars,avg_day_dollars,soft_loss_cap_breach_days,cumulative_pnl_dollars,account_balance_est,month_green,strong_month_flag,equity_peak_est,drawdown_from_peak_dollars
+2025-04,9,2037.595535714343,676.6410714285848,226.39950396826032,75.18234126984277,44.44444444444444,4,2,2,-509.70982142856883,2652.0,509.39888392858575,0,2037.595535714343,52037.59553571434,True,False,52037.59553571434,0.0

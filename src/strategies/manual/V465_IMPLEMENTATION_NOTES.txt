@@ -1,0 +1,16 @@
+V465 implementation summary
+
+Core goals
+- real follow-up to v464
+- keep 5 MNQ on standard setups
+- keep 10 MNQ only on strongest setups
+- preserve v464 pruning while easing runner management slightly
+
+Main changes
+- keeps NYPM_CONTINUATION + C2C3 blocked from ranked execution
+- keeps CISD continuation buckets blocked from ranked execution
+- keeps LONDON_CONTINUATION + iFVG tradable but not a preferred strong size-up bucket
+- keeps true 10-MNQ size-up focused on A-tier liquid-session setups
+- NYAM stays 5 MNQ only
+- ASIA iFVG stays 5 MNQ only
+- softer runner profile than v464: 3.25R target, 20% partial, BE after 1.9R confirmation

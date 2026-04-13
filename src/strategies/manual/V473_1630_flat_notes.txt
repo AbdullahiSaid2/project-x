@@ -1,0 +1,5 @@
+Updated V473 shared file with hard 16:30 ET force-flat rule.
+Notes:
+- Closes any open position at or after 16:30 ET.
+- Clears pending/state after 16:30 ET so no late re-entries.
+- Apex cutoff validation still retained.
