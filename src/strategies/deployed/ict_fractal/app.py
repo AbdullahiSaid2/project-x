@@ -1,33 +1,137 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime, time as dt_time, timezone
 from typing import Any
 
 from zoneinfo import ZoneInfo
 
 from config import (
     EXECUTION_MODE,
+    FORCE_FLAT_ENABLED,
     FORCE_FLAT_HOUR_ET,
     FORCE_FLAT_MINUTE_ET,
+    GLOBEX_REOPEN_HOUR_ET,
+    GLOBEX_REOPEN_MINUTE_ET,
     LOOP_SECONDS,
     MODEL_NAME,
 )
-from execution import execute_signal
+from execution import execute_signal, force_flat_all_positions
 from live_model import generate_live_signals
 from state import load_state, save_state
 
 ET = ZoneInfo('America/New_York')
 
 
+@dataclass(frozen=True)
+class SessionState:
+    allow_entries: bool
+    force_flat: bool
+    reason: str
+    session_key: str
+
+
 def now_et() -> datetime:
     return datetime.now(timezone.utc).astimezone(ET)
 
 
-def after_force_flat_cutoff(ts: datetime) -> bool:
-    return (ts.hour > FORCE_FLAT_HOUR_ET) or (
-        ts.hour == FORCE_FLAT_HOUR_ET and ts.minute >= FORCE_FLAT_MINUTE_ET
+def _time_et(hour: int, minute: int) -> dt_time:
+    return dt_time(hour=hour, minute=minute)
+
+
+def _trading_session_key(ts: datetime) -> str:
+    reopen_time = _time_et(GLOBEX_REOPEN_HOUR_ET, GLOBEX_REOPEN_MINUTE_ET)
+    if ts.time().replace(tzinfo=None) >= reopen_time:
+        return ts.date().isoformat()
+    previous_date = ts.date().fromordinal(ts.date().toordinal() - 1)
+    return previous_date.isoformat()
+
+
+def get_session_state(ts: datetime) -> SessionState:
+    force_flat_start = _time_et(FORCE_FLAT_HOUR_ET, FORCE_FLAT_MINUTE_ET)
+    globex_reopen = _time_et(GLOBEX_REOPEN_HOUR_ET, GLOBEX_REOPEN_MINUTE_ET)
+
+    weekday = ts.weekday()  # Monday=0 ... Sunday=6
+    time_of_day = ts.time().replace(tzinfo=None)
+    session_key = _trading_session_key(ts)
+
+    if weekday == 5:
+        return SessionState(
+            allow_entries=False,
+            force_flat=True,
+            reason='weekend_closed',
+            session_key=session_key,
+        )
+
+    if weekday == 6:
+        if time_of_day < globex_reopen:
+            return SessionState(
+                allow_entries=False,
+                force_flat=True,
+                reason='preopen_sunday',
+                session_key=session_key,
+            )
+        return SessionState(
+            allow_entries=True,
+            force_flat=False,
+            reason='session_open',
+            session_key=session_key,
+        )
+
+    if weekday in (0, 1, 2, 3):
+        if force_flat_start <= time_of_day < globex_reopen:
+            return SessionState(
+                allow_entries=False,
+                force_flat=True,
+                reason='force_flat_window',
+                session_key=session_key,
+            )
+        return SessionState(
+            allow_entries=True,
+            force_flat=False,
+            reason='session_open',
+            session_key=session_key,
+        )
+
+    if weekday == 4:
+        if time_of_day < force_flat_start:
+            return SessionState(
+                allow_entries=True,
+                force_flat=False,
+                reason='session_open',
+                session_key=session_key,
+            )
+        return SessionState(
+            allow_entries=False,
+            force_flat=True,
+            reason='weekend_closed',
+            session_key=session_key,
+        )
+
+    return SessionState(
+        allow_entries=False,
+        force_flat=True,
+        reason='unknown_session_state',
+        session_key=session_key,
     )
+
+
+def maybe_force_flat(state: dict[str, Any], session_state: SessionState) -> dict[str, Any] | None:
+    if not FORCE_FLAT_ENABLED or not session_state.force_flat:
+        return None
+
+    last_force_flat_key = state.get('last_force_flat_key')
+    if last_force_flat_key == session_state.session_key:
+        return state.get('last_force_flat_result')
+
+    result = force_flat_all_positions(
+        reason=session_state.reason,
+        session_key=session_state.session_key,
+    )
+    state['last_force_flat_key'] = session_state.session_key
+    state['last_force_flat_result'] = result
+    return result
 
 
 def run_once() -> dict[str, Any]:
@@ -35,14 +139,20 @@ def run_once() -> dict[str, Any]:
     seen_ids = set(state.get('seen_signal_ids', []))
 
     current_et = now_et()
-    if after_force_flat_cutoff(current_et):
+    session_state = get_session_state(current_et)
+    force_flat_result = maybe_force_flat(state, session_state)
+
+    if not session_state.allow_entries:
         summary = {
             'model_name': MODEL_NAME,
             'mode': EXECUTION_MODE,
             'cycle_time_et': current_et.isoformat(),
             'signals_seen': 0,
             'orders_sent': 0,
-            'skipped_reason': 'after_force_flat_cutoff',
+            'skipped_reason': session_state.reason,
+            'force_flat': session_state.force_flat,
+            'force_flat_result': force_flat_result,
+            'session_key': session_state.session_key,
         }
         state['last_cycle'] = summary
         save_state(state)
@@ -68,6 +178,8 @@ def run_once() -> dict[str, Any]:
         'cycle_time_et': current_et.isoformat(),
         'signals_seen': len(signals),
         'orders_sent': sent,
+        'session_reason': session_state.reason,
+        'session_key': session_state.session_key,
     }
     save_state(state)
     print(state['last_cycle'])

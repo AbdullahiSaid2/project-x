@@ -29,18 +29,27 @@ ICT_FRACTAL_DEFAULT_QTY=1
 ICT_FRACTAL_SYMBOLS=NQ,MES,MYM,MGC
 ICT_FRACTAL_FORCE_FLAT_HOUR_ET=16
 ICT_FRACTAL_FORCE_FLAT_MINUTE_ET=50
+ICT_FRACTAL_GLOBEX_REOPEN_HOUR_ET=18
+ICT_FRACTAL_GLOBEX_REOPEN_MINUTE_ET=0
+ICT_FRACTAL_FORCE_FLAT_ENABLED=1
 ICT_FRACTAL_SIGNAL_LOOKBACK_BARS=1
+
+Optional for a real force-flat API call:
+PICKMYTRADE_FORCE_FLAT_URL=/api/v1/positions/flatten
 
 One command to run:
 python src/strategies/deployed/ict_fractal/app.py
 
-How this behaves:
-- before every cycle it checks ET time
-- after the force-flat cutoff it sends no new orders
-- before cutoff it reruns V473 exactly from the manual strategy module
+How this behaves now:
+- the runner is session-aware, not calendar-day cutoff based
+- entry allowed from 18:00 ET to 16:49:59 ET next day
+- no new entries from 16:50 ET to 17:59:59 ET
+- Friday after 16:50 ET stays blocked until Sunday 18:00 ET
+- at the force-flat window the runner attempts one flatten action per session window
 - new signals are deduped by signal_id so the same entry is not resent every cycle
 
 Important:
 - this is the exact V473 signal-generation path from your backtest module, not a simplified imitation model
 - it is heavier than a lightweight live model because it reruns the strategy each cycle
-- execution is still your PickMyTrade order adapter, so order placement is live/demo while signal generation is exact V473
+- force-flat execution for demo/live requires a working flatten endpoint if you want the app to actually close positions via PickMyTrade
+- if PICKMYTRADE_FORCE_FLAT_URL is not configured, the runner will still block entries correctly and log that force-flat was skipped
