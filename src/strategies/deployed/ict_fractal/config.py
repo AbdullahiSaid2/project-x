@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parents[4]
@@ -11,9 +12,29 @@ MODEL_NAME = 'ict_fractal'
 DEPLOY_DIR = BASE_DIR / 'src' / 'strategies' / 'deployed' / MODEL_NAME
 LOG_DIR = DEPLOY_DIR / 'logs'
 STATE_DIR = DEPLOY_DIR / 'state'
+TRADINGVIEW_BARS_DIR = BASE_DIR / 'src' / 'data' / 'tradingview_bars'
 
-for p in (LOG_DIR, STATE_DIR):
+for p in (LOG_DIR, STATE_DIR, TRADINGVIEW_BARS_DIR):
     p.mkdir(parents=True, exist_ok=True)
+
+
+def _env_bool(name: str, default: str = '0') -> bool:
+    return os.getenv(name, default).strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+
+
+def _parse_symbol_map(raw: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for item in raw.split(','):
+        item = item.strip()
+        if not item or ':' not in item:
+            continue
+        left, right = item.split(':', 1)
+        left = left.strip().upper()
+        right = right.strip()
+        if left and right:
+            mapping[left] = right
+    return mapping
+
 
 EXECUTION_MODE = os.getenv('ICT_FRACTAL_EXECUTION_MODE', 'paper').strip().lower()
 LOOP_SECONDS = int(os.getenv('ICT_FRACTAL_LOOP_SECONDS', '20'))
@@ -32,4 +53,14 @@ FORCE_FLAT_HOUR_ET = int(os.getenv('ICT_FRACTAL_FORCE_FLAT_HOUR_ET', '16'))
 FORCE_FLAT_MINUTE_ET = int(os.getenv('ICT_FRACTAL_FORCE_FLAT_MINUTE_ET', '50'))
 GLOBEX_REOPEN_HOUR_ET = int(os.getenv('ICT_FRACTAL_GLOBEX_REOPEN_HOUR_ET', '18'))
 GLOBEX_REOPEN_MINUTE_ET = int(os.getenv('ICT_FRACTAL_GLOBEX_REOPEN_MINUTE_ET', '0'))
-FORCE_FLAT_ENABLED = os.getenv('ICT_FRACTAL_FORCE_FLAT_ENABLED', '1').strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+FORCE_FLAT_ENABLED = _env_bool('ICT_FRACTAL_FORCE_FLAT_ENABLED', '1')
+
+USE_TRADINGVIEW_BARS = _env_bool('ICT_FRACTAL_USE_TRADINGVIEW_BARS', '1')
+TRADINGVIEW_FALLBACK_TO_FETCHER = _env_bool('ICT_FRACTAL_TV_FALLBACK_TO_FETCHER', '1')
+TRADINGVIEW_MIN_BARS = int(os.getenv('ICT_FRACTAL_TV_MIN_BARS', '200'))
+TRADINGVIEW_SYMBOL_MAP = _parse_symbol_map(
+    os.getenv(
+        'ICT_FRACTAL_TRADINGVIEW_SYMBOL_MAP',
+        'NQ:MNQ1!,MES:MES1!,MYM:MYM1!,MGC:MGC1!',
+    )
+)

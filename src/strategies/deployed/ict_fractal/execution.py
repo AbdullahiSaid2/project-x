@@ -64,7 +64,7 @@ def send_to_pickmytrade(signal: dict[str, Any]) -> dict[str, Any]:
     if not PICKMYTRADE_ACCOUNT_ID:
         raise ExecutionError('Missing PICKMYTRADE_ACCOUNT_ID in .env')
 
-    url = f"{PICKMYTRADE_BASE_URL.rstrip('/')}/api/v1/orders"
+    url = f"{PICKMYTRADE_BASE_URL.rstrip('/')}/v2/add-trade-data-latest"
     payload = {
         'accountId': PICKMYTRADE_ACCOUNT_ID,
         'strategyId': PICKMYTRADE_STRATEGY_ID,

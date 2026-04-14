@@ -4,7 +4,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, time as dt_time, timezone
 from typing import Any
-
 from zoneinfo import ZoneInfo
 
 from config import (
@@ -16,6 +15,7 @@ from config import (
     GLOBEX_REOPEN_MINUTE_ET,
     LOOP_SECONDS,
     MODEL_NAME,
+    USE_TRADINGVIEW_BARS,
 )
 from execution import execute_signal, force_flat_all_positions
 from live_model import generate_live_signals
@@ -52,69 +52,25 @@ def get_session_state(ts: datetime) -> SessionState:
     force_flat_start = _time_et(FORCE_FLAT_HOUR_ET, FORCE_FLAT_MINUTE_ET)
     globex_reopen = _time_et(GLOBEX_REOPEN_HOUR_ET, GLOBEX_REOPEN_MINUTE_ET)
 
-    weekday = ts.weekday()  # Monday=0 ... Sunday=6
+    weekday = ts.weekday()
     time_of_day = ts.time().replace(tzinfo=None)
     session_key = _trading_session_key(ts)
 
     if weekday == 5:
-        return SessionState(
-            allow_entries=False,
-            force_flat=True,
-            reason='weekend_closed',
-            session_key=session_key,
-        )
-
+        return SessionState(False, True, 'weekend_closed', session_key)
     if weekday == 6:
         if time_of_day < globex_reopen:
-            return SessionState(
-                allow_entries=False,
-                force_flat=True,
-                reason='preopen_sunday',
-                session_key=session_key,
-            )
-        return SessionState(
-            allow_entries=True,
-            force_flat=False,
-            reason='session_open',
-            session_key=session_key,
-        )
-
+            return SessionState(False, True, 'preopen_sunday', session_key)
+        return SessionState(True, False, 'session_open', session_key)
     if weekday in (0, 1, 2, 3):
         if force_flat_start <= time_of_day < globex_reopen:
-            return SessionState(
-                allow_entries=False,
-                force_flat=True,
-                reason='force_flat_window',
-                session_key=session_key,
-            )
-        return SessionState(
-            allow_entries=True,
-            force_flat=False,
-            reason='session_open',
-            session_key=session_key,
-        )
-
+            return SessionState(False, True, 'force_flat_window', session_key)
+        return SessionState(True, False, 'session_open', session_key)
     if weekday == 4:
         if time_of_day < force_flat_start:
-            return SessionState(
-                allow_entries=True,
-                force_flat=False,
-                reason='session_open',
-                session_key=session_key,
-            )
-        return SessionState(
-            allow_entries=False,
-            force_flat=True,
-            reason='weekend_closed',
-            session_key=session_key,
-        )
-
-    return SessionState(
-        allow_entries=False,
-        force_flat=True,
-        reason='unknown_session_state',
-        session_key=session_key,
-    )
+            return SessionState(True, False, 'session_open', session_key)
+        return SessionState(False, True, 'weekend_closed', session_key)
+    return SessionState(False, True, 'unknown_session_state', session_key)
 
 
 def maybe_force_flat(state: dict[str, Any], session_state: SessionState) -> dict[str, Any] | None:
@@ -153,6 +109,7 @@ def run_once() -> dict[str, Any]:
             'force_flat': session_state.force_flat,
             'force_flat_result': force_flat_result,
             'session_key': session_state.session_key,
+            'data_source_mode': 'tradingview' if USE_TRADINGVIEW_BARS else 'fetcher',
         }
         state['last_cycle'] = summary
         save_state(state)
@@ -180,6 +137,7 @@ def run_once() -> dict[str, Any]:
         'orders_sent': sent,
         'session_reason': session_state.reason,
         'session_key': session_state.session_key,
+        'data_source_mode': 'tradingview' if USE_TRADINGVIEW_BARS else 'fetcher',
     }
     save_state(state)
     print(state['last_cycle'])
@@ -187,7 +145,8 @@ def run_once() -> dict[str, Any]:
 
 
 def main() -> None:
-    print(f'[{MODEL_NAME}] starting exact-v473 loop in mode={EXECUTION_MODE}')
+    source = 'tradingview bars' if USE_TRADINGVIEW_BARS else 'fetcher bars'
+    print(f'[{MODEL_NAME}] starting exact-v473 loop in mode={EXECUTION_MODE} source={source}')
     while True:
         try:
             run_once()

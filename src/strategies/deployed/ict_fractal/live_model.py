@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +11,18 @@ import pandas as pd
 from backtesting import Backtest
 from zoneinfo import ZoneInfo
 
-from config import BACKTEST_CASH, DEFAULT_QTY, MODEL_NAME, SIGNAL_LOOKBACK_BARS, SYMBOLS
+from config import (
+    BACKTEST_CASH,
+    DEFAULT_QTY,
+    MODEL_NAME,
+    SIGNAL_LOOKBACK_BARS,
+    SYMBOLS,
+    TRADINGVIEW_BARS_DIR,
+    TRADINGVIEW_FALLBACK_TO_FETCHER,
+    TRADINGVIEW_MIN_BARS,
+    TRADINGVIEW_SYMBOL_MAP,
+    USE_TRADINGVIEW_BARS,
+)
 
 ET = ZoneInfo('America/New_York')
 BASE_DIR = Path(__file__).resolve().parents[4]
@@ -77,23 +89,118 @@ def validate_signal(signal: dict[str, Any]) -> bool:
     return signal['target'] < signal['entry'] < signal['stop']
 
 
-def run_exact_v473_for_symbol(symbol: str) -> pd.DataFrame:
+def _tv_timeframe_key(strategy_timeframe: str) -> str:
+    tf = str(strategy_timeframe).strip().lower()
+    mapping = {
+        '1m': '1',
+        '3m': '3',
+        '5m': '5',
+        '15m': '15',
+        '30m': '30',
+        '45m': '45',
+        '60m': '60',
+        '1h': '60',
+        '2h': '120',
+        '4h': '240',
+        '1d': '1D',
+        'd': '1D',
+    }
+    return mapping.get(tf, strategy_timeframe)
+
+
+def _parse_bar_time(value: Any) -> pd.Timestamp:
+    text = str(value).strip()
+    if text.isdigit():
+        return pd.to_datetime(int(text), unit='ms', utc=True).tz_convert(ET).tz_localize(None)
+    ts = pd.to_datetime(text, utc=True, errors='coerce')
+    if pd.isna(ts):
+        raise ValueError(f'Unparseable TradingView bar_time: {value}')
+    return ts.tz_convert(ET).tz_localize(None)
+
+
+def _tv_file_for_symbol(strategy_symbol: str) -> tuple[Path, str, str]:
+    cfg = INSTRUMENTS[strategy_symbol]
+    tv_symbol = TRADINGVIEW_SYMBOL_MAP.get(strategy_symbol.upper(), f'{strategy_symbol.upper()}1!')
+    tv_timeframe = _tv_timeframe_key(cfg.timeframe)
+    path = TRADINGVIEW_BARS_DIR / f'{tv_symbol}__{tv_timeframe}.json'
+    return path, tv_symbol, tv_timeframe
+
+
+def load_tradingview_ohlcv(strategy_symbol: str) -> pd.DataFrame:
+    path, tv_symbol, tv_timeframe = _tv_file_for_symbol(strategy_symbol)
+    if not path.exists():
+        raise FileNotFoundError(f'TradingView bars file not found: {path}')
+
+    rows = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(f'TradingView bars file is empty: {path}')
+
+    cleaned: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            cleaned.append(
+                {
+                    'Date': _parse_bar_time(row.get('bar_time')),
+                    'Open': float(row['open']),
+                    'High': float(row['high']),
+                    'Low': float(row['low']),
+                    'Close': float(row['close']),
+                    'Volume': float(row.get('volume', 0.0)),
+                }
+            )
+        except Exception as exc:
+            print(f'[live_model] skipped malformed TradingView candle for {strategy_symbol}: {exc}')
+
+    if not cleaned:
+        raise ValueError(f'No usable TradingView candles found in: {path}')
+
+    df = pd.DataFrame(cleaned).drop_duplicates(subset=['Date']).sort_values('Date').set_index('Date')
+    if len(df) < TRADINGVIEW_MIN_BARS:
+        raise ValueError(
+            f'TradingView candle history too short for {strategy_symbol}: '
+            f'{len(df)} < {TRADINGVIEW_MIN_BARS} from {tv_symbol}/{tv_timeframe}'
+        )
+
+    cfg = INSTRUMENTS[strategy_symbol]
+    df = df.tail(cfg.tail_rows)
+    print(f'[live_model] using TradingView candles for {strategy_symbol} from {path} ({len(df)} rows)')
+    return df
+
+
+def load_model_ohlcv(strategy_symbol: str) -> tuple[pd.DataFrame, str]:
+    cfg = INSTRUMENTS[strategy_symbol]
+
+    if USE_TRADINGVIEW_BARS:
+        try:
+            return load_tradingview_ohlcv(strategy_symbol), 'tradingview'
+        except Exception as exc:
+            print(f'[live_model] TradingView fallback for {strategy_symbol}: {exc}')
+            if not TRADINGVIEW_FALLBACK_TO_FETCHER:
+                raise
+
+    df = get_ohlcv(cfg.symbol, exchange=cfg.exchange, timeframe=cfg.timeframe, days_back=cfg.days_back)
+    return df, 'fetcher'
+
+
+def run_exact_v473_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     cfg = INSTRUMENTS[symbol]
     strategy_cls = _make_strategy_class(cfg)
-    df = get_ohlcv(cfg.symbol, exchange=cfg.exchange, timeframe=cfg.timeframe, days_back=cfg.days_back)
+    df, source = load_model_ohlcv(symbol)
     df = df.tail(cfg.tail_rows)
     if df.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
 
     bt = Backtest(df, strategy_cls, cash=BACKTEST_CASH, commission=0.0, exclusive_orders=True)
     bt.run()
 
     meta = pd.DataFrame(getattr(strategy_cls, 'last_trade_log', []))
     if meta.empty:
-        return pd.DataFrame()
+        print(f'[live_model] no entries for {symbol} using {source}')
+        return pd.DataFrame(), pd.DataFrame()
     meta = _prepare_meta(meta, cfg)
     if meta.empty:
-        return pd.DataFrame()
+        print(f'[live_model] prepared meta empty for {symbol} using {source}')
+        return pd.DataFrame(), pd.DataFrame()
     return meta, df
 
 
@@ -133,7 +240,7 @@ def extract_fresh_entries(meta: pd.DataFrame, df: pd.DataFrame) -> list[dict[str
             if validate_signal(signal):
                 out.append(signal)
         except Exception as exc:
-            print(f'[live_model] skipped malformed {symbol} signal: {exc}')
+            print(f'[live_model] skipped malformed signal row: {exc}')
     return out
 
 
