@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parents[4]
+load_dotenv(BASE_DIR / '.env')
+
+MODEL_NAME = 'ict_fractal'
+DEPLOY_DIR = BASE_DIR / 'src' / 'strategies' / 'deployed' / MODEL_NAME
+LOG_DIR = DEPLOY_DIR / 'logs'
+STATE_DIR = DEPLOY_DIR / 'state'
+
+for p in (LOG_DIR, STATE_DIR):
+    p.mkdir(parents=True, exist_ok=True)
+
+EXECUTION_MODE = os.getenv('ICT_FRACTAL_EXECUTION_MODE', 'paper').strip().lower()
+LOOP_SECONDS = int(os.getenv('ICT_FRACTAL_LOOP_SECONDS', '20'))
+DEFAULT_QTY = int(os.getenv('ICT_FRACTAL_DEFAULT_QTY', '1'))
+SYMBOLS = [s.strip().upper() for s in os.getenv('ICT_FRACTAL_SYMBOLS', 'NQ,MES,MYM,MGC').split(',') if s.strip()]
+SIGNAL_LOOKBACK_BARS = int(os.getenv('ICT_FRACTAL_SIGNAL_LOOKBACK_BARS', '1'))
+BACKTEST_CASH = float(os.getenv('ICT_FRACTAL_BACKTEST_CASH', '1000000'))
+
+PICKMYTRADE_BASE_URL = os.getenv('PICKMYTRADE_BASE_URL', 'https://api.pickmytrade.trade').strip()
+PICKMYTRADE_TOKEN = os.getenv('PICKMYTRADE_TOKEN', '').strip()
+PICKMYTRADE_ACCOUNT_ID = os.getenv('PICKMYTRADE_ACCOUNT_ID', '').strip()
+PICKMYTRADE_STRATEGY_ID = os.getenv('PICKMYTRADE_STRATEGY_ID', MODEL_NAME).strip()
+
+FORCE_FLAT_HOUR_ET = int(os.getenv('ICT_FRACTAL_FORCE_FLAT_HOUR_ET', '16'))
+FORCE_FLAT_MINUTE_ET = int(os.getenv('ICT_FRACTAL_FORCE_FLAT_MINUTE_ET', '50'))
