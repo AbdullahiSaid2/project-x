@@ -4,9 +4,12 @@
   "last_cycle": {
     "model_name": "ict_fractal",
     "mode": "demo",
-    "cycle_time_et": "2026-04-13T21:56:09.395675-04:00",
+    "cycle_time_et": "2026-04-13T22:50:09.443740-04:00",
     "signals_seen": 0,
     "orders_sent": 0,
-    "skipped_reason": "after_force_flat_cutoff"
-  }
+    "session_reason": "session_open",
+    "session_key": "2026-04-13"
+  },
+  "last_force_flat_key": null,
+  "last_force_flat_result": null
 }

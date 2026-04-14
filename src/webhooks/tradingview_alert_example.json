@@ -1,0 +1,16 @@
+{
+  "source": "tradingview",
+  "event": "bar_close",
+  "symbol": "{{ticker}}",
+  "exchange": "{{exchange}}",
+  "timeframe": "{{interval}}",
+  "bar_time": "{{time}}",
+  "fire_time": "{{timenow}}",
+  "open": "{{open}}",
+  "high": "{{high}}",
+  "low": "{{low}}",
+  "close": "{{close}}",
+  "volume": "{{volume}}",
+  "strategy": "ict_fractal",
+  "secret": "YOUR_WEBHOOK_SECRET"
+}

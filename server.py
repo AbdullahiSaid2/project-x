@@ -90,8 +90,9 @@ PYTHON = "python3"   # python executable
 try:
     from src.webhooks.tradingview_webhook import webhook_bp
     app.register_blueprint(webhook_bp)
-except Exception:
-    pass
+    print("✅ TradingView webhook blueprint loaded")
+except Exception as exc:
+    print(f"⚠️ Failed to load TradingView webhook blueprint: {exc}")
 
 def read_csv(path, max_rows=500):
     if not path.exists(): return []
