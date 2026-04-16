@@ -1,0 +1,9 @@
+//@version=5
+indicator("Algotec Webhook Candle Feed", overlay=true)
+
+secret = input.string("algoXariif2026", "Webhook Secret")
+
+payload = "{\"source\":\"tradingview\",\"event\":\"candle_close\",\"token\":\"" + secret + "\",\"symbol\":\"" + syminfo.ticker + "\",\"exchange\":\"" + syminfo.prefix + "\",\"timeframe\":\"" + timeframe.period + "\",\"bar_time\":\"" + str.tostring(time) + "\",\"fire_time\":\"" + str.tostring(timenow) + "\",\"open\":\"" + str.tostring(open) + "\",\"high\":\"" + str.tostring(high) + "\",\"low\":\"" + str.tostring(low) + "\",\"close\":\"" + str.tostring(close) + "\",\"volume\":\"" + str.tostring(volume) + "\"}"
+
+if barstate.isconfirmed
+    alert(payload, alert.freq_once_per_bar_close)

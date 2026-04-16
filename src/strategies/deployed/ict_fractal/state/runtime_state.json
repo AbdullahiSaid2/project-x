@@ -1,16 +1,29 @@
 {
   "seen_signal_ids": [],
-  "orders_sent": 0,
   "last_cycle": {
     "model_name": "ict_fractal",
     "mode": "demo",
-    "cycle_time_et": "2026-04-14T14:45:47.424899-04:00",
+    "cycle_time_et": "2026-04-16T11:07:31.762057-04:00",
     "signals_seen": 0,
     "orders_sent": 0,
     "session_reason": "session_open",
-    "session_key": "2026-04-13",
+    "session_key": "2026-04-16",
+    "force_flat_result": null,
     "data_source_mode": "tradingview"
   },
-  "last_force_flat_key": null,
-  "last_force_flat_result": null
+  "last_force_flat_key": "2026-04-15",
+  "last_force_flat_result": {
+    "ok": true,
+    "mode": "demo",
+    "action_type": "trade_closed",
+    "signal_id": "force_flat_2026-04-15",
+    "symbol": "NQ",
+    "logged_at_et": "2026-04-15T16:50:17.917748-04:00",
+    "response": {
+      "res": "Successfully send",
+      "error": false
+    }
+  },
+  "unsupported_actions": [],
+  "orders_sent": 0
 }
