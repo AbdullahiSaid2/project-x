@@ -36,4 +36,4 @@ debug_logs/
 *.csv
 
 # Mac files
-.DS_Store
+.DS_Storesrc/data/databento_cache/
