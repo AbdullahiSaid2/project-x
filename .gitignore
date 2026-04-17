@@ -26,5 +26,14 @@ src/data/trading_paused.json
 src/data/tracked_wallets.json
 src/data/processed_ideas.json
 
+# Databento cache / generated market data
+src/data/databento_cache/
+
+# Logs
+*.log
+logs/
+debug_logs/
+*.csv
+
 # Mac files
 .DS_Store
