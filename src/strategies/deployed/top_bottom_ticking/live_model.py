@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 from backtesting import Backtest
-from zoneinfo import ZoneInfo
 
 from config import BACKTEST_CASH, DEFAULT_QTY, MODEL_NAME, SIGNAL_LOOKBACK_BARS, SYMBOLS
 
-ET = ZoneInfo("America/New_York")
 DEPLOY_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = DEPLOY_DIR.parents[3]
 if str(PROJECT_ROOT) not in sys.path:
@@ -21,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 LIVE_TIMEFRAME = "1m"
 MIN_ROWS_BY_TIMEFRAME = {"1m": 11, "5m": 11, "15m": 11}
-HISTORICAL_WARMUP_MULTIPLIER = 6
+PROP_PROFILE_NAME = os.getenv("PROP_PROFILE", "apex_pa_50k")
 
 
 def _find_file(filename: str) -> Path:
@@ -51,27 +49,43 @@ def _load_module(name: str, path: Path):
 
 
 FETCHER_PATH = _find_file("fetcher.py")
-V473_SHARED_PATH = _find_file("v473_shared.py")
+SHARED_PATH = _find_file("top_bottom_ticking_shared.py")
+STRAT_PATH = _find_file("ict_top_bottom_ticking.py")
 
-_fetcher = _load_module("ict_fractal_fetcher_local", FETCHER_PATH)
-_v473 = _load_module("ict_fractal_v473_shared_local", V473_SHARED_PATH)
+_fetcher = _load_module("top_bottom_fetcher_local", FETCHER_PATH)
+_shared = _load_module("top_bottom_shared_local", SHARED_PATH)
+_strat = _load_module("top_bottom_strategy_local", STRAT_PATH)
 
 get_ohlcv = _fetcher.get_ohlcv
 estimate_days_back_for_live_window = getattr(_fetcher, "estimate_days_back_for_live_window", None)
 
-INSTRUMENTS = _v473.INSTRUMENTS
-_make_strategy_class = _v473._make_strategy_class
-_prepare_meta = _v473._prepare_meta
+# Optional live-aware hooks if your fetcher exposes them.
+get_live_ohlcv = getattr(_fetcher, "get_live_ohlcv", None)
+get_latest_live_ohlcv = getattr(_fetcher, "get_latest_live_ohlcv", None)
+
+INSTRUMENTS = _shared.INSTRUMENTS
+_prepare_meta = _shared._prepare_meta
+
+ICT_TOP_BOTTOM_TICKING_TYPE2 = None
+for name in (
+    "ICT_TOP_BOTTOM_TICKING_TYPE2",
+    "ICTTopBottomTickingType2",
+    "ICTTopBottomTickingType2Baseline",
+    "ICT_TOP_BOTTOM_TICKING",
+):
+    if hasattr(_strat, name):
+        ICT_TOP_BOTTOM_TICKING_TYPE2 = getattr(_strat, name)
+        break
+if ICT_TOP_BOTTOM_TICKING_TYPE2 is None:
+    raise ImportError("Could not find top_bottom_ticking baseline strategy class in ict_top_bottom_ticking.py")
 
 REQUIRED_COLUMNS = [
     "entry_time_et_naive",
     "planned_entry_price",
     "planned_stop_price",
-    "planned_target_price",
+    "planned_target3_price",
     "side",
     "setup_type",
-    "setup_tier",
-    "bridge_type",
     "symbol",
 ]
 
@@ -86,10 +100,7 @@ def _estimate_days_back_for_live_window(timeframe: str, tail_rows: int) -> int:
 
 
 def build_signal_id(signal: dict[str, Any]) -> str:
-    raw = (
-        f"{signal['symbol']}|{signal['side']}|{signal['entry']}|{signal['stop']}|"
-        f"{signal['target']}|{signal['timestamp_et']}|{signal['setup_type']}|{signal['bridge_type']}"
-    )
+    raw = f"{signal['symbol']}|{signal['side']}|{signal['entry']}|{signal['stop']}|{signal['target']}|{signal['timestamp_et']}|{signal['setup_type']}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
@@ -104,8 +115,6 @@ def normalize_signal(raw: dict[str, Any]) -> dict[str, Any]:
         "timestamp_et": str(raw["timestamp_et"]),
         "session_date_et": str(raw["session_date_et"]),
         "setup_type": str(raw["setup_type"]),
-        "setup_tier": str(raw.get("setup_tier", "B")),
-        "bridge_type": str(raw.get("bridge_type", "UNKNOWN")),
         "qty": int(raw.get("qty", DEFAULT_QTY)),
     }
     signal["signal_id"] = str(raw.get("signal_id") or build_signal_id(signal))
@@ -115,13 +124,13 @@ def normalize_signal(raw: dict[str, Any]) -> dict[str, Any]:
 def validate_signal(signal: dict[str, Any]) -> bool:
     if signal["qty"] <= 0 or signal["entry"] <= 0 or signal["stop"] <= 0 or signal["target"] <= 0:
         return False
-    if signal["side"] not in {"LONG", "SHORT"}:
+    if signal["side"] not in {"LONG", "SHORT", "BUY", "SELL"}:
         return False
-    return (
-        signal["stop"] < signal["entry"] < signal["target"]
-        if signal["side"] == "LONG"
-        else signal["target"] < signal["entry"] < signal["stop"]
-    )
+
+    side = signal["side"]
+    if side in {"LONG", "BUY"}:
+        return signal["stop"] < signal["entry"] < signal["target"]
+    return signal["target"] < signal["entry"] < signal["stop"]
 
 
 def _live_days_back_for_cfg(cfg: Any) -> int:
@@ -135,79 +144,100 @@ def _required_rows_for_timeframe(tf: str) -> int:
     return int(MIN_ROWS_BY_TIMEFRAME.get(tf, 11))
 
 
-def _concat_dedup_sort(frames: list[pd.DataFrame]) -> pd.DataFrame:
-    valid = [f for f in frames if isinstance(f, pd.DataFrame) and not f.empty]
-    if not valid:
-        return pd.DataFrame()
-    out = pd.concat(valid).sort_index()
-    out = out[~out.index.duplicated(keep="last")]
-    return out
+def _fetch_live_ohlcv(symbol: str, exchange: str, timeframe: str, days_back: int, tail_rows: int) -> pd.DataFrame:
+    """
+    Live-only wrapper.
+    Priority:
+    1) get_latest_live_ohlcv(...)
+    2) get_live_ohlcv(...)
+    3) plain get_ohlcv(...)
+    No historical fallback/merge.
+    """
+    if callable(get_latest_live_ohlcv):
+        try:
+            df = get_latest_live_ohlcv(
+                symbol=symbol,
+                exchange=exchange,
+                timeframe=timeframe,
+                days_back=days_back,
+            )
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                return df.tail(tail_rows)
+        except Exception as exc:
+            print(f"[live_model] latest live fetch failed for {symbol}: {exc}")
 
+    if callable(get_live_ohlcv):
+        try:
+            df = get_live_ohlcv(
+                symbol=symbol,
+                exchange=exchange,
+                timeframe=timeframe,
+                days_back=days_back,
+            )
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                return df.tail(tail_rows)
+        except Exception as exc:
+            print(f"[live_model] live fetch failed for {symbol}: {exc}")
 
-def _load_historical_warmup_df(cfg: Any, tf: str, required_rows: int) -> pd.DataFrame:
-    warm_rows = max(required_rows * HISTORICAL_WARMUP_MULTIPLIER, int(getattr(cfg, "tail_rows", 500)))
-    warm_days_back = _estimate_days_back_for_live_window(tf, warm_rows)
     try:
-        hist = get_ohlcv(
-            cfg.symbol,
-            exchange=cfg.exchange,
-            timeframe=tf,
-            days_back=warm_days_back,
-            prefer_cache=False,
-            live_mode=False,
+        df = get_ohlcv(
+            symbol,
+            exchange=exchange,
+            timeframe=timeframe,
+            days_back=days_back,
         )
-        hist = hist.tail(warm_rows)
-        print(f"[live_model] Databento historical warmup for {cfg.symbol} ({tf}) loaded {len(hist)} rows")
-        return hist
+        return df.tail(tail_rows)
     except Exception as exc:
-        print(f"[live_model] Databento historical warmup failed for {cfg.symbol}: {exc}")
+        print(f"[live_model] fetch failed for {symbol}: {exc}")
         return pd.DataFrame()
 
 
-def _load_databento_only_df(cfg: Any) -> pd.DataFrame:
+def _load_live_df(cfg: Any) -> pd.DataFrame:
     tf = str(getattr(cfg, "timeframe", LIVE_TIMEFRAME))
     live_days_back = _live_days_back_for_cfg(cfg)
     required_rows = _required_rows_for_timeframe(tf)
+    tail_rows = int(getattr(cfg, "tail_rows", 500))
 
-    live_df = get_ohlcv(
+    live_df = _fetch_live_ohlcv(
         cfg.symbol,
         exchange=cfg.exchange,
         timeframe=tf,
         days_back=live_days_back,
-        prefer_cache=False,
-        live_mode=True,
-    ).tail(int(getattr(cfg, "tail_rows", 500)))
+        tail_rows=tail_rows,
+    )
 
     if live_df.empty:
-        print(f"[live_model] skipping {cfg.symbol}: Databento returned 0 live rows for {tf}")
+        print(f"[live_model] skipping {cfg.symbol}: live path returned 0 rows for {tf}")
         return pd.DataFrame()
 
-    if len(live_df) >= required_rows:
-        print(f"[live_model] using Databento candles for {cfg.symbol} ({tf}) ({len(live_df)} rows)")
-        return live_df
-
-    print(
-        f"[live_model] Databento live rows insufficient for {cfg.symbol}: {len(live_df)} rows for {tf}; "
-        f"need at least {required_rows}. Attempting Databento historical warmup."
-    )
-    hist_df = _load_historical_warmup_df(cfg, tf, required_rows)
-    df = _concat_dedup_sort([hist_df, live_df]).tail(int(getattr(cfg, "tail_rows", 500)))
-
-    if len(df) < required_rows:
+    if len(live_df) < required_rows:
         print(
-            f"[live_model] skipping {cfg.symbol}: Databento live+historical warmup still has only "
-            f"{len(df)} rows for {tf}; need at least {required_rows}. No TradingView fallback."
+            f"[live_model] skipping {cfg.symbol}: live rows insufficient "
+            f"({len(live_df)} rows for {tf}; need at least {required_rows}). "
+            f"No historical fallback in live trading mode."
         )
         return pd.DataFrame()
 
-    print(f"[live_model] using Databento live+historical candles for {cfg.symbol} ({tf}) ({len(df)} rows total)")
-    return df
+    print(f"[live_model] using live candles for {cfg.symbol} ({tf}) ({len(live_df)} rows)")
+    return live_df
 
 
-def run_exact_v473_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _make_strategy_class(cfg: Any):
+    return type(
+        f"TopBottomLive_{cfg.symbol}",
+        (ICT_TOP_BOTTOM_TICKING_TYPE2,),
+        {
+            "fixed_size": int(getattr(cfg, "contracts", DEFAULT_QTY)),
+            "last_trade_log": [],
+            "last_debug_counts": {},
+        },
+    )
+
+
+def run_top_bottom_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     cfg = INSTRUMENTS[symbol]
     strategy_cls = _make_strategy_class(cfg)
-    df = _load_databento_only_df(cfg)
+    df = _load_live_df(cfg)
     if df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -219,7 +249,12 @@ def run_exact_v473_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         print(f"[live_model] {symbol} produced no fresh trade log rows from the strategy")
         return pd.DataFrame(), df
 
-    meta = _prepare_meta(meta, cfg)
+    meta = _prepare_meta(
+        meta,
+        cfg,
+        variant_name="type2_baseline",
+        prop_profile_name=PROP_PROFILE_NAME,
+    )
     if meta.empty:
         print(f"[live_model] {symbol} produced trade rows but none survived _prepare_meta")
         return pd.DataFrame(), df
@@ -250,17 +285,16 @@ def extract_fresh_entries(meta: pd.DataFrame, df: pd.DataFrame) -> list[dict[str
 
     out = []
     for _, row in subset.iterrows():
+        target_col = "planned_target3_price" if "planned_target3_price" in row else "planned_target_price"
         raw = {
             "symbol": row["symbol"],
             "side": row["side"],
             "entry": float(row["planned_entry_price"]),
             "stop": float(row["planned_stop_price"]),
-            "target": float(row["planned_target_price"]),
+            "target": float(row[target_col]),
             "timestamp_et": pd.Timestamp(row["entry_time_et_naive"]).isoformat(),
             "session_date_et": str(pd.Timestamp(row["entry_time_et_naive"]).date()),
             "setup_type": str(row.get("setup_type", "UNKNOWN")),
-            "setup_tier": str(row.get("setup_tier", "B")),
-            "bridge_type": str(row.get("bridge_type", "UNKNOWN")),
             "qty": DEFAULT_QTY,
         }
         try:
@@ -281,7 +315,7 @@ def generate_live_signals() -> list[dict[str, Any]]:
             print(f"[live_model] unsupported symbol skipped: {symbol}")
             continue
         try:
-            meta, df = run_exact_v473_for_symbol(symbol)
+            meta, df = run_top_bottom_for_symbol(symbol)
             symbol_signals = extract_fresh_entries(meta, df)
             if not symbol_signals:
                 print(f"[live_model] {symbol} yielded 0 fresh signals this cycle")
@@ -289,11 +323,3 @@ def generate_live_signals() -> list[dict[str, Any]]:
         except Exception as exc:
             print(f"[live_model] {symbol} scan failed: {exc}")
     return signals
-
-
-def generate_live_actions() -> list[dict[str, Any]]:
-    return generate_live_signals()
-
-
-def get_active_data_source_name() -> str:
-    return "databento"

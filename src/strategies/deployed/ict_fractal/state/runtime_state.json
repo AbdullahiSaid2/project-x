@@ -2,27 +2,27 @@
   "seen_signal_ids": [],
   "last_cycle": {
     "model_name": "ict_fractal",
-    "mode": "demo",
-    "cycle_time_et": "2026-04-16T11:07:31.762057-04:00",
+    "mode": "live",
+    "prop_profile": "apex_pa_50k",
+    "live_orders_enabled": true,
+    "cycle_time_et": "2026-04-16T22:15:19.991904-04:00",
     "signals_seen": 0,
     "orders_sent": 0,
+    "blocked_by_session": 0,
     "session_reason": "session_open",
-    "session_key": "2026-04-16",
+    "session_key": "2026-04-17",
+    "market_open": true,
     "force_flat_result": null,
-    "data_source_mode": "tradingview"
+    "data_source_mode": "databento",
+    "next_sleep_seconds": 20
   },
-  "last_force_flat_key": "2026-04-15",
+  "last_force_flat_key": "2026-04-16",
   "last_force_flat_result": {
     "ok": true,
-    "mode": "demo",
-    "action_type": "trade_closed",
-    "signal_id": "force_flat_2026-04-15",
-    "symbol": "NQ",
-    "logged_at_et": "2026-04-15T16:50:17.917748-04:00",
-    "response": {
-      "res": "Successfully send",
-      "error": false
-    }
+    "simulated": true,
+    "live_orders_enabled": false,
+    "reason": "force_flat_force_flat_window_simulated_only",
+    "session_key": "2026-04-16"
   },
   "unsupported_actions": [],
   "orders_sent": 0

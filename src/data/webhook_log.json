@@ -1,99 +1,6 @@
 [
   {
-    "timestamp": "2026-04-16T18:16:03.153620",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MNQ1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "fire_time": "1776352560167",
-      "open": "26440",
-      "high": "26449.25",
-      "low": "26429.5",
-      "close": "26446",
-      "volume": "6199"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MNQ1!",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "bars_buffered": 512,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:16:03.280366",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MGC1!",
-      "exchange": "COMEX_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "fire_time": "1776352560228",
-      "open": "4822.5",
-      "high": "4826.1",
-      "low": "4820.9",
-      "close": "4825.5",
-      "volume": "873"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MGC1!",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "bars_buffered": 441,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:16:12.126905",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MYM1!",
-      "exchange": "CBOT_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "fire_time": "1776352560347",
-      "open": "48648",
-      "high": "48658",
-      "low": "48632",
-      "close": "48658",
-      "volume": "282"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MYM1!",
-      "timeframe": "1",
-      "bar_time": "1776351900000",
-      "bars_buffered": 434,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:16:12.136792",
+    "timestamp": "2026-04-16T23:37:24.225907",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -103,13 +10,13 @@
       "symbol": "MES1!",
       "exchange": "CME_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776351900000",
-      "fire_time": "1776352560207",
-      "open": "7066.5",
-      "high": "7067.75",
-      "low": "7064.25",
-      "close": "7067.5",
-      "volume": "3736"
+      "bar_time": "1776371160000",
+      "fire_time": "1776371823011",
+      "open": "7076.5",
+      "high": "7076.5",
+      "low": "7075.75",
+      "close": "7076.25",
+      "volume": "198"
     },
     "extra": {
       "status": "accepted",
@@ -117,14 +24,14 @@
       "inserted": true,
       "symbol": "MES1!",
       "timeframe": "1",
-      "bar_time": "1776351900000",
-      "bars_buffered": 440,
+      "bar_time": "1776371160000",
+      "bars_buffered": 756,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
       "execution_enabled": false
     }
   },
   {
-    "timestamp": "2026-04-16T18:17:00.672044",
+    "timestamp": "2026-04-16T23:38:01.008943",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -134,261 +41,13 @@
       "symbol": "MNQ1!",
       "exchange": "CME_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776351960000",
-      "fire_time": "1776352620116",
-      "open": "26446",
-      "high": "26450",
-      "low": "26438.5",
-      "close": "26439.75",
-      "volume": "4486"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MNQ1!",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "bars_buffered": 513,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:17:01.167528",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MES1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "fire_time": "1776352620268",
-      "open": "7067.5",
-      "high": "7068.75",
-      "low": "7066.25",
-      "close": "7066.5",
-      "volume": "4069"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MES1!",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "bars_buffered": 441,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:17:01.630342",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MGC1!",
-      "exchange": "COMEX_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "fire_time": "1776352620508",
-      "open": "4825.7",
-      "high": "4828.3",
-      "low": "4824.3",
-      "close": "4824.7",
-      "volume": "1004"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MGC1!",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "bars_buffered": 442,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:17:02.362665",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MYM1!",
-      "exchange": "CBOT_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "fire_time": "1776352620981",
-      "open": "48657",
-      "high": "48666",
-      "low": "48648",
-      "close": "48654",
-      "volume": "508"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MYM1!",
-      "timeframe": "1",
-      "bar_time": "1776351960000",
-      "bars_buffered": 435,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:18:00.927073",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MNQ1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "fire_time": "1776352680227",
-      "open": "26439.5",
-      "high": "26448",
-      "low": "26433.75",
-      "close": "26445.5",
-      "volume": "2889"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MNQ1!",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "bars_buffered": 514,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:18:01.054084",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MYM1!",
-      "exchange": "CBOT_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "fire_time": "1776352680240",
-      "open": "48652",
-      "high": "48660",
-      "low": "48649",
-      "close": "48654",
-      "volume": "135"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MYM1!",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "bars_buffered": 436,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:18:01.215783",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MGC1!",
-      "exchange": "COMEX_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "fire_time": "1776352680272",
-      "open": "4824.9",
-      "high": "4828.7",
-      "low": "4824.7",
-      "close": "4827.1",
-      "volume": "586"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MGC1!",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "bars_buffered": 443,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:18:03.638680",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MES1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "fire_time": "1776352683185",
-      "open": "7066.75",
-      "high": "7067.75",
-      "low": "7065.25",
-      "close": "7067",
-      "volume": "1708"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MES1!",
-      "timeframe": "1",
-      "bar_time": "1776352020000",
-      "bars_buffered": 442,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:19:00.858428",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MNQ1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352080000",
-      "fire_time": "1776352740192",
-      "open": "26445",
+      "bar_time": "1776371220000",
+      "fire_time": "1776371880512",
+      "open": "26455.25",
       "high": "26456.5",
-      "low": "26444.25",
-      "close": "26454",
-      "volume": "4941"
+      "low": "26454.5",
+      "close": "26454.75",
+      "volume": "195"
     },
     "extra": {
       "status": "accepted",
@@ -396,14 +55,14 @@
       "inserted": true,
       "symbol": "MNQ1!",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "bars_buffered": 515,
+      "bar_time": "1776371220000",
+      "bars_buffered": 831,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
       "execution_enabled": false
     }
   },
   {
-    "timestamp": "2026-04-16T18:19:01.153847",
+    "timestamp": "2026-04-16T23:38:02.962488",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -413,13 +72,13 @@
       "symbol": "MES1!",
       "exchange": "CME_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "fire_time": "1776352740266",
-      "open": "7067",
-      "high": "7070",
-      "low": "7067",
-      "close": "7069.75",
-      "volume": "3507"
+      "bar_time": "1776371220000",
+      "fire_time": "1776371882451",
+      "open": "7076",
+      "high": "7076.75",
+      "low": "7076",
+      "close": "7076.25",
+      "volume": "67"
     },
     "extra": {
       "status": "accepted",
@@ -427,14 +86,14 @@
       "inserted": true,
       "symbol": "MES1!",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "bars_buffered": 443,
+      "bar_time": "1776371220000",
+      "bars_buffered": 757,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
       "execution_enabled": false
     }
   },
   {
-    "timestamp": "2026-04-16T18:19:01.355369",
+    "timestamp": "2026-04-16T23:38:08.774560",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -444,13 +103,13 @@
       "symbol": "MGC1!",
       "exchange": "COMEX_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "fire_time": "1776352740235",
-      "open": "4827.4",
-      "high": "4831.3",
-      "low": "4827.3",
-      "close": "4831.3",
-      "volume": "832"
+      "bar_time": "1776371220000",
+      "fire_time": "1776371887981",
+      "open": "4809.9",
+      "high": "4810",
+      "low": "4809.7",
+      "close": "4809.9",
+      "volume": "15"
     },
     "extra": {
       "status": "accepted",
@@ -458,14 +117,14 @@
       "inserted": true,
       "symbol": "MGC1!",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "bars_buffered": 444,
+      "bar_time": "1776371220000",
+      "bars_buffered": 759,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
       "execution_enabled": false
     }
   },
   {
-    "timestamp": "2026-04-16T18:19:02.299607",
+    "timestamp": "2026-04-16T23:38:15.768828",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -475,13 +134,13 @@
       "symbol": "MYM1!",
       "exchange": "CBOT_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "fire_time": "1776352740992",
-      "open": "48652",
-      "high": "48675",
-      "low": "48650",
-      "close": "48674",
-      "volume": "376"
+      "bar_time": "1776371220000",
+      "fire_time": "1776371895252",
+      "open": "48790",
+      "high": "48792",
+      "low": "48790",
+      "close": "48790",
+      "volume": "7"
     },
     "extra": {
       "status": "accepted",
@@ -489,76 +148,14 @@
       "inserted": true,
       "symbol": "MYM1!",
       "timeframe": "1",
-      "bar_time": "1776352080000",
-      "bars_buffered": 437,
+      "bar_time": "1776371220000",
+      "bars_buffered": 751,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
       "execution_enabled": false
     }
   },
   {
-    "timestamp": "2026-04-16T18:20:01.303762",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MES1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352140000",
-      "fire_time": "1776352800195",
-      "open": "7069.5",
-      "high": "7072.75",
-      "low": "7069.5",
-      "close": "7071.25",
-      "volume": "5814"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MES1!",
-      "timeframe": "1",
-      "bar_time": "1776352140000",
-      "bars_buffered": 444,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:20:02.428701",
-    "status": "ACCEPTED",
-    "message": "Candle stored; execution disabled",
-    "alert": {
-      "source": "tradingview",
-      "event": "candle_close",
-      "token": "algoXariif2026",
-      "symbol": "MNQ1!",
-      "exchange": "CME_MINI_DL",
-      "timeframe": "1",
-      "bar_time": "1776352140000",
-      "fire_time": "1776352800303",
-      "open": "26454",
-      "high": "26468.25",
-      "low": "26453.75",
-      "close": "26464.5",
-      "volume": "7165"
-    },
-    "extra": {
-      "status": "accepted",
-      "type": "candle",
-      "inserted": true,
-      "symbol": "MNQ1!",
-      "timeframe": "1",
-      "bar_time": "1776352140000",
-      "bars_buffered": 516,
-      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
-      "execution_enabled": false
-    }
-  },
-  {
-    "timestamp": "2026-04-16T18:20:02.914880",
+    "timestamp": "2026-04-16T23:39:00.812275",
     "status": "ACCEPTED",
     "message": "Candle stored; execution disabled",
     "alert": {
@@ -568,13 +165,13 @@
       "symbol": "MGC1!",
       "exchange": "COMEX_MINI_DL",
       "timeframe": "1",
-      "bar_time": "1776352140000",
-      "fire_time": "1776352800295",
-      "open": "4831.1",
-      "high": "4833.7",
-      "low": "4829.9",
-      "close": "4830.2",
-      "volume": "962"
+      "bar_time": "1776371280000",
+      "fire_time": "1776371940297",
+      "open": "4810",
+      "high": "4810",
+      "low": "4809.6",
+      "close": "4809.8",
+      "volume": "14"
     },
     "extra": {
       "status": "accepted",
@@ -582,8 +179,566 @@
       "inserted": true,
       "symbol": "MGC1!",
       "timeframe": "1",
-      "bar_time": "1776352140000",
-      "bars_buffered": 445,
+      "bar_time": "1776371280000",
+      "bars_buffered": 760,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:39:01.091166",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MNQ1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "fire_time": "1776371940455",
+      "open": "26454.75",
+      "high": "26457.75",
+      "low": "26453.5",
+      "close": "26457.5",
+      "volume": "207"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MNQ1!",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "bars_buffered": 832,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:39:02.629072",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MYM1!",
+      "exchange": "CBOT_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "fire_time": "1776371942135",
+      "open": "48789",
+      "high": "48790",
+      "low": "48788",
+      "close": "48790",
+      "volume": "14"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MYM1!",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "bars_buffered": 752,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:39:12.176324",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MES1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "fire_time": "1776371940500",
+      "open": "7076.25",
+      "high": "7076.5",
+      "low": "7075.75",
+      "close": "7076.5",
+      "volume": "104"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MES1!",
+      "timeframe": "1",
+      "bar_time": "1776371280000",
+      "bars_buffered": 758,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:40:00.680567",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MNQ1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "fire_time": "1776372000196",
+      "open": "26457.25",
+      "high": "26458.5",
+      "low": "26455.25",
+      "close": "26458",
+      "volume": "213"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MNQ1!",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "bars_buffered": 833,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:40:00.925085",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MES1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "fire_time": "1776372000240",
+      "open": "7076.5",
+      "high": "7076.75",
+      "low": "7076.25",
+      "close": "7076.5",
+      "volume": "159"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MES1!",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "bars_buffered": 759,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:40:04.174000",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MGC1!",
+      "exchange": "COMEX_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "fire_time": "1776372002181",
+      "open": "4810.1",
+      "high": "4810.3",
+      "low": "4809",
+      "close": "4810",
+      "volume": "65"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MGC1!",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "bars_buffered": 761,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:40:14.619834",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MYM1!",
+      "exchange": "CBOT_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "fire_time": "1776372014122",
+      "open": "48791",
+      "high": "48794",
+      "low": "48789",
+      "close": "48793",
+      "volume": "19"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MYM1!",
+      "timeframe": "1",
+      "bar_time": "1776371340000",
+      "bars_buffered": 753,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:41:02.036492",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MES1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "fire_time": "1776372060631",
+      "open": "7076.5",
+      "high": "7076.75",
+      "low": "7076.25",
+      "close": "7076.5",
+      "volume": "77"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MES1!",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "bars_buffered": 760,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:41:02.359966",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MGC1!",
+      "exchange": "COMEX_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "fire_time": "1776372061559",
+      "open": "4810.1",
+      "high": "4810.3",
+      "low": "4809.7",
+      "close": "4810.2",
+      "volume": "42"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MGC1!",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "bars_buffered": 762,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:41:02.692265",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MYM1!",
+      "exchange": "CBOT_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "fire_time": "1776372061599",
+      "open": "48794",
+      "high": "48795",
+      "low": "48791",
+      "close": "48794",
+      "volume": "30"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MYM1!",
+      "timeframe": "1",
+      "bar_time": "1776371400000",
+      "bars_buffered": 754,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:42:02.970400",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MGC1!",
+      "exchange": "COMEX_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "fire_time": "1776372122169",
+      "open": "4810.3",
+      "high": "4811",
+      "low": "4810",
+      "close": "4810.1",
+      "volume": "49"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MGC1!",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "bars_buffered": 763,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:42:03.245187",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MNQ1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "fire_time": "1776372122583",
+      "open": "26458.25",
+      "high": "26459",
+      "low": "26455.5",
+      "close": "26456.5",
+      "volume": "278"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MNQ1!",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "bars_buffered": 835,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:42:10.305007",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MYM1!",
+      "exchange": "CBOT_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "fire_time": "1776372129725",
+      "open": "48794",
+      "high": "48797",
+      "low": "48792",
+      "close": "48792",
+      "volume": "16"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MYM1!",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "bars_buffered": 755,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:42:12.333978",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MES1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "fire_time": "1776372131566",
+      "open": "7076.75",
+      "high": "7077",
+      "low": "7076.25",
+      "close": "7076.5",
+      "volume": "132"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MES1!",
+      "timeframe": "1",
+      "bar_time": "1776371460000",
+      "bars_buffered": 761,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:43:01.219580",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MNQ1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "fire_time": "1776372180450",
+      "open": "26456.5",
+      "high": "26456.75",
+      "low": "26454.5",
+      "close": "26456",
+      "volume": "112"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MNQ1!",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "bars_buffered": 836,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MNQ1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:43:03.413748",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MES1!",
+      "exchange": "CME_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "fire_time": "1776372181523",
+      "open": "7076.5",
+      "high": "7076.5",
+      "low": "7076.25",
+      "close": "7076.25",
+      "volume": "86"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MES1!",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "bars_buffered": 762,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MES1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:43:05.029851",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MYM1!",
+      "exchange": "CBOT_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "fire_time": "1776372184249",
+      "open": "48793",
+      "high": "48795",
+      "low": "48791",
+      "close": "48794",
+      "volume": "15"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MYM1!",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "bars_buffered": 756,
+      "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MYM1!__1.json",
+      "execution_enabled": false
+    }
+  },
+  {
+    "timestamp": "2026-04-16T23:43:27.823941",
+    "status": "ACCEPTED",
+    "message": "Candle stored; execution disabled",
+    "alert": {
+      "source": "tradingview",
+      "event": "candle_close",
+      "token": "algoXariif2026",
+      "symbol": "MGC1!",
+      "exchange": "COMEX_MINI_DL",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "fire_time": "1776372207041",
+      "open": "4810.2",
+      "high": "4810.3",
+      "low": "4809.6",
+      "close": "4809.9",
+      "volume": "27"
+    },
+    "extra": {
+      "status": "accepted",
+      "type": "candle",
+      "inserted": true,
+      "symbol": "MGC1!",
+      "timeframe": "1",
+      "bar_time": "1776371520000",
+      "bars_buffered": 764,
       "storage": "/Users/Abdullahi/trading-project/trading_system/src/data/tradingview_bars/MGC1!__1.json",
       "execution_enabled": false
     }

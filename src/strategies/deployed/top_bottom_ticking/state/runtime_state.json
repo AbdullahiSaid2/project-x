@@ -1,0 +1,14 @@
+{
+  "last_cycle": {
+    "cycle_time_et": "2026-04-16T22:13:04.080774-04:00",
+    "force_flat_result": null,
+    "mode": "live",
+    "model_name": "top_bottom_ticking",
+    "orders_sent": 0,
+    "signals_seen": 0
+  },
+  "last_error": null,
+  "last_force_flat": null,
+  "orders_sent": 0,
+  "seen_signal_ids": []
+}

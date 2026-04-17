@@ -45,7 +45,6 @@ DEFAULT_OUTDIR = Path("src/data/databento_cache")
 
 # Contract basename -> Databento continuous symbol
 CONTRACT_MAP = {
-    "MNQ": "MNQ.v.0",
     "MES": "MES.v.0",
     "MYM": "MYM.v.0",
     "MGC": "MGC.v.0",
