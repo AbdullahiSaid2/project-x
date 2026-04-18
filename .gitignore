@@ -1,3 +1,9 @@
+# macOS
+.DS_Store
+
+# Mac files
+.DS_Storesrc/data/databento_cache/
+
 # NEVER commit these
 .env
 venv/
@@ -35,5 +41,5 @@ logs/
 debug_logs/
 *.csv
 
-# Mac files
-.DS_Storesrc/data/databento_cache/
+# Data files
+*.parquet
