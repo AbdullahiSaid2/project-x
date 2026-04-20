@@ -1,0 +1,691 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+import importlib
+import sys
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+from backtesting import Backtest
+
+ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT if (ROOT / "src").exists() else ROOT.parents[0]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.fetcher import get_ohlcv
+
+mod = importlib.import_module("ict_top_bottom_ticking")
+
+BASE_TYPE2 = None
+for name in (
+    "ICTTopBottomTickingType2Baseline",
+    "ICT_TOP_BOTTOM_TICKING_TYPE2",
+    "ICT_TOP_BOTTOM_TICKING",
+):
+    if hasattr(mod, name):
+        BASE_TYPE2 = getattr(mod, name)
+        break
+
+if BASE_TYPE2 is None:
+    raise ImportError(
+        "Could not find a usable baseline class in ict_top_bottom_ticking.py. "
+        "Expected one of: ICTTopBottomTickingType2Baseline, "
+        "ICT_TOP_BOTTOM_TICKING_TYPE2, ICT_TOP_BOTTOM_TICKING"
+    )
+
+BASE_TYPE1 = None
+for name in (
+    "ICTTopBottomTickingType1Sniper",
+    "ICT_TOP_BOTTOM_TICKING_TYPE1",
+):
+    if hasattr(mod, name):
+        BASE_TYPE1 = getattr(mod, name)
+        break
+
+if BASE_TYPE1 is None:
+    class ICTTopBottomTickingType1Sniper(BASE_TYPE2):
+        require_internal_sweep_filter = False
+        require_cos_confirmation = False
+        setup_expiry_bars = 14
+        limit_touch_tolerance_ticks = 2
+        min_stop_points = 5.0
+        max_stop_points = 34.0
+
+    BASE_TYPE1 = ICTTopBottomTickingType1Sniper
+
+
+REPORT_ACCOUNT_CASH = 50_000.0
+ENGINE_CASH = 1_000_000.0
+
+APEX_DAILY_LOSS_LIMIT = -1_000.0
+APEX_MAX_CONSECUTIVE_LOSSES_PER_DAY = 2
+
+
+@dataclass(frozen=True)
+class InstrumentConfig:
+    symbol: str
+    exchange: str
+    timeframe: str
+    days_back: int
+    tail_rows: int
+    contracts: int
+    dollars_per_point: float
+
+
+@dataclass(frozen=True)
+class SymbolSpec:
+    tick_size: float
+    min_stop_baseline: float
+    max_stop_baseline: float
+    min_stop_sniper: float
+    max_stop_sniper: float
+    expiry_baseline: int
+    expiry_sniper: int
+    touch_tol_baseline_ticks: int
+    touch_tol_sniper_ticks: int
+    require_cos_baseline: bool
+    require_cos_sniper: bool
+    require_internal_baseline: bool
+    require_internal_sniper: bool
+
+
+class ApexAccount:
+    def __init__(
+        self,
+        starting_balance: float = REPORT_ACCOUNT_CASH,
+        daily_loss_limit: float = APEX_DAILY_LOSS_LIMIT,
+        max_consecutive_losses_per_day: int = APEX_MAX_CONSECUTIVE_LOSSES_PER_DAY,
+    ):
+        self.starting_balance = float(starting_balance)
+        self.balance = float(starting_balance)
+        self.daily_loss_limit = float(daily_loss_limit)
+        self.max_consecutive_losses_per_day = int(max_consecutive_losses_per_day)
+
+        self.current_day = None
+        self.day_realized = 0.0
+        self.consecutive_losses_today = 0
+
+        self.rejected_daily_loss = 0
+        self.rejected_consecutive_losses = 0
+        self.rejected_total = 0
+
+    def reset_day(self, trade_day):
+        self.current_day = trade_day
+        self.day_realized = 0.0
+        self.consecutive_losses_today = 0
+
+    def check_day_roll(self, trade_day):
+        if self.current_day != trade_day:
+            self.reset_day(trade_day)
+
+    def can_keep_trade(self) -> tuple[bool, str | None]:
+        if self.day_realized <= self.daily_loss_limit:
+            self.rejected_daily_loss += 1
+            self.rejected_total += 1
+            return False, "daily_loss"
+
+        if self.consecutive_losses_today >= self.max_consecutive_losses_per_day:
+            self.rejected_consecutive_losses += 1
+            self.rejected_total += 1
+            return False, "consecutive_losses"
+
+        return True, None
+
+    def apply_trade(self, pnl: float):
+        self.balance += float(pnl)
+        self.day_realized += float(pnl)
+
+        if pnl < 0:
+            self.consecutive_losses_today += 1
+        else:
+            self.consecutive_losses_today = 0
+
+
+INSTRUMENTS: Dict[str, InstrumentConfig] = {
+    "MNQ": InstrumentConfig("MNQ", "tradovate", "5m", 365, 120_000, 5, 2.0),
+    "MES": InstrumentConfig("MES", "tradovate", "5m", 365, 120_000, 5, 5.0),
+    "MYM": InstrumentConfig("MYM", "tradovate", "5m", 365, 120_000, 5, 0.5),
+    "MGC": InstrumentConfig("MGC", "tradovate", "5m", 365, 120_000, 5, 10.0),
+    "MCL": InstrumentConfig("MCL", "tradovate", "5m", 365, 120_000, 5, 100.0),
+}
+
+SYMBOL_SPECS: Dict[str, SymbolSpec] = {
+    "MNQ": SymbolSpec(
+        tick_size=0.25,
+        min_stop_baseline=6.0,
+        max_stop_baseline=30.0,
+        min_stop_sniper=5.0,
+        max_stop_sniper=34.0,
+        expiry_baseline=18,
+        expiry_sniper=14,
+        touch_tol_baseline_ticks=1,
+        touch_tol_sniper_ticks=2,
+        require_cos_baseline=True,
+        require_cos_sniper=False,
+        require_internal_baseline=False,
+        require_internal_sniper=False,
+    ),
+    "MES": SymbolSpec(
+        tick_size=0.25,
+        min_stop_baseline=3.0,
+        max_stop_baseline=15.0,
+        min_stop_sniper=2.5,
+        max_stop_sniper=16.0,
+        expiry_baseline=18,
+        expiry_sniper=14,
+        touch_tol_baseline_ticks=1,
+        touch_tol_sniper_ticks=2,
+        require_cos_baseline=True,
+        require_cos_sniper=False,
+        require_internal_baseline=False,
+        require_internal_sniper=False,
+    ),
+    "MYM": SymbolSpec(
+        tick_size=1.0,
+        min_stop_baseline=20.0,
+        max_stop_baseline=120.0,
+        min_stop_sniper=15.0,
+        max_stop_sniper=140.0,
+        expiry_baseline=18,
+        expiry_sniper=14,
+        touch_tol_baseline_ticks=1,
+        touch_tol_sniper_ticks=2,
+        require_cos_baseline=True,
+        require_cos_sniper=False,
+        require_internal_baseline=False,
+        require_internal_sniper=False,
+    ),
+    "MGC": SymbolSpec(
+        tick_size=0.1,
+        min_stop_baseline=0.8,
+        max_stop_baseline=6.0,
+        min_stop_sniper=0.6,
+        max_stop_sniper=7.0,
+        expiry_baseline=18,
+        expiry_sniper=14,
+        touch_tol_baseline_ticks=1,
+        touch_tol_sniper_ticks=2,
+        require_cos_baseline=True,
+        require_cos_sniper=False,
+        require_internal_baseline=False,
+        require_internal_sniper=False,
+    ),
+    "MCL": SymbolSpec(
+        tick_size=0.01,
+        min_stop_baseline=0.05,
+        max_stop_baseline=0.60,
+        min_stop_sniper=0.04,
+        max_stop_sniper=0.80,
+        expiry_baseline=18,
+        expiry_sniper=14,
+        touch_tol_baseline_ticks=1,
+        touch_tol_sniper_ticks=2,
+        require_cos_baseline=True,
+        require_cos_sniper=False,
+        require_internal_baseline=False,
+        require_internal_sniper=False,
+    ),
+}
+
+VARIANTS: Dict[str, type] = {
+    "type2_baseline": BASE_TYPE2,
+    "type1_sniper": BASE_TYPE1,
+}
+
+OUT_TRADE_CSV = ROOT / "top_bottom_ticking_trade_log.csv"
+OUT_MONTHLY_CSV = ROOT / "top_bottom_ticking_monthly_summary.csv"
+OUT_DAILY_CSV = ROOT / "top_bottom_ticking_daily_summary.csv"
+OUT_DEBUG_CSV = ROOT / "top_bottom_ticking_debug_counts.csv"
+OUT_VARIANT_SUMMARY_CSV = ROOT / "top_bottom_ticking_variant_summary.csv"
+
+OUT_RAW_TRADE_CSV = ROOT / "top_bottom_ticking_trade_log_raw.csv"
+OUT_RAW_MONTHLY_CSV = ROOT / "top_bottom_ticking_monthly_summary_raw.csv"
+OUT_RAW_DAILY_CSV = ROOT / "top_bottom_ticking_daily_summary_raw.csv"
+OUT_RAW_VARIANT_SUMMARY_CSV = ROOT / "top_bottom_ticking_variant_summary_raw.csv"
+
+
+def to_et(ts):
+    if pd.isna(ts):
+        return ts
+    t = pd.Timestamp(ts)
+    if t.tzinfo is None:
+        t = t.tz_localize("UTC")
+    return t.tz_convert("America/New_York")
+
+
+def realized_points(row: pd.Series) -> float:
+    side = str(row.get("side", "")).upper()
+    if side == "LONG":
+        return float(row["exit_price"]) - float(row["entry_price"])
+    return float(row["entry_price"]) - float(row["exit_price"])
+
+
+def _prepare_meta(meta: pd.DataFrame, cfg: InstrumentConfig, variant_name: str) -> pd.DataFrame:
+    if meta.empty:
+        return meta
+
+    out = meta.copy()
+    out["variant"] = variant_name
+    out["symbol"] = cfg.symbol
+    out["exchange"] = cfg.exchange
+    out["timeframe"] = cfg.timeframe
+    out["report_contracts"] = cfg.contracts
+    out["dollars_per_point"] = cfg.dollars_per_point
+    out["report_account_cash"] = REPORT_ACCOUNT_CASH
+
+    out["entry_time"] = pd.to_datetime(out.get("entry_time"), errors="coerce")
+    out["exit_time"] = pd.to_datetime(out.get("exit_time"), errors="coerce")
+    out["entry_time_et"] = out["entry_time"].apply(to_et)
+    out["exit_time_et"] = out["exit_time"].apply(to_et)
+    out["entry_time_et_naive"] = (
+        pd.to_datetime(out["entry_time_et"], errors="coerce").dt.tz_localize(None)
+    )
+    out["exit_time_et_naive"] = (
+        pd.to_datetime(out["exit_time_et"], errors="coerce").dt.tz_localize(None)
+    )
+    out["exit_month_et"] = out["exit_time_et_naive"].dt.to_period("M").astype(str)
+    out["calendar_exit_date_et"] = out["exit_time_et_naive"].dt.date
+
+    out["realized_points"] = out.apply(realized_points, axis=1)
+    out["gross_pnl_dollars_dynamic"] = (
+        out["realized_points"] * cfg.dollars_per_point * cfg.contracts
+    )
+    out["gross_return_pct_on_50k"] = (
+        out["gross_pnl_dollars_dynamic"] / REPORT_ACCOUNT_CASH
+    ) * 100.0
+    return out
+
+
+def _build_strategy_class(
+    cfg: InstrumentConfig,
+    variant_name: str,
+    base_cls: type,
+) -> type:
+    spec = SYMBOL_SPECS[cfg.symbol]
+    is_sniper = variant_name == "type1_sniper"
+
+    attrs = {
+        "fixed_size": cfg.contracts,
+        "tick_size": spec.tick_size,
+        "setup_expiry_bars": spec.expiry_sniper if is_sniper else spec.expiry_baseline,
+        "limit_touch_tolerance_ticks": (
+            spec.touch_tol_sniper_ticks if is_sniper else spec.touch_tol_baseline_ticks
+        ),
+        "require_cos_confirmation": (
+            spec.require_cos_sniper if is_sniper else spec.require_cos_baseline
+        ),
+        "require_internal_sweep_filter": (
+            spec.require_internal_sniper if is_sniper else spec.require_internal_baseline
+        ),
+        "min_stop_points": (
+            spec.min_stop_sniper if is_sniper else spec.min_stop_baseline
+        ),
+        "max_stop_points": (
+            spec.max_stop_sniper if is_sniper else spec.max_stop_baseline
+        ),
+        "last_trade_log": [],
+        "last_debug_counts": {},
+    }
+    return type(f"{base_cls.__name__}_{cfg.symbol}_{variant_name}", (base_cls,), attrs)
+
+
+def run_symbol_variant(cfg: InstrumentConfig, variant_name: str, base_cls: type):
+    StrategyCls = _build_strategy_class(cfg, variant_name, base_cls)
+
+    print(f"\n=== {cfg.symbol} | {variant_name} ===")
+    print(f"Loading {cfg.symbol} {cfg.timeframe} data...")
+    df = get_ohlcv(
+        cfg.symbol,
+        exchange=cfg.exchange,
+        timeframe=cfg.timeframe,
+        days_back=cfg.days_back,
+    )
+    df = df.tail(cfg.tail_rows)
+    print(f"Loaded {len(df)} rows | start={df.index.min()} end={df.index.max()}")
+
+    bt = Backtest(
+        df,
+        StrategyCls,
+        cash=ENGINE_CASH,
+        commission=0.0,
+        exclusive_orders=True,
+        trade_on_close=False,
+    )
+    stats = bt.run()
+
+    meta = pd.DataFrame(getattr(StrategyCls, "last_trade_log", []))
+    meta = _prepare_meta(meta, cfg, variant_name)
+
+    debug = pd.DataFrame([getattr(StrategyCls, "last_debug_counts", {})])
+    if not debug.empty:
+        debug.insert(0, "variant", variant_name)
+        debug.insert(1, "symbol", cfg.symbol)
+
+    return stats, meta, debug
+
+
+def build_monthly_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    out = (
+        df.groupby(["variant", "exit_month_et", "symbol"], dropna=False)
+        .agg(
+            trades=("gross_pnl_dollars_dynamic", "size"),
+            gross_pnl_dollars=("gross_pnl_dollars_dynamic", "sum"),
+            gross_points=("realized_points", "sum"),
+            avg_trade_dollars=("gross_pnl_dollars_dynamic", "mean"),
+            avg_points_per_trade=("realized_points", "mean"),
+            gross_return_pct_on_50k=("gross_return_pct_on_50k", "sum"),
+            win_rate_pct=("gross_pnl_dollars_dynamic", lambda s: (s > 0).mean() * 100.0),
+        )
+        .reset_index()
+        .sort_values(["variant", "exit_month_et", "symbol"])
+    )
+    return out
+
+
+def build_daily_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    out = (
+        df.groupby(["variant", "calendar_exit_date_et", "symbol"], dropna=False)
+        .agg(
+            trades=("gross_pnl_dollars_dynamic", "size"),
+            gross_pnl_dollars=("gross_pnl_dollars_dynamic", "sum"),
+            gross_points=("realized_points", "sum"),
+            avg_trade_dollars=("gross_pnl_dollars_dynamic", "mean"),
+            gross_return_pct_on_50k=("gross_return_pct_on_50k", "sum"),
+            win_rate_pct=("gross_pnl_dollars_dynamic", lambda s: (s > 0).mean() * 100.0),
+        )
+        .reset_index()
+        .rename(columns={"calendar_exit_date_et": "calendar_date_et"})
+        .sort_values(["variant", "calendar_date_et", "symbol"])
+    )
+    return out
+
+
+def build_variant_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    rows = []
+    for (variant, symbol), grp in df.groupby(["variant", "symbol"], dropna=False):
+        pnl = grp["gross_pnl_dollars_dynamic"]
+        gross_profit = pnl[pnl > 0].sum()
+        gross_loss = abs(pnl[pnl < 0].sum())
+        rows.append(
+            {
+                "variant": variant,
+                "symbol": symbol,
+                "trades": int(len(grp)),
+                "gross_pnl_dollars": float(pnl.sum()),
+                "gross_return_pct_on_50k": float(grp["gross_return_pct_on_50k"].sum()),
+                "gross_points": float(grp["realized_points"].sum()),
+                "avg_trade_dollars": float(pnl.mean()),
+                "median_trade_dollars": float(pnl.median()),
+                "wins": int((pnl > 0).sum()),
+                "losses": int((pnl < 0).sum()),
+                "breakeven": int((pnl == 0).sum()),
+                "best_trade_dollars": float(pnl.max()),
+                "worst_trade_dollars": float(pnl.min()),
+                "win_rate_pct": float((pnl > 0).mean() * 100.0),
+                "profit_factor": (gross_profit / gross_loss) if gross_loss > 0 else np.nan,
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values(["variant", "symbol"]).reset_index(drop=True)
+
+
+def run_all_symbols(symbols: List[str] | None = None, variants: List[str] | None = None):
+    selected_symbols = symbols or list(INSTRUMENTS.keys())
+    selected_variants = variants or list(VARIANTS.keys())
+
+    all_meta: List[pd.DataFrame] = []
+    all_debug: List[pd.DataFrame] = []
+    stats_by_variant_symbol: Dict[Tuple[str, str], object] = {}
+
+    for sym in selected_symbols:
+        cfg = INSTRUMENTS[sym]
+        for variant_name in selected_variants:
+            base_cls = VARIANTS[variant_name]
+            stats, meta, debug = run_symbol_variant(cfg, variant_name, base_cls)
+            stats_by_variant_symbol[(variant_name, sym)] = stats
+            if not meta.empty:
+                all_meta.append(meta)
+            if not debug.empty:
+                all_debug.append(debug)
+
+    combined = pd.concat(all_meta, ignore_index=True) if all_meta else pd.DataFrame()
+    debug_df = pd.concat(all_debug, ignore_index=True) if all_debug else pd.DataFrame()
+    return stats_by_variant_symbol, combined, debug_df
+
+
+def apply_combined_account_filter(
+    raw_df: pd.DataFrame,
+    debug_df: pd.DataFrame,
+    starting_balance: float = REPORT_ACCOUNT_CASH,
+    daily_loss_limit: float = APEX_DAILY_LOSS_LIMIT,
+    max_consecutive_losses_per_day: int = APEX_MAX_CONSECUTIVE_LOSSES_PER_DAY,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    if raw_df.empty:
+        return raw_df.copy(), debug_df.copy(), {
+            "starting_balance": starting_balance,
+            "ending_balance": starting_balance,
+            "raw_pnl": 0.0,
+            "filtered_pnl": 0.0,
+            "delta_filtered_minus_raw": 0.0,
+            "rejected_trades": 0,
+            "rejected_daily_loss": 0,
+            "rejected_consecutive_losses": 0,
+        }
+
+    combined = raw_df.copy()
+    sort_cols = ["exit_time_et_naive", "entry_time_et_naive", "variant", "symbol"]
+    combined = combined.sort_values(sort_cols).reset_index(drop=True)
+
+    account = ApexAccount(
+        starting_balance=starting_balance,
+        daily_loss_limit=daily_loss_limit,
+        max_consecutive_losses_per_day=max_consecutive_losses_per_day,
+    )
+
+    kept_flags: List[bool] = []
+    reject_daily_flags: List[bool] = []
+    reject_consecutive_flags: List[bool] = []
+
+    for _, row in combined.iterrows():
+        trade_day = row["calendar_exit_date_et"]
+        pnl = float(row["gross_pnl_dollars_dynamic"])
+
+        account.check_day_roll(trade_day)
+        keep, reason = account.can_keep_trade()
+
+        if keep:
+            account.apply_trade(pnl)
+            kept_flags.append(True)
+            reject_daily_flags.append(False)
+            reject_consecutive_flags.append(False)
+        else:
+            kept_flags.append(False)
+            reject_daily_flags.append(reason == "daily_loss")
+            reject_consecutive_flags.append(reason == "consecutive_losses")
+
+    combined["apex_trade_kept"] = kept_flags
+    combined["apex_reject_daily_loss"] = reject_daily_flags
+    combined["apex_reject_consecutive_losses"] = reject_consecutive_flags
+
+    filtered = combined[combined["apex_trade_kept"]].copy().reset_index(drop=True)
+
+    debug_out = debug_df.copy()
+    if not debug_out.empty:
+        debug_out["apex_kept_trades"] = 0
+        debug_out["apex_rejected_trades"] = 0
+        debug_out["apex_reject_daily_loss"] = 0
+        debug_out["apex_reject_consecutive_losses"] = 0
+        debug_out["apex_final_balance"] = float(account.balance)
+
+        for idx, row in debug_out.iterrows():
+            mask = (
+                (combined["variant"] == row["variant"])
+                & (combined["symbol"] == row["symbol"])
+            )
+            sub = combined.loc[mask]
+            debug_out.at[idx, "apex_kept_trades"] = int(sub["apex_trade_kept"].sum())
+            debug_out.at[idx, "apex_rejected_trades"] = int((~sub["apex_trade_kept"]).sum())
+            debug_out.at[idx, "apex_reject_daily_loss"] = int(sub["apex_reject_daily_loss"].sum())
+            debug_out.at[idx, "apex_reject_consecutive_losses"] = int(
+                sub["apex_reject_consecutive_losses"].sum()
+            )
+
+    raw_pnl = float(combined["gross_pnl_dollars_dynamic"].sum())
+    filtered_pnl = float(filtered["gross_pnl_dollars_dynamic"].sum())
+
+    summary = {
+        "starting_balance": float(starting_balance),
+        "ending_balance": float(account.balance),
+        "raw_pnl": raw_pnl,
+        "filtered_pnl": filtered_pnl,
+        "delta_filtered_minus_raw": filtered_pnl - raw_pnl,
+        "rejected_trades": int(account.rejected_total),
+        "rejected_daily_loss": int(account.rejected_daily_loss),
+        "rejected_consecutive_losses": int(account.rejected_consecutive_losses),
+    }
+    return filtered, debug_out, summary
+
+
+def print_normalized_summary(df: pd.DataFrame) -> None:
+    if df.empty:
+        print("No trades.")
+        return
+
+    grouped = df.groupby(["variant", "symbol"], dropna=False)
+    for (variant, symbol), grp in grouped:
+        pnl = grp["gross_pnl_dollars_dynamic"]
+        wins = pnl[pnl > 0]
+        losses = pnl[pnl < 0]
+        gross_profit = wins.sum() if not wins.empty else 0.0
+        gross_loss = abs(losses.sum()) if not losses.empty else 0.0
+        pf = gross_profit / gross_loss if gross_loss > 0 else np.nan
+
+        print(f"\n--- {variant} | {symbol} normalized summary ---")
+        print(f"Trades:            {len(grp)}")
+        print(f"PnL [$]:           {pnl.sum():.2f}")
+        print(f"Return on 50k [%]: {(pnl.sum() / REPORT_ACCOUNT_CASH) * 100.0:.2f}")
+        print(f"Win Rate [%]:      {(pnl > 0).mean() * 100.0:.2f}")
+        print(
+            f"Profit Factor:     {pf:.2f}"
+            if not np.isnan(pf)
+            else "Profit Factor:     NaN"
+        )
+        print(f"Avg Trade [$]:     {pnl.mean():.2f}")
+
+
+if __name__ == "__main__":
+    stats_by_variant_symbol, combined_raw, debug_raw = run_all_symbols(
+        ["MNQ", "MES", "MYM", "MGC", "MCL"],
+        ["type2_baseline", "type1_sniper"],
+    )
+
+    if not combined_raw.empty:
+        combined_raw.to_csv(OUT_RAW_TRADE_CSV, index=False)
+        build_monthly_summary(combined_raw).to_csv(OUT_RAW_MONTHLY_CSV, index=False)
+        build_daily_summary(combined_raw).to_csv(OUT_RAW_DAILY_CSV, index=False)
+        build_variant_summary(combined_raw).to_csv(OUT_RAW_VARIANT_SUMMARY_CSV, index=False)
+
+    combined_filtered, debug_df, apex_summary = apply_combined_account_filter(
+        combined_raw,
+        debug_raw,
+        starting_balance=REPORT_ACCOUNT_CASH,
+        daily_loss_limit=APEX_DAILY_LOSS_LIMIT,
+        max_consecutive_losses_per_day=APEX_MAX_CONSECUTIVE_LOSSES_PER_DAY,
+    )
+
+    if not combined_filtered.empty:
+        combined_filtered.to_csv(OUT_TRADE_CSV, index=False)
+        build_monthly_summary(combined_filtered).to_csv(OUT_MONTHLY_CSV, index=False)
+        build_daily_summary(combined_filtered).to_csv(OUT_DAILY_CSV, index=False)
+        build_variant_summary(combined_filtered).to_csv(OUT_VARIANT_SUMMARY_CSV, index=False)
+        print(f"Saved trades -> {OUT_TRADE_CSV}")
+        print(f"Saved monthly -> {OUT_MONTHLY_CSV}")
+        print(f"Saved daily -> {OUT_DAILY_CSV}")
+        print(f"Saved variant summary -> {OUT_VARIANT_SUMMARY_CSV}")
+        print(f"Saved raw trades -> {OUT_RAW_TRADE_CSV}")
+        print(f"Saved raw monthly -> {OUT_RAW_MONTHLY_CSV}")
+        print(f"Saved raw daily -> {OUT_RAW_DAILY_CSV}")
+        print(f"Saved raw variant summary -> {OUT_RAW_VARIANT_SUMMARY_CSV}")
+    else:
+        print("No trades produced.")
+
+    if not debug_df.empty:
+        debug_df.to_csv(OUT_DEBUG_CSV, index=False)
+        print(f"Saved debug -> {OUT_DEBUG_CSV}")
+        print("\n--- DEBUG COUNTS ---")
+        print(debug_df.T)
+
+    print(
+        f"\nNOTE: engine_cash={ENGINE_CASH:,.0f} is used only to let backtesting.py "
+        "fill expensive futures."
+    )
+    print(
+        f"NOTE: custom dollar reporting and return % are normalized to "
+        f"report_account_cash={REPORT_ACCOUNT_CASH:,.0f}."
+    )
+    print(
+        "NOTE: Combined account filter uses DAILY LOSS ONLY plus a SAME-DAY "
+        "CONSECUTIVE-LOSS breaker across all symbols/variants."
+    )
+    print(
+        f"NOTE: Raw normalized realized PnL before filter: "
+        f"${apex_summary['raw_pnl']:.2f}"
+    )
+    print(
+        f"NOTE: Filtered normalized realized PnL after filter: "
+        f"${apex_summary['filtered_pnl']:.2f}"
+    )
+    print(
+        f"NOTE: Filter delta (filtered - raw): "
+        f"${apex_summary['delta_filtered_minus_raw']:.2f}"
+    )
+    print(
+        f"NOTE: Combined account ending balance: "
+        f"${apex_summary['ending_balance']:.2f}"
+    )
+    print(
+        f"NOTE: Combined account rejected trades: "
+        f"{apex_summary['rejected_trades']}"
+    )
+    print(
+        f"NOTE: Rejected by daily-loss lock: "
+        f"{apex_summary['rejected_daily_loss']}"
+    )
+    print(
+        f"NOTE: Rejected by consecutive-loss breaker: "
+        f"{apex_summary['rejected_consecutive_losses']}"
+    )
+    print(
+        f"NOTE: Max consecutive losses allowed per day: "
+        f"{APEX_MAX_CONSECUTIVE_LOSSES_PER_DAY}"
+    )
+
+    print_normalized_summary(combined_filtered)
+
+    for (variant_name, sym), stats in stats_by_variant_symbol.items():
+        diag = pd.Series(
+            {
+                "# Trades": stats.get("# Trades", np.nan),
+                "Win Rate [%]": stats.get("Win Rate [%]", np.nan),
+                "Profit Factor": stats.get("Profit Factor", np.nan),
+                "Sharpe Ratio": stats.get("Sharpe Ratio", np.nan),
+                "Max. Drawdown [%]": stats.get("Max. Drawdown [%]", np.nan),
+            }
+        )
+        print(f"\n--- {variant_name} | {sym} engine diagnostics ---")
+        print(diag)
+        print("NOTE: Engine stats use ENGINE_CASH for fill mechanics only.")

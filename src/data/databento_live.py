@@ -116,6 +116,7 @@ class DatabentoLiveOHLCVService:
 
         self._mapping_debug_seen: set[tuple[int, str]] = set()
         self._mcl_debug_count = 0
+        self._mgc_bad_debug_count = 0
 
     @property
     def is_running(self) -> bool:
@@ -254,6 +255,25 @@ class DatabentoLiveOHLCVService:
 
         return None
 
+
+    def _row_is_obviously_bad(self, root: str, o: float, h: float, l: float, c: float) -> bool:
+        values = (o, h, l, c)
+        if any(pd.isna(v) for v in values):
+            return True
+        if any(v <= 0 for v in values):
+            return True
+
+        scaled = (o / PRICE_SCALE, h / PRICE_SCALE, l / PRICE_SCALE, c / PRICE_SCALE)
+
+        # MGC is currently the only feed that is repeatedly arriving with poisoned
+        # zero/invalid OHLC packets in live mode. Drop those packets at source so
+        # they never make it into the in-memory live bar store.
+        if root == "MGC":
+            if min(scaled) < 500.0 or max(scaled) > 10000.0:
+                return True
+
+        return False
+
     def _handle_ohlcv_record(self, record) -> None:
         root = self._resolve_record_symbol(record)
         if root is None:
@@ -267,6 +287,17 @@ class DatabentoLiveOHLCVService:
         raw_high = float(getattr(record, "high"))
         raw_low = float(getattr(record, "low"))
         raw_close = float(getattr(record, "close"))
+
+        if self._row_is_obviously_bad(root, raw_open, raw_high, raw_low, raw_close):
+            if root == "MGC" and self._mgc_bad_debug_count < 10:
+                self._mgc_bad_debug_count += 1
+                print(
+                    "[databento_live] dropping poisoned MGC row | "
+                    f"ts={ts.isoformat()} | raw_open={raw_open} raw_high={raw_high} "
+                    f"raw_low={raw_low} raw_close={raw_close} | "
+                    f"scaled_close={raw_close / PRICE_SCALE}"
+                )
+            return
 
         row = pd.DataFrame(
             [{

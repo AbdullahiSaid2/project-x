@@ -5,24 +5,40 @@
     "mode": "live",
     "prop_profile": "apex_pa_50k",
     "live_orders_enabled": true,
-    "cycle_time_et": "2026-04-16T22:15:19.991904-04:00",
+    "cycle_time_et": "2026-04-18T16:13:30.239114-04:00",
     "signals_seen": 0,
     "orders_sent": 0,
     "blocked_by_session": 0,
-    "session_reason": "session_open",
-    "session_key": "2026-04-17",
-    "market_open": true,
-    "force_flat_result": null,
+    "session_reason": "weekend_closed",
+    "session_key": "2026-04-18",
+    "market_open": false,
+    "force_flat_result": {
+      "ok": true,
+      "mode": "live",
+      "action_type": "trade_closed",
+      "signal_id": "force_flat_2026-04-18",
+      "symbol": "NQ",
+      "logged_at_et": "2026-04-18T16:13:18.433820-04:00",
+      "response": {
+        "res": "Successfully send",
+        "error": false
+      }
+    },
     "data_source_mode": "databento",
-    "next_sleep_seconds": 20
+    "next_sleep_seconds": 60
   },
-  "last_force_flat_key": "2026-04-16",
+  "last_force_flat_key": "2026-04-18",
   "last_force_flat_result": {
     "ok": true,
-    "simulated": true,
-    "live_orders_enabled": false,
-    "reason": "force_flat_force_flat_window_simulated_only",
-    "session_key": "2026-04-16"
+    "mode": "live",
+    "action_type": "trade_closed",
+    "signal_id": "force_flat_2026-04-18",
+    "symbol": "NQ",
+    "logged_at_et": "2026-04-18T16:13:18.433820-04:00",
+    "response": {
+      "res": "Successfully send",
+      "error": false
+    }
   },
   "unsupported_actions": [],
   "orders_sent": 0

@@ -471,6 +471,20 @@ td { padding: .6rem 1rem; vertical-align: middle; }
 
   <!-- Sidebar -->
   <div class="sidebar">
+
+    <div style="padding:0 .9rem .8rem .9rem">
+      <div style="font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase;margin:0 0 .35rem 0">Folders</div>
+      <select id="folder-jump" onchange="jumpFolder(this.value)" style="width:100%">
+        <option value="">Jump to section…</option>
+        <option value="connections">Connections</option>
+        <option value="deployments">Deploy</option>
+        <option value="controls">Controls</option>
+        <option value="vault">Research / Vault</option>
+        <option value="backtest">Backtests</option>
+      </select>
+    </div>
+
+    <div style="padding:.15rem 1.2rem .45rem 1.2rem;font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase">Core</div>
     <div class="nav-item active" onclick="switchPanel('backtest')">
       <span>📊</span> Backtests
       <span class="nav-count" id="n-backtest">0</span>
@@ -556,8 +570,22 @@ td { padding: .6rem 1rem; vertical-align: middle; }
       <span class="nav-count" id="n-llm_status">0</span>
     </div>
 
+
     <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
 
+    <div style="padding:.15rem 1.2rem .45rem 1.2rem;font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase">Deploy</div>
+    <div class="nav-item" onclick="switchPanel('connections')">
+      <span>🔌</span> Connections
+      <span class="nav-count" id="n-connections">2</span>
+    </div>
+    <div class="nav-item" onclick="switchPanel('deployments')">
+      <span>🚀</span> Deployments
+      <span class="nav-count" id="n-deployments">2</span>
+    </div>
+
+    <div style="height:1px;background:var(--border2);margin:.5rem 0"></div>
+
+    <div style="padding:.15rem 1.2rem .45rem 1.2rem;font-size:.58rem;letter-spacing:.1em;color:var(--muted2);text-transform:uppercase">Operations</div>
     <div class="nav-item" onclick="switchPanel('controls')" style="color:var(--green)">
       <span>🎮</span> Controls
       <span class="nav-count" id="n-running" style="background:var(--green-dim);color:var(--green)">0</span>
@@ -919,7 +947,35 @@ td { padding: .6rem 1rem; vertical-align: middle; }
     </div>
 
 
+
+    <!-- ══ CONNECTIONS PANEL ══ -->
+    <div class="panel" id="panel-connections">
+      <div class="panel-header">
+        <div class="panel-title">🔌 LIVE CONNECTIONS</div>
+        <div class="panel-meta">Updated <span id="age-connections">—</span></div>
+      </div>
+      <div style="padding:1.2rem 1.5rem">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem" id="connections-grid">
+          <div class="empty"><span class="empty-icon">🔌</span>Loading connection status...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DEPLOYMENTS PANEL ══ -->
+    <div class="panel" id="panel-deployments">
+      <div class="panel-header">
+        <div class="panel-title">🚀 DEPLOYED STRATEGIES</div>
+        <div class="panel-meta">ICT Fractal + Top Bottom Ticking</div>
+      </div>
+      <div style="padding:1.2rem 1.5rem">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem" id="deployments-grid">
+          <div class="empty"><span class="empty-icon">🚀</span>Loading deployments...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ CONTROLS PANEL ══ -->
+
     <div class="panel" id="panel-controls">
       <div class="panel-header">
         <div class="panel-title">🎮 AGENT CONTROLS</div>
@@ -2428,6 +2484,150 @@ async function loadApexTrades() {
     );
   } catch(e) {}
 }
+
+
+function jumpFolder(value) {
+  if (!value) return;
+  const map = {
+    connections: 'connections',
+    deployments: 'deployments',
+    controls: 'controls',
+    vault: 'vault',
+    backtest: 'backtest',
+  };
+  const panel = map[value];
+  if (!panel) return;
+  const nav = Array.from(document.querySelectorAll('.nav-item')).find(el => {
+    const txt = (el.textContent || '').toLowerCase();
+    return txt.includes(panel === 'vault' ? 'vault' : panel);
+  });
+  if (nav) nav.click();
+}
+
+function statusBadge(status) {
+  if (status === 'up' || status === 'running') return 'badge-g';
+  if (status === 'down' || status === 'stopped') return 'badge-r';
+  return 'badge-y';
+}
+
+async function loadConnections() {
+  try {
+    const data = await fetch('/api/health/connections').then(r => r.json());
+    const grid = document.getElementById('connections-grid');
+    const age = document.getElementById('age-connections');
+    const count = document.getElementById('n-connections');
+    if (count) count.textContent = (data.checks || []).length;
+    if (age) age.textContent = new Date().toLocaleTimeString();
+    if (!grid) return;
+    const checks = data.checks || [];
+    if (!checks.length) {
+      grid.innerHTML = '<div class="empty"><span class="empty-icon">🔌</span>No connection checks available.</div>';
+      return;
+    }
+    grid.innerHTML = checks.map(c => `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem">
+        <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start">
+          <div>
+            <div style="font-family:'Chakra Petch',sans-serif;font-size:1rem;font-weight:700">${c.label}</div>
+            <div style="font-size:.68rem;color:var(--muted2);margin-top:.25rem">${c.service}</div>
+          </div>
+          <span class="badge ${statusBadge(c.status)}">${(c.status || '—').toUpperCase()}</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--text);margin-top:.85rem;line-height:1.8">${c.message || '—'}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    const grid = document.getElementById('connections-grid');
+    if (grid) grid.innerHTML = '<div class="empty"><span class="empty-icon">🔌</span>Failed to load connection status.</div>';
+  }
+}
+
+async function runDeployment(key) {
+  try {
+    const res = await fetch('/api/deployments/run/' + key, {method:'POST'});
+    const data = await res.json();
+    if (data.error) {
+      showToast('❌ ' + data.error, 'error');
+      return;
+    }
+    showToast('🚀 Started ' + key);
+    loadDeployments();
+    updateControlStatus();
+  } catch (e) {
+    showToast('❌ Failed to start ' + key, 'error');
+  }
+}
+
+async function stopDeployment(key) {
+  try {
+    const res = await fetch('/api/deployments/stop/' + key, {method:'POST'});
+    const data = await res.json();
+    if (data.error) {
+      showToast('❌ ' + data.error, 'error');
+      return;
+    }
+    showToast('⏹ Stopped ' + key);
+    loadDeployments();
+    updateControlStatus();
+  } catch (e) {
+    showToast('❌ Failed to stop ' + key, 'error');
+  }
+}
+
+async function loadDeployments() {
+  try {
+    const data = await fetch('/api/deployments').then(r => r.json());
+    const grid = document.getElementById('deployments-grid');
+    const count = document.getElementById('n-deployments');
+    if (count) count.textContent = data.count || 0;
+    if (!grid) return;
+    const rows = data.rows || [];
+    if (!rows.length) {
+      grid.innerHTML = '<div class="empty"><span class="empty-icon">🚀</span>No deployments configured.</div>';
+      return;
+    }
+    grid.innerHTML = rows.map(r => `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem">
+        <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start">
+          <div>
+            <div style="font-family:'Chakra Petch',sans-serif;font-size:1rem;font-weight:700">${r.name}</div>
+            <div style="font-size:.68rem;color:var(--muted2);margin-top:.25rem">${r.folder}</div>
+          </div>
+          <span class="badge ${statusBadge(r.status)}">${(r.status || '—').toUpperCase()}</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.9rem">
+          <div style="background:var(--surface);border-radius:8px;padding:.7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Folder</div>
+            <div style="font-size:.78rem;margin-top:.2rem;color:${r.folder_exists ? 'var(--green)' : 'var(--red)'}">${r.folder_exists ? 'FOUND' : 'MISSING'}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:.7rem">
+            <div style="font-size:.55rem;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase">Entry</div>
+            <div style="font-size:.78rem;margin-top:.2rem;color:${r.entry_exists ? 'var(--green)' : 'var(--red)'}">${r.entry_exists ? 'READY' : 'MISSING'}</div>
+          </div>
+        </div>
+
+        <div style="font-size:.68rem;color:var(--muted2);margin-top:.85rem;line-height:1.8">
+          Entry: <span style="color:var(--text)">${r.entry}</span><br/>
+          Last modified: <span style="color:var(--text)">${r.last_modified}</span>
+        </div>
+
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+          <button class="ctrl-btn" onclick="runDeployment('${r.key}')">▶ Run</button>
+          <button class="ctrl-stop" onclick="stopDeployment('${r.key}')">⏹ Stop</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    const grid = document.getElementById('deployments-grid');
+    if (grid) grid.innerHTML = '<div class="empty"><span class="empty-icon">🚀</span>Failed to load deployments.</div>';
+  }
+}
+
+loadConnections();
+setInterval(loadConnections, 15000);
+loadDeployments();
+setInterval(loadDeployments, 10000);
 
 </script>
 </body>
