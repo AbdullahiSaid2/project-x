@@ -15,7 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-DEFAULT_TICK_SIZE = 0.25
+TICK_SIZE = 0.25
 FORCE_FLAT_HOUR_ET = 16
 FORCE_FLAT_MINUTE_ET = 50
 GLOBEX_REOPEN_HOUR_ET = 18
@@ -54,7 +54,27 @@ def _session_date_for_et(ts: pd.Series) -> pd.Series:
 
 
 
-def build_model_frame(df: pd.DataFrame, tick_size: float = DEFAULT_TICK_SIZE) -> pd.DataFrame:
+def _session_block_for_et(ts: pd.Series) -> pd.Series:
+    """
+    Label the major session blocks inside a single CME futures session.
+
+    The strategy idea is not "Asia-only". We want external liquidity to be able
+    to come from any already-completed major session block in the same futures
+    session, while still allowing prior full-session highs/lows as external
+    references.
+    """
+    hhmm = (ts.dt.hour * 100) + ts.dt.minute
+    block = pd.Series("other", index=ts.index, dtype="object")
+    block[(hhmm >= 1800) & (hhmm <= 2359)] = "asia"
+    block[(hhmm >= 0) & (hhmm < 600)] = "london"
+    block[(hhmm >= 600) & (hhmm < 830)] = "pre_ny"
+    block[(hhmm >= 830) & (hhmm < 1200)] = "ny_am"
+    block[(hhmm >= 1200) & (hhmm <= 1650)] = "ny_pm"
+    return block
+
+
+
+def build_model_frame(df: pd.DataFrame) -> pd.DataFrame:
     m = df.copy()
     m.columns = [c.capitalize() for c in m.columns]
     et = _to_et(pd.DatetimeIndex(m.index))
@@ -73,18 +93,39 @@ def build_model_frame(df: pd.DataFrame, tick_size: float = DEFAULT_TICK_SIZE) ->
     )
     m = m.join(session_summary, on="session_date")
 
-    # Asia window proxy: 18:00-23:59 ET of the same futures session.
-    asia_rows = m[m["et_hour"] >= 18]
-    asia_summary = (
-        asia_rows.groupby("session_date")
-        .agg(asia_high=("High", "max"), asia_low=("Low", "min"))
-        .rename(columns={"asia_high": "asia_high", "asia_low": "asia_low"})
-    )
-    m = m.join(asia_summary, on="session_date")
+    # Major intra-session blocks. We intentionally support more than Asia here,
+    # because the model idea is to work with sweeps from any meaningful session,
+    # not just Asia.
+    m["session_block"] = _session_block_for_et(pd.Series(et, index=m.index))
+    block_rank_map = {"asia": 1, "london": 2, "pre_ny": 3, "ny_am": 4, "ny_pm": 5, "other": 6}
+    m["session_block_rank"] = m["session_block"].map(block_rank_map).fillna(6).astype(int)
 
-    # Candidate external levels.
-    m["external_buyside"] = m[["prior_session_high", "asia_high"]].max(axis=1, skipna=True)
-    m["external_sellside"] = m[["prior_session_low", "asia_low"]].min(axis=1, skipna=True)
+    def _join_block_summary(frame: pd.DataFrame, block_name: str) -> pd.DataFrame:
+        block_rows = frame[frame["session_block"] == block_name]
+        if block_rows.empty:
+            frame[f"{block_name}_high"] = np.nan
+            frame[f"{block_name}_low"] = np.nan
+            return frame
+        block_summary = (
+            block_rows.groupby("session_date")
+            .agg(**{f"{block_name}_high": ("High", "max"), f"{block_name}_low": ("Low", "min")})
+        )
+        return frame.join(block_summary, on="session_date")
+
+    for _block_name in ("asia", "london", "pre_ny", "ny_am", "ny_pm"):
+        m = _join_block_summary(m, _block_name)
+
+    # Candidate external levels come from prior full session plus any already-
+    # completed major session blocks inside the current futures session.
+    candidate_buyside = [m["prior_session_high"]]
+    candidate_sellside = [m["prior_session_low"]]
+    for _block_name, _rank in (("asia", 1), ("london", 2), ("pre_ny", 3), ("ny_am", 4), ("ny_pm", 5)):
+        eligible = m["session_block_rank"] > _rank
+        candidate_buyside.append(m[f"{_block_name}_high"].where(eligible, np.nan))
+        candidate_sellside.append(m[f"{_block_name}_low"].where(eligible, np.nan))
+
+    m["external_buyside"] = pd.concat(candidate_buyside, axis=1).max(axis=1, skipna=True)
+    m["external_sellside"] = pd.concat(candidate_sellside, axis=1).min(axis=1, skipna=True)
 
     # 15m context markers derived from the 5m stream.
     res = (
@@ -119,17 +160,17 @@ def build_model_frame(df: pd.DataFrame, tick_size: float = DEFAULT_TICK_SIZE) ->
 
     m["sweep_short"] = (
         pd.notna(m["external_buyside"])
-        & (m["High"] >= m["external_buyside"] + tick_size)
+        & (m["High"] >= m["external_buyside"] + TICK_SIZE)
         & (m["Close"] <= m["external_buyside"])
     )
     m["sweep_long"] = (
         pd.notna(m["external_sellside"])
-        & (m["Low"] <= m["external_sellside"] - tick_size)
+        & (m["Low"] <= m["external_sellside"] - TICK_SIZE)
         & (m["Close"] >= m["external_sellside"])
     )
 
-    m["internal_sweep_short"] = m["High"] >= (m["recent_high_6"] + tick_size)
-    m["internal_sweep_long"] = m["Low"] <= (m["recent_low_6"] - tick_size)
+    m["internal_sweep_short"] = m["High"] >= (m["recent_high_6"] + TICK_SIZE)
+    m["internal_sweep_long"] = m["Low"] <= (m["recent_low_6"] - TICK_SIZE)
 
     # Simple change-of-structure proxies.
     m["cos_short"] = m["Close"] < m["recent_low_6"]
@@ -146,12 +187,7 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
     limit_touch_tolerance_ticks = 1
     require_cos_confirmation = True
     require_internal_sweep_filter = False
-    symbol_name = "UNKNOWN"
-    tick_size = DEFAULT_TICK_SIZE
-    min_sweep_points = DEFAULT_TICK_SIZE
-    retest_tolerance_points = DEFAULT_TICK_SIZE
-    stop_buffer_points = DEFAULT_TICK_SIZE
-    max_zone_width_points = np.inf
+    tick_size = TICK_SIZE
 
     # Apex-style single-entry, bracketed position, 5 micros, no adds.
     partial_1_fraction = 2 / 5
@@ -171,7 +207,7 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
     last_debug_counts: dict = {}
 
     def init(self):
-        self.m = build_model_frame(self.data.df.copy(), tick_size=float(self.tick_size))
+        self.m = build_model_frame(self.data.df.copy())
         self.pending = PendingSetup()
         self.partial1_taken = False
         self.partial2_taken = False
@@ -192,16 +228,6 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
             "forced_flat": 0,
             "expired_pending": 0,
             "blocked_internal_filter": 0,
-            "reject_short_sweep_too_small": 0,
-            "reject_long_sweep_too_small": 0,
-            "reject_short_zone_too_wide": 0,
-            "reject_long_zone_too_wide": 0,
-            "reject_short_stop_out_of_bounds": 0,
-            "reject_long_stop_out_of_bounds": 0,
-            "reject_short_confirmation_missing": 0,
-            "reject_long_confirmation_missing": 0,
-            "pending_short_not_touched": 0,
-            "pending_long_not_touched": 0,
         }
         self.__class__.last_trade_log = []
         self.__class__.last_debug_counts = {}
@@ -283,61 +309,25 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
             self.open_trade_meta = None
         self.prev_closed_count = len(closed)
 
-    def _count(self, key: str):
-        self.debug_counts[key] = self.debug_counts.get(key, 0) + 1
-        self._sync_debug()
+    def _arm_short_from_sweep(self, row: pd.Series, i: int):
+        if self.require_internal_sweep_filter and not bool(row.get("internal_sweep_short", False)):
+            self.debug_counts["blocked_internal_filter"] += 1
+            self._sync_debug()
+            return
 
-    def _short_sweep_distance(self, row: pd.Series) -> float:
-        ext = row.get("external_buyside", np.nan)
-        if pd.isna(ext):
-            return 0.0
-        return max(0.0, float(row["High"]) - float(ext))
-
-    def _long_sweep_distance(self, row: pd.Series) -> float:
-        ext = row.get("external_sellside", np.nan)
-        if pd.isna(ext):
-            return 0.0
-        return max(0.0, float(ext) - float(row["Low"]))
-
-    def _short_zone(self, row: pd.Series) -> tuple[float, float, float, float]:
+        # Rejection block proxy: use the sweep candle range/body as the first-pass zone.
         zone_high = float(row["High"])
         zone_low = min(float(row["Open"]), float(row["Close"]))
         entry_ce = (zone_high + zone_low) / 2.0
-        zone_width = zone_high - zone_low
-        return zone_high, zone_low, entry_ce, zone_width
-
-    def _long_zone(self, row: pd.Series) -> tuple[float, float, float, float]:
-        zone_low = float(row["Low"])
-        zone_high = max(float(row["Open"]), float(row["Close"]))
-        entry_ce = (zone_high + zone_low) / 2.0
-        zone_width = zone_high - zone_low
-        return zone_low, zone_high, entry_ce, zone_width
-
-    def _arm_short_from_sweep(self, row: pd.Series, i: int):
-        if self.require_internal_sweep_filter and not bool(row.get("internal_sweep_short", False)):
-            self._count("blocked_internal_filter")
-            return
-
-        sweep_distance = self._short_sweep_distance(row)
-        if sweep_distance < float(self.min_sweep_points):
-            self._count("reject_short_sweep_too_small")
-            return
-
-        zone_high, zone_low, entry_ce, zone_width = self._short_zone(row)
-        if zone_width > float(self.max_zone_width_points):
-            self._count("reject_short_zone_too_wide")
-            return
-
-        stop = zone_high + float(self.stop_buffer_points)
+        stop = zone_high + self.tick_size
         risk = stop - entry_ce
-        if risk < float(self.min_stop_points) or risk > float(self.max_stop_points):
-            self._count("reject_short_stop_out_of_bounds")
+        if risk < self.min_stop_points or risk > self.max_stop_points:
             return
 
         self.pending = PendingSetup(
             direction="short",
             created_bar=i,
-            expiry_bar=i + int(self.setup_expiry_bars),
+            expiry_bar=i + self.setup_expiry_bars,
             entry_ce=entry_ce,
             zone_high=zone_high,
             zone_low=zone_low,
@@ -350,48 +340,10 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
             entry_variant="CE_LIMIT" if not self.require_cos_confirmation else "CE_PLUS_COS",
             internal_sweep=bool(row.get("internal_sweep_short", False)),
         )
-        self._count("pending_short_armed")
+        self.debug_counts["pending_short_armed"] += 1
+        self._sync_debug()
 
     def _arm_long_from_sweep(self, row: pd.Series, i: int):
-        if self.require_internal_sweep_filter and not bool(row.get("internal_sweep_long", False)):
-            self._count("blocked_internal_filter")
-            return
-
-        sweep_distance = self._long_sweep_distance(row)
-        if sweep_distance < float(self.min_sweep_points):
-            self._count("reject_long_sweep_too_small")
-            return
-
-        zone_low, zone_high, entry_ce, zone_width = self._long_zone(row)
-        if zone_width > float(self.max_zone_width_points):
-            self._count("reject_long_zone_too_wide")
-            return
-
-        stop = zone_low - float(self.stop_buffer_points)
-        risk = entry_ce - stop
-        if risk < float(self.min_stop_points) or risk > float(self.max_stop_points):
-            self._count("reject_long_stop_out_of_bounds")
-            return
-
-        self.pending = PendingSetup(
-            direction="long",
-            created_bar=i,
-            expiry_bar=i + int(self.setup_expiry_bars),
-            entry_ce=entry_ce,
-            zone_high=zone_high,
-            zone_low=zone_low,
-            stop_price=stop,
-            target1=entry_ce + (risk * self.target1_r),
-            target2=entry_ce + (risk * self.target2_r),
-            target3=entry_ce + (risk * self.target3_r),
-            external_level=float(row.get("external_sellside", np.nan)),
-            setup_type="TYPE2_LONG_BOTTOM_TICK",
-            entry_variant="CE_LIMIT" if not self.require_cos_confirmation else "CE_PLUS_COS",
-            internal_sweep=bool(row.get("internal_sweep_long", False)),
-        )
-        self._count("pending_long_armed")
-
-    def _pending_short_ready(self, row: pd.Series, i: int):
         if self.require_internal_sweep_filter and not bool(row.get("internal_sweep_long", False)):
             self.debug_counts["blocked_internal_filter"] += 1
             self._sync_debug()
@@ -425,45 +377,29 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
         self._sync_debug()
 
     def _pending_short_ready(self, row: pd.Series) -> bool:
-        touched = float(row["High"]) >= (self.pending.entry_ce - float(self.retest_tolerance_points))
+        touched = float(row["High"]) >= (self.pending.entry_ce - (self.tick_size * self.limit_touch_tolerance_ticks))
         if not touched:
-            self._count("pending_short_not_touched")
             return False
         if self.require_cos_confirmation:
-            ready = bool(row.get("cos_short", False)) and float(row["Close"]) < self.pending.entry_ce
-            if not ready:
-                self._count("reject_short_confirmation_missing")
-            return ready
+            return bool(row.get("cos_short", False)) and float(row["Close"]) < self.pending.entry_ce
         return float(row["Close"]) <= self.pending.entry_ce
 
     def _pending_long_ready(self, row: pd.Series) -> bool:
-        touched = float(row["Low"]) <= (self.pending.entry_ce + float(self.retest_tolerance_points))
+        touched = float(row["Low"]) <= (self.pending.entry_ce + (self.tick_size * self.limit_touch_tolerance_ticks))
         if not touched:
-            self._count("pending_long_not_touched")
             return False
         if self.require_cos_confirmation:
-            ready = bool(row.get("cos_long", False)) and float(row["Close"]) > self.pending.entry_ce
-            if not ready:
-                self._count("reject_long_confirmation_missing")
-            return ready
+            return bool(row.get("cos_long", False)) and float(row["Close"]) > self.pending.entry_ce
         return float(row["Close"]) >= self.pending.entry_ce
 
     def _enter_short(self, row: pd.Series, i: int):
         entry = min(float(row["Close"]), float(self.pending.entry_ce))
-        stop = float(self.pending.stop_price)
-        risk = stop - entry
+        risk = float(self.pending.stop_price) - entry
         if risk <= 0:
             self._clear_pending()
             return
-        # Re-anchor targets to the actual executed entry so TP remains below entry for shorts.
-        self.pending.target1 = entry - (risk * self.target1_r)
-        self.pending.target2 = entry - (risk * self.target2_r)
-        self.pending.target3 = entry - (risk * self.target3_r)
-        if not (self.pending.target3 < entry < stop):
-            self._clear_pending()
-            return
         self.active_risk = risk
-        self.sell(size=self.fixed_size, sl=stop, tp=float(self.pending.target3))
+        self.sell(size=self.fixed_size, sl=float(self.pending.stop_price), tp=float(self.pending.target3))
         self.partial1_taken = False
         self.partial2_taken = False
         self.be_moved = False
@@ -474,20 +410,12 @@ class ICT_TOP_BOTTOM_TICKING(Strategy):
 
     def _enter_long(self, row: pd.Series, i: int):
         entry = max(float(row["Close"]), float(self.pending.entry_ce))
-        stop = float(self.pending.stop_price)
-        risk = entry - stop
+        risk = entry - float(self.pending.stop_price)
         if risk <= 0:
             self._clear_pending()
             return
-        # Re-anchor targets to the actual executed entry so TP remains above entry for longs.
-        self.pending.target1 = entry + (risk * self.target1_r)
-        self.pending.target2 = entry + (risk * self.target2_r)
-        self.pending.target3 = entry + (risk * self.target3_r)
-        if not (stop < entry < self.pending.target3):
-            self._clear_pending()
-            return
         self.active_risk = risk
-        self.buy(size=self.fixed_size, sl=stop, tp=float(self.pending.target3))
+        self.buy(size=self.fixed_size, sl=float(self.pending.stop_price), tp=float(self.pending.target3))
         self.partial1_taken = False
         self.partial2_taken = False
         self.be_moved = False
