@@ -1,0 +1,1642 @@
+TOP_BOTTOM_TICKING STRATEGY - EXHAUSTIVE DETAILED BREAKDOWN
+
+Document purpose
+
+This document is a deep, plain-text explanation of the top_bottom_ticking model/strategy based on the uploaded files ict_top_bottom_ticking.py and top_bottom_ticking_shared.py.
+
+This write-up aims to leave as little as possible to inference. It explains what the strategy is trying to do, how its data is prepared, exactly how a setup is detected, how a pending setup becomes a trade, how stops and targets are calculated, how partials and breakeven moves work, how session controls work, how the backtest harness wraps the raw strategy, how symbol-specific tuning works, and how prop-firm rules are attached through the shared harness.
+
+High-level summary
+
+At its core, top_bottom_ticking is a short-term reversal model built around the idea of a price sweep into an important external liquidity level followed by rejection and a retracement entry.
+
+In plain terms, price runs above an important prior high or below an important prior low, then closes back through that external level, suggesting rejection. The strategy defines the sweep candle as a zone, calculates the midpoint of that candle zone, called CE or consequent encroachment, and instead of entering immediately, waits for price to retrace back to that CE area. Depending on configuration, it may also require a simple change-of-structure style confirmation. When the retrace and confirmation happen, it enters with a stop just beyond the sweep zone, then manages the trade with three R-based targets and staged partial exits.
+
+The strategy has two main styles: type2_baseline and type1_sniper.
+
+The shared harness layers in symbol-specific stop rules, symbol-specific point values, prop-firm pre-entry guard logic, and reporting/CSV output.
+
+PART 1 - THE CORE STRATEGY FILE
+
+File: ict_top_bottom_ticking.py
+
+This file contains the actual setup logic and trade-management behavior.
+
+1. Imports and structural role
+
+The core file imports numpy, pandas, Strategy from backtesting.py, and dataclass for pending setup state.
+
+This file is the raw strategy engine. It is not the reporting harness. It is not the prop-firm wrapper. It is the actual trade idea implementation.
+
+2. Global constants
+
+The file defines:
+
+* TICK_SIZE = 0.25
+* FORCE_FLAT_HOUR_ET = 16
+* FORCE_FLAT_MINUTE_ET = 50
+* GLOBEX_REOPEN_HOUR_ET = 18
+
+Meaning:
+
+* the default tick size in the raw file is 0.25
+* there is a force-flat cutoff at 16:50 ET
+* Globex reopen reference is 18:00 ET
+
+The shared harness later overrides symbol-specific behavior, including tick size and stop rules, but the raw base file starts from these defaults.
+
+3. PendingSetup dataclass
+
+The strategy uses a dataclass called PendingSetup with these fields:
+
+* direction
+* created_bar
+* expiry_bar
+* entry_ce
+* zone_high
+* zone_low
+* stop_price
+* target1
+* target2
+* target3
+* external_level
+* setup_type
+* entry_variant
+* internal_sweep
+
+This object is central to the model. The strategy does not immediately trade the sweep candle. Instead, it stores the proposed trade as a pending setup and waits for the retrace entry.
+
+Field meanings:
+
+* direction: short or long
+* created_bar: bar index where the pending setup was created
+* expiry_bar: last bar index on which the setup is valid
+* entry_ce: midpoint of the entry zone, the intended retracement entry reference
+* zone_high: top of the sweep/rejection zone
+* zone_low: bottom of the sweep/rejection zone
+* stop_price: stop loss level
+* target1/2/3: first, second, and third targets
+* external_level: external buyside or sellside level that got swept
+* setup_type: text label describing the setup
+* entry_variant: whether the entry is CE only or CE plus structure confirmation
+* internal_sweep: whether an internal sweep condition was present when the setup formed
+
+4. Time conversion helpers
+
+The strategy builds ET-based context from the original index.
+
+Helper 1, _to_et(idx):
+
+* takes the dataframe index
+* if timezone-naive, assumes UTC
+* converts it to America/New_York
+
+This matters because the strategy’s session logic and Asia-window logic are defined in ET.
+
+Helper 2, _session_date_for_et(ts):
+
+* futures-style session labeling
+* if ET hour is 18:00 or later, that bar belongs to the next session date
+
+So 18:15 ET on a day is labeled as the next futures session date, not the prior calendar day. This matches CME-style session handling rather than midnight-to-midnight calendar logic.
+
+5. build_model_frame(df)
+
+This is one of the most important functions in the strategy.
+
+Its purpose is to take raw OHLCV bars and add all derived context fields the model needs, create external liquidity levels, create 15-minute context markers, and create simple structure/sweep proxies.
+
+5.1 Column normalization
+
+* open -> Open
+* high -> High
+* low -> Low
+* close -> Close
+* volume -> Volume
+
+5.2 ET time fields
+It converts the index into ET and adds:
+
+* et_time
+* et_date
+* et_hour
+* et_minute
+* session_date
+
+These are used for session logic, Asia-window grouping, force-flat timing, and futures session labeling.
+
+5.3 Prior session summaries
+The strategy groups by session_date and computes the session high and low, then shifts them by one session and renames them to prior_session_high and prior_session_low.
+
+This gives the current session access to the previous session’s high and low, which are treated as major external liquidity candidates.
+
+5.4 Asia window proxy
+The strategy defines an Asia window proxy using rows where et_hour >= 18. It groups these rows by session_date and computes asia_high and asia_low.
+
+This is a simplified Asian-session liquidity reference for the current futures session.
+
+5.5 External liquidity levels
+The strategy creates:
+
+* external_buyside = max(prior_session_high, asia_high)
+* external_sellside = min(prior_session_low, asia_low)
+
+This means on the upside it uses the higher of the prior session high and Asia high, and on the downside it uses the lower of the prior session low and Asia low.
+
+5.6 15-minute context
+The model resamples the 5-minute stream into 15-minute bars and creates Open, High, Low, Close, and Volume. It then computes:
+
+* range = High - Low
+* body = abs(Close - Open)
+* bull = Close > Open
+* bear = Close < Open
+
+It identifies 15-minute swing points using a centered rolling window of 5 bars:
+
+* swing_high_15 is true if the current bar’s high is the max in that 5-bar window
+* swing_low_15 is true if the current bar’s low is the min in that 5-bar window
+
+Then it merges the latest backward 15-minute context into the 5-minute frame using merge_asof, adding:
+
+* ctx_high_15
+* ctx_low_15
+* ctx_close_15
+* swing_high_15
+* swing_low_15
+
+These are context fields prepared for filtering or expansion, though the visible entry logic does not rely heavily on them.
+
+5.7 Execution context fields
+The model computes:
+
+* atr14: average of High - Low over the last 14 bars, a simplified ATR proxy
+* recent_high_6: rolling 6-bar highest high, shifted by 1
+* recent_low_6: rolling 6-bar lowest low, shifted by 1
+* recent_high_12: rolling 12-bar highest high, shifted by 1
+* recent_low_12: rolling 12-bar lowest low, shifted by 1
+
+These are used as short-term structure references.
+
+5.8 Sweep conditions
+The model defines sweep_short as true when:
+
+* external_buyside exists
+* current High >= external_buyside + one tick
+* current Close <= external_buyside
+
+Interpretation:
+Price traded above the external buyside liquidity level by at least one tick, but then closed back at or below that level. That is treated as a bearish sweep and rejection.
+
+The model defines sweep_long as true when:
+
+* external_sellside exists
+* current Low <= external_sellside - one tick
+* current Close >= external_sellside
+
+Interpretation:
+Price traded below the external sellside liquidity level by at least one tick, but then closed back at or above that level. That is treated as a bullish sweep and rejection.
+
+This is the heart of the model. It is not just a touch of the level. It requires a breach and then a reclaim/rejection back through it on close.
+
+5.9 Internal sweep proxies
+
+* internal_sweep_short = High >= recent_high_6 + one tick
+* internal_sweep_long = Low <= recent_low_6 - one tick
+
+These are smaller internal liquidity sweeps inside recent local structure. In the base strategy, these are only enforced if require_internal_sweep_filter = True.
+
+5.10 Change-of-structure proxies
+
+* cos_short = Close < recent_low_6
+* cos_long = Close > recent_high_6
+
+These are simple structure-break proxies. They are intentionally lightweight rather than full market-structure engines.
+
+6. The base strategy class
+
+The main class is ICT_TOP_BOTTOM_TICKING(Strategy).
+
+Key parameters:
+
+* fixed_size = 5
+* min_warmup_bars = 150
+* setup_expiry_bars = 18
+* limit_touch_tolerance_ticks = 1
+* require_cos_confirmation = True
+* require_internal_sweep_filter = False
+* tick_size = TICK_SIZE
+* partial_1_fraction = 2/5
+* partial_2_fraction_of_remaining = 2/3
+* move_stop_to_be_after_t1 = True
+* target1_r = 1.0
+* target2_r = 2.25
+* target3_r = 4.25
+* min_stop_points = 6.0
+* max_stop_points = 30.0
+
+Interpretation:
+
+* it trades 5 units by default
+* does nothing before 150 bars of history
+* pending setups expire after 18 bars
+* retrace entry uses a 1-tick tolerance by default
+* change-of-structure confirmation is required by default
+* internal sweep is optional by default
+* partial exits are staged at 1R and 2.25R, leaving a runner to 4.25R
+* trades are rejected if stop distance is too small or too large
+
+7. init()
+
+On initialization the strategy:
+
+* builds the model frame
+* resets pending setup state
+* resets management flags
+* initializes debug counters
+
+Management flags include:
+
+* partial1_taken
+* partial2_taken
+* be_moved
+* active_risk
+* open_trade_meta
+* prev_closed_count
+
+Debug counters include:
+
+* sweep_short_seen
+* sweep_long_seen
+* pending_short_armed
+* pending_long_armed
+* entry_short
+* entry_long
+* partial1
+* partial2
+* be_move
+* forced_flat
+* expired_pending
+* blocked_internal_filter
+
+8. Utility methods
+
+_sync_debug(): copies current debug counters into class storage.
+_i(): returns current bar index.
+_latest_trade(): returns the latest trade if available.
+_clear_pending(): resets the pending setup.
+_after_force_flat_cutoff(row): true if ET time is later than or equal to 16:50 ET.
+_force_flat_if_needed(row): if a position exists and time is after force-flat cutoff, it closes the position.
+
+9. Trade metadata recording
+
+_record_open_trade_meta(entry):
+When a trade is entered, the strategy stores:
+
+* setup_type
+* entry_variant
+* external_level
+* zone_high
+* zone_low
+* planned_entry_price
+* planned_stop_price
+* planned_target1_price
+* planned_target2_price
+* planned_target3_price
+* internal_sweep
+
+This allows the backtest to report not just PnL but also the exact setup context.
+
+_log_newly_closed_trades():
+When trades close, the strategy appends to last_trade_log:
+
+* side
+* setup_type
+* entry_variant
+* entry_price
+* exit_price
+* entry_time
+* exit_time
+* pnl
+* return_pct
+* plus the stored setup metadata
+
+10. Setup arming logic
+
+10.1 _arm_short_from_sweep(row, i)
+A bearish setup starts when a valid bearish sweep has been detected.
+
+Internal filter:
+
+* if require_internal_sweep_filter is True and internal_sweep_short is False, reject the setup and increment blocked_internal_filter.
+
+Zone construction:
+
+* zone_high = sweep candle High
+* zone_low = min(Open, Close)
+* entry_ce = midpoint of zone_high and zone_low
+* stop = zone_high + one tick
+* risk = stop - entry_ce
+
+Risk filter:
+
+* reject if risk < min_stop_points
+* reject if risk > max_stop_points
+
+If valid, it arms a PendingSetup with:
+
+* short direction
+* creation and expiry bars
+* entry CE
+* zone boundaries
+* stop
+* targets at 1R, 2.25R, and 4.25R below entry CE
+* external level reference
+* setup type label
+* entry variant label
+* internal_sweep flag
+
+10.2 _arm_long_from_sweep(row, i)
+Mirror image of the short logic:
+
+* zone_low = sweep candle Low
+* zone_high = max(Open, Close)
+* entry_ce = midpoint
+* stop = zone_low - one tick
+* risk = entry_ce - stop
+* reject if risk is outside allowed stop range
+* if valid, arm a long PendingSetup with 1R, 2.25R, and 4.25R upside targets
+
+11. Pending setup readiness rules
+
+11.1 _pending_short_ready(row)
+For a pending short to trigger:
+
+* current High must reach entry_ce minus tolerance
+* if COS confirmation is required, cos_short must be true and Close must be below entry_ce
+* if COS confirmation is not required, Close <= entry_ce is enough
+
+11.2 _pending_long_ready(row)
+For a pending long to trigger:
+
+* current Low must reach entry_ce plus tolerance
+* if COS confirmation is required, cos_long must be true and Close must be above entry_ce
+* if COS confirmation is not required, Close >= entry_ce is enough
+
+12. Actual entry logic
+
+12.1 _enter_short(row, i)
+Executed once pending short is ready.
+
+* entry = min(current Close, pending.entry_ce)
+* stop = pending.stop_price
+* risk = stop - entry
+* if risk <= 0, cancel
+
+Targets are then re-anchored to the actual executed entry:
+
+* target1 = entry - 1R
+* target2 = entry - 2.25R
+* target3 = entry - 4.25R
+
+Sanity check:
+
+* target3 < entry < stop
+
+Then:
+
+* active_risk is stored
+* a sell order is placed with size fixed_size, stop loss, and final TP at target3
+* partial flags reset
+* trade metadata recorded
+* entry_short counter incremented
+* pending setup cleared
+
+12.2 _enter_long(row, i)
+Mirror image:
+
+* entry = max(current Close, pending.entry_ce)
+* stop = pending.stop_price
+* risk = entry - stop
+* targets are re-anchored to actual entry
+* sanity check ensures stop < entry < target3
+* then it buys with stop and final TP at target3
+
+13. Trade management
+
+13.1 General structure
+Trade management runs only if:
+
+* there is an active trade
+* there is an active position
+* active_risk is finite
+
+13.2 Long trade management
+For longs:
+
+* r_now = (current price - entry_price) / active_risk
+
+At 1R:
+
+* close 40 percent of the position
+* mark partial1_taken
+
+After target1:
+
+* if enabled, move stop to breakeven or better
+* mark be_moved
+
+At 2.25R:
+
+* close two-thirds of the remaining size
+* mark partial2_taken
+
+With fixed size 5:
+
+* first partial takes off 2 units
+* 3 remain
+* second partial removes 2 of those 3
+* 1 unit remains as the final runner
+
+13.3 Short trade management
+Mirror image:
+
+* r_now = (entry_price - current price) / active_risk
+* first partial at 1R
+* stop moved to breakeven or better
+* second partial at 2.25R
+* last unit remains for target3
+
+This structure locks gains early, reduces risk quickly, and still leaves tail exposure for bigger moves.
+
+14. next() - the full bar-by-bar state machine
+
+Execution order each bar:
+
+1. log newly closed trades
+2. warmup filter; do nothing before 150 bars
+3. read current derived row
+4. manage open trade
+5. force-flat if needed
+6. expire stale pending setups
+7. if a position is open, stop processing
+8. if after force-flat cutoff, clear pending and stop
+9. if a short is pending and ready, enter short
+10. if a long is pending and ready, enter long
+11. if any setup is already pending, do not arm another one
+12. if flat and no pending setup, detect new sweep setups
+13. if a short sweep is found, arm a short setup
+14. if a long sweep is found, arm a long setup
+
+The model is therefore a single-position, single-pending-setup state machine.
+
+PART 2 - THE SHARED HARNESS FILE
+
+File: top_bottom_ticking_shared.py
+
+This file is not the pure strategy itself. It is the operational wrapper and reporting harness.
+
+It adds:
+
+* instrument configuration
+* symbol-specific point values
+* symbol-specific stop rules
+* variant selection
+* backtest looping across symbols and variants
+* prop-firm profile attachment
+* pre-entry guard layer
+* CSV output and summaries
+
+15. Purpose of the shared file
+
+Its role is to:
+
+* run the strategy across multiple symbols
+* run multiple variants
+* normalize dollar PnL
+* keep strategy logic separate from prop-firm logic
+* apply prop rules as a pre-entry guard
+* export results
+
+16. Core imported dependencies
+
+It imports:
+
+* get_ohlcv from src.data.fetcher
+* get_prop_profile / list_prop_profiles
+* PropFirmGuard
+* the ict_top_bottom_ticking module
+
+It dynamically finds:
+
+* the baseline class
+* the sniper class
+
+If no dedicated sniper class exists in the raw module, it builds a fallback sniper subclass.
+
+17. Fallback sniper class
+
+If a dedicated type1 sniper does not exist, the fallback sniper subclass changes:
+
+* require_internal_sweep_filter = False
+* require_cos_confirmation = False
+* setup_expiry_bars = 14
+* limit_touch_tolerance_ticks = 2
+* min_stop_points = 5.0
+* max_stop_points = 34.0
+
+Interpretation:
+In the fallback version, sniper is actually looser, faster to trigger, and more permissive than the baseline.
+
+18. Reporting capital vs engine capital
+
+REPORT_ACCOUNT_CASH = 50,000
+ENGINE_CASH = 1,000,000
+
+This distinction is crucial.
+
+* ENGINE_CASH exists only to let backtesting.py fill expensive futures contracts cleanly
+* REPORT_ACCOUNT_CASH is what performance is normalized against for return calculations
+
+So fill mechanics use large artificial capital, but performance reporting is normalized to a 50k account.
+
+19. InstrumentConfig
+
+Each instrument stores:
+
+* symbol
+* exchange
+* timeframe
+* days_back
+* tail_rows
+* contracts
+* dollars_per_point
+
+Configured instruments:
+
+* MNQ: 5 contracts, 2 dollars per point
+* MES: 5 contracts, 5 dollars per point
+* MYM: 5 contracts, 0.5 dollars per point
+* MGC: 5 contracts, 10 dollars per point
+* MCL: 5 contracts, 100 dollars per point
+
+These point values are how raw point movement becomes dollar PnL.
+
+20. SymbolSpec
+
+For each symbol the harness defines:
+
+* tick_size
+* min and max stop ranges for baseline
+* min and max stop ranges for sniper
+* expiry for baseline and sniper
+* touch tolerance for baseline and sniper
+* whether baseline requires COS
+* whether sniper requires COS
+* whether internal sweep is required for either
+
+This is how the same raw idea is adapted across instruments.
+
+Examples:
+
+* MNQ baseline stop range 6.0 to 30.0, sniper 5.0 to 34.0
+* MES baseline 3.0 to 15.0, sniper 2.5 to 16.0
+* MYM baseline 20.0 to 120.0, sniper 15.0 to 140.0
+* MGC baseline 0.8 to 6.0, sniper 0.6 to 7.0
+* MCL baseline 0.05 to 0.60, sniper 0.04 to 0.80
+
+This instrument-aware layer is essential. A single stop policy would not make sense across all five markets.
+
+21. _prepare_meta(…)
+
+This enriches trade logs with:
+
+* variant
+* symbol
+* prop_profile
+* report_contracts
+* dollars_per_point
+* report_account_cash
+* ET-converted entry and exit times
+* calendar_exit_date_et
+* realized_points
+* gross_pnl_dollars_dynamic
+* gross_return_pct_on_50k
+
+Realized points are computed as:
+
+* long: exit - entry
+* short: entry - exit
+
+Dollar PnL is:
+
+* realized_points * dollars_per_point * contracts
+
+22. _build_guarded_strategy_class(…)
+
+This is the key connection point between raw strategy logic and prop-firm rule enforcement.
+
+It takes cfg, variant name, base class, and prop profile name, then returns a GuardedStrategy subclass.
+
+22.1 Variant and symbol specialization
+The subclass dynamically overrides:
+
+* fixed_size
+* tick_size
+* setup_expiry_bars
+* limit_touch_tolerance_ticks
+* require_cos_confirmation
+* require_internal_sweep_filter
+* min_stop_points
+* max_stop_points
+
+All of these depend on which symbol and which variant is running.
+
+22.2 Prop guard creation
+In init(), the guarded class creates:
+
+* self.prop_guard = PropFirmGuard(profile)
+
+Each strategy instance therefore carries its own prop-firm state.
+
+22.3 Additional debug counters
+The guarded strategy adds:
+
+* blocked_prop_daily_loss
+* blocked_prop_consecutive_losses
+* blocked_prop_max_trades
+* blocked_prop_trailing_drawdown
+
+These record exactly why trades were blocked before entry.
+
+22.4 Closed trade synchronization
+_update_guard_from_closed_trades() reads newly closed backtest trades, converts them into dollar PnL using instrument point value and contract size, calculates the trade day from ET exit date, and feeds the result into the prop guard.
+
+That is how the guard updates:
+
+* balance
+* daily realized PnL
+* loss streak
+* and any other profile-specific state
+
+22.5 Pre-entry decision
+_guard_allows_entry(row) asks the prop guard whether a trade is allowed on that day.
+
+If allowed:
+
+* entry proceeds
+
+If denied:
+
+* the reason is recorded
+* the relevant blocked_prop_* counter is incremented
+* the pending setup is cleared
+* the trade is blocked before it can be opened
+
+This is true pre-entry filtering, not post-trade filtering.
+
+22.6 Entry interception
+The guarded strategy overrides _enter_short and _enter_long.
+
+Flow:
+
+* first sync the prop guard from newly closed trades
+* ask whether a new trade is allowed
+* if denied, return without entering
+* if allowed, call the raw parent entry method
+
+This is how prop rules are attached without rewriting the raw strategy logic.
+
+23. Variant map
+
+The shared harness maps:
+
+* type2_baseline -> baseline class
+* type1_sniper -> sniper class
+
+24. run_all_symbols(…)
+
+This orchestrates the full backtest:
+
+* loads data per symbol
+* builds guarded strategy class
+* runs backtest
+* collects stats
+* collects trade log metadata
+* collects debug counts
+
+25. main block behavior
+
+When run directly, it:
+
+* runs all five default symbols
+* runs both variants
+* saves:
+    * trade log CSV
+    * monthly summary CSV
+    * daily summary CSV
+    * variant summary CSV
+    * debug counts CSV
+* prints notes about engine cash and report cash
+* prints per-symbol, per-variant stats
+
+PART 3 - THE STRATEGY IDEA IN HUMAN TERMS
+
+26. Conceptual setup
+
+This is a liquidity sweep reversal strategy.
+
+For shorts:
+
+* identify an upper external liquidity level
+* price trades above it
+* price closes back below it
+* this suggests a failed breakout or rejection
+* define the rejection candle’s upper portion as the zone
+* compute the midpoint of that zone
+* wait for retracement to that midpoint
+* optionally require bearish structure confirmation
+* short from that retracement/confirmation
+* stop above the zone
+* take profits in stages
+
+For longs:
+
+* identify a lower external liquidity level
+* price trades below it
+* price closes back above it
+* define bullish rejection zone
+* compute midpoint
+* wait for retracement
+* optionally require bullish structure confirmation
+* buy
+* stop below the zone
+* scale out at fixed R multiples
+
+27. Why CE midpoint is used
+
+The model does not enter immediately on the sweep candle close. It waits for a retracement into the midpoint of the rejection zone.
+
+Likely reasons:
+
+* better entry price
+* better R multiple
+* less chasing
+* structurally consistent with rejection-block / CE execution logic
+
+28. Why COS confirmation matters
+
+If COS confirmation is required:
+
+* the strategy is stricter
+* the retrace alone is not enough
+* price must also show a simple structure break
+
+If COS confirmation is not required:
+
+* more entries can fire
+* the model is more aggressive and permissive
+
+29. Why stop-size filters matter
+
+The strategy rejects setups whose stop distance is too small or too large.
+
+Too small:
+
+* too noise-sensitive
+* easy to stop out
+* unrealistic in some markets
+
+Too large:
+
+* poor efficiency
+* weak R profile
+* too much exposure for the setup style
+
+30. Why one-position-at-a-time matters
+
+The model does not pyramid and does not hold multiple overlapping trades. It is:
+
+* single setup
+* single open position
+* single pending setup
+
+This keeps state simpler and makes prop-guard attachment easier.
+
+31. Why the partial structure looks like this
+
+The sequence is:
+
+* 40 percent off at 1R
+* stop to breakeven
+* two-thirds of remainder off at 2.25R
+* final runner to 4.25R
+
+This balances:
+
+* early monetization
+* fast risk reduction
+* tail participation if the move expands
+
+PART 4 - DIFFERENCE BETWEEN BASELINE AND SNIPER
+
+32. Baseline behavior
+
+Baseline is generally the stricter version.
+Common traits:
+
+* stricter stop range
+* tighter touch tolerance
+* COS confirmation required
+* fewer but more filtered entries
+
+33. Sniper behavior
+
+The configured sniper is looser in the current implementation.
+Common traits:
+
+* COS confirmation disabled
+* wider touch tolerance
+* slightly wider stop allowance
+* often more entries
+
+So despite the name, the current sniper often behaves as the higher-throughput variant.
+
+PART 5 - IMPORTANT LIMITATIONS / ASSUMPTIONS
+
+34. Simplified structure model
+    The COS and internal sweep logic are simple proxies, not a full market-structure engine.
+35. Asia session proxy
+    The Asia session proxy is simplified to bars with ET hour >= 18.
+36. ATR proxy is simplified
+    atr14 is just average bar range, not classical ATR.
+37. One pending setup only
+    If a setup is already pending, new setups are ignored until it triggers, expires, or is cleared.
+38. One open trade only
+    No overlapping positions.
+39. Force-flat behavior
+    Positions are forcibly closed after cutoff and no new setups are allowed after that point.
+40. Shared file depends on external prop profile/guard files
+    This breakdown explains how the harness uses them, but not their entire internals, because those extra files were not part of the inspected strategy pair here.
+
+Still, one thing is clear:
+
+* prop rules are attached as a wrapper
+* they do not rewrite the raw model
+* they are enforced before entry
+
+PART 6 - BOTTOM LINE
+
+41. One-sentence strategy definition
+    It is a short-term futures reversal model that looks for sweeps of external liquidity, defines the rejection candle as an entry zone, waits for a midpoint retracement with optional structure confirmation, and manages the trade through multi-stage R-based exits.
+42. One-sentence harness definition
+    It turns the raw strategy into a multi-symbol, multi-variant, point-value-aware, prop-profile-compatible backtest/forward-test framework with normalized reporting and pre-entry trade blocking.
+43. Practical loop summary
+    For each bar:
+
+* update context
+* manage any open trade
+* force-flat if required
+* expire stale setups
+* if already in a trade, do nothing else
+* if a setup is pending, wait for retrace/confirmation
+* if nothing is pending, detect a fresh external sweep
+* arm a pending setup
+* if retrace comes back and rules pass, enter
+* manage partials and stop
+* record the trade when it closes
+
+44. Most critical mechanics to understand
+    A. external_buyside / external_sellside
+    B. sweep_short / sweep_long
+    C. zone_high / zone_low and entry_ce
+    D. require_cos_confirmation
+    E. min_stop_points / max_stop_points
+    F. _pending_short_ready / _pending_long_ready
+    G. _manage_trade()
+    H. _guard_allows_entry()
+
+PART 7 - FULL SYSTEM WORKFLOW AND HOW EVERYTHING CONNECTS
+
+45. Purpose of this section
+
+This section explains the full end-to-end workflow around top_bottom_ticking as it exists in your broader Algotec stack.
+
+It covers:
+
+* where the raw model lives
+* where the deployed wrapper lives
+* how data gets into the model
+* how signals become executable actions
+* how prop-firm rules are attached
+* how execution is routed
+* what outside platforms are involved
+* what role each file and platform plays
+
+The goal is to describe not just the strategy idea, but the operating system around the strategy.
+
+46. The major layers in the stack
+
+At a high level, the full stack can be separated into these layers:
+
+Layer 1 - Core strategy logic
+
+* This is the actual trading brain.
+* For top_bottom_ticking, this is primarily in ict_top_bottom_ticking.py.
+* It contains the sweep logic, setup arming, entry logic, stop logic, target logic, and trade management logic.
+
+Layer 2 - Shared backtest / orchestration harness
+
+* This is top_bottom_ticking_shared.py.
+* It wraps the raw strategy for multi-symbol and multi-variant use.
+* It adds instrument settings, reporting, prop-guard attachment, CSV output, and batch runs.
+
+Layer 3 - Deployed live / forward-test wrapper
+
+* This is the deployed folder under src/strategies/deployed/top_bottom_ticking/.
+* It adapts the same strategy logic for forward test and live-style runtime.
+* It is not the trading brain itself. It is the runtime container around the brain.
+
+Layer 4 - Data layer
+
+* This supplies bars/candles to the deployed or backtest strategy.
+* In your setup this can come from Databento, TradingView bars, or a fallback fetcher path.
+
+Layer 5 - Prop-firm rules layer
+
+* This applies account/risk constraints separately from model logic.
+* The raw strategy does not inherently know Apex rules.
+* The prop guard layer adds that behavior before entry.
+
+Layer 6 - Execution routing layer
+
+* This takes a valid entry/action and sends it to your execution bridge.
+* In your current operating path, this goes through PickMyTrade.
+
+Layer 7 - Broker / prop account layer
+
+* This is where the actual account exists.
+* In your case this is your Apex PA account routed through Tradovate infrastructure.
+
+Layer 8 - Monitoring / state / logs
+
+* This stores runtime state, event logs, and health signals.
+* It allows the runner to know what it already processed and what happened on prior cycles.
+
+47. The main files and what they do
+
+Core strategy file:
+
+* src/strategies/manual/ict_top_bottom_ticking.py
+* Contains the actual top/bottom sweep-reversal logic.
+
+Shared harness file:
+
+* src/strategies/manual/top_bottom_ticking_shared.py
+* Runs the raw strategy across symbols and variants.
+* Adds reporting and prop-guard integration.
+
+Deployed config:
+
+* src/strategies/deployed/top_bottom_ticking/config.py
+* Holds runtime settings for deployed operation.
+* Reads environment variables.
+
+Deployed live model wrapper:
+
+* src/strategies/deployed/top_bottom_ticking/live_model.py
+* Pulls in the raw strategy logic and runs it in live-style scanning mode.
+* Converts fresh trade opportunities into live actions.
+
+Deployed app runner:
+
+* src/strategies/deployed/top_bottom_ticking/app.py
+* Infinite loop runner.
+* Handles open/closed market behavior, heartbeat, session rules, and dispatching actions for execution.
+
+Deployed execution bridge file:
+
+* src/strategies/deployed/top_bottom_ticking/execution.py
+* Reuses the shared execution path from ict_fractal deployment.
+* This is the layer that turns signals into executable commands.
+
+Deployed monitoring file:
+
+* src/strategies/deployed/top_bottom_ticking/monitoring.py
+* Writes runtime monitoring logs.
+
+Deployed state file:
+
+* src/strategies/deployed/top_bottom_ticking/state.py
+* Stores state such as already-seen signals and recent cycle summaries.
+
+Model registry:
+
+* src/strategies/deployed/model_registry.py
+* Tells the master deployed runner which models exist and where their app files live.
+
+Runner:
+
+* src/strategies/deployed/run_models.py
+* Starts one or more deployed models from the registry.
+
+48. How the strategy logic flows in backtesting mode
+
+In backtest mode, the flow is generally:
+
+1. Data is loaded for a symbol.
+2. The raw top_bottom_ticking strategy class is selected.
+3. The shared harness modifies the class according to:
+    * symbol
+    * variant
+    * prop profile
+4. The backtest engine runs the strategy bar by bar.
+5. The raw strategy detects sweeps, arms pending setups, enters, manages exits, and logs metadata.
+6. The shared harness converts raw trade information into symbol-aware dollar PnL.
+7. CSV summaries are produced.
+
+In this mode, nothing is sent to a broker. It is all simulated.
+
+49. How the strategy logic flows in deployed / forward-test mode
+
+In deployed mode, the flow is different.
+
+The deployed top_bottom_ticking wrapper does not simply replay a whole year.
+Instead it runs in a live-style cycle.
+
+A single cycle looks like this:
+
+1. The deployed app wakes up.
+2. It checks the current ET time and session status.
+3. If market is closed, it usually idles and logs a heartbeat.
+4. If entries are allowed, it calls generate_live_actions().
+5. The deployed live_model wrapper scans each configured symbol.
+6. For each symbol it runs each configured variant.
+7. It loads recent bars for that symbol.
+8. It runs the raw strategy over recent history using the backtesting engine as a signal extractor.
+9. It inspects the latest bars and latest trade log metadata.
+10. It extracts only fresh entries that fall within the configured recent lookback window.
+11. It converts those into normalized live actions.
+12. The app runner checks state so it does not resend already-seen signals.
+13. If live orders are disabled, it simulates processing only.
+14. If live orders are enabled, it routes the action into the execution layer.
+15. Monitoring and state are updated.
+16. The process sleeps until the next cycle.
+
+So the deployed model is essentially using the same raw trading logic as a signal engine, but wrapping it in a repeating operational loop.
+
+50. How data gets into the strategy
+
+There are several possible data paths.
+
+Path A - Databento
+
+* Databento is your preferred direct market data source.
+* It provides CME futures market data.
+* The deployed live model can warm up historical bars and then consume live/near-live bars from Databento.
+
+Path B - TradingView bars
+
+* Your system can also read TradingView-exported or TradingView-fed bar files.
+* These are stored in your tradingview_bars folder.
+* The deployed model can use these directly or fall back to them when Databento is unavailable or incomplete.
+
+Path C - Fallback fetcher
+
+* There is also a fallback data fetcher path through your local repo utilities.
+* This is generally a lower-priority safety path.
+
+Operationally, the typical preference is:
+
+1. Databento
+2. TradingView fallback
+3. fetcher fallback
+4. Why multiple data paths exist
+
+You use multiple data paths because each serves a different operational purpose.
+
+Databento:
+
+* strongest direct market-data route
+* better for robust live operation
+* more aligned with institutional futures feed usage
+
+TradingView bars:
+
+* useful because your broader bot stack already interacts with TradingView
+* good fallback when direct feed handling is still being stabilized
+* also useful if live Databento buffers are incomplete for some symbols at startup
+
+Fetcher fallback:
+
+* final safety net
+
+This layered data design increases runtime resilience.
+
+52. How top_bottom_ticking live_model uses the raw strategy
+
+The deployed live_model for top_bottom_ticking does not reimplement the strategy rules by hand.
+Instead it imports them.
+
+Broadly it does this:
+
+* imports the shared manual module
+* reads the instrument definitions
+* reads the variant class map
+* selects the relevant class per symbol and per variant
+* loads recent bars
+* runs a short backtesting pass on the recent data
+* extracts only fresh entry opportunities from the raw strategy’s metadata output
+
+This is very important conceptually.
+
+The deployed file is not a second independent strategy.
+It is a runtime wrapper around the same core strategy logic.
+
+53. Why the deployed model still uses backtesting.py internally
+
+Even in deployed scanning mode, the system uses the backtesting engine as a convenient way to run the strategy class over recent bars.
+
+Why this is useful:
+
+* it reuses the exact same entry/exit logic as backtests
+* it reduces duplication
+* it keeps live-style signal generation closer to backtest behavior
+* it avoids rewriting the whole strategy state machine a second time for deployment
+
+So in deployed mode, the backtesting engine is being used less as a portfolio backtester and more as a deterministic strategy runner over recent bars.
+
+54. How fresh entries are extracted
+
+After the raw strategy is run over recent data, the deployed wrapper does not blindly turn every historical trade into a live signal.
+
+Instead it:
+
+* looks at the recent bar window
+* checks trade metadata/log entries
+* finds only entries whose timestamps are within the latest lookback bars
+* converts those into actionable signals
+
+This is how it tries to avoid replaying stale historical trades.
+
+55. What a live action looks like
+
+A normalized live action usually contains fields like:
+
+* action_type
+* model_name
+* variant
+* symbol
+* side
+* entry
+* stop
+* target
+* timestamp_et
+* session_date_et
+* setup_type
+* setup_tier
+* bridge_type
+* qty
+* signal_id
+
+This action is the bridge format between:
+
+* raw strategy output
+    and
+* execution layer input
+
+56. Why signal_id matters
+
+signal_id prevents duplicate processing.
+
+The deployed app keeps a state file with seen signal IDs.
+If the same signal appears again on the next cycle, it will not be resent.
+
+This is critical in any looping live system. Without it, the model could repeatedly send the same trade every cycle.
+
+57. Session and market-time handling
+
+The deployed runner is ET-aware.
+It uses:
+
+* force-flat time
+* Globex reopen time
+* weekday/weekend logic
+
+This means the runner knows whether it is:
+
+* in normal session
+* in force-flat window
+* in weekend-closed state
+* in Sunday pre-open state
+
+When market is closed:
+
+* it can avoid entry generation
+* it can emit a heartbeat rather than look frozen
+* it can sleep longer between cycles
+
+58. Force-flat logic in the full system
+
+There are two related force-flat ideas:
+
+Inside the raw strategy:
+
+* if a position is open after the cutoff, it closes it
+* no new setups are allowed after the cutoff
+
+Inside the deployed runner:
+
+* if force-flat behavior is enabled, the runtime can also simulate or perform account-wide flattening behavior based on current session state
+
+So force-flat is both:
+
+* a strategy behavior
+* a runtime safety behavior
+
+59. Prop-firm rules in the full system
+
+This is one of the most important architecture decisions.
+
+The raw strategy does not intrinsically know Apex rules.
+Instead, prop-firm rules are connected outside the raw model through the prop guard layer.
+
+This separation is deliberate and important because:
+
+* the same strategy can be used with different prop firms
+* the model logic remains stable
+* account rule logic can be swapped or toggled through a profile
+
+That means the architecture is:
+
+raw model logic
++
+prop-firm rule wrapper
++
+runtime execution wrapper
+
+not:
+
+raw model logic hardcoded specifically for Apex only
+
+60. How a prop profile affects actual behavior
+
+When a prop profile is active, the system may block trades before entry based on things such as:
+
+* daily loss conditions
+* consecutive losses
+* max trades
+* trailing drawdown or similar thresholds depending on profile implementation
+
+In the shared harness, this happens before entry.
+That means if a trade is disallowed:
+
+* the trade is never opened
+* it is not filtered out after the fact
+* the strategy’s pending setup is cleared
+* the block reason is counted for reporting
+
+This is the cleanest way to attach prop rules.
+
+61. Why this separation matters for future firms
+
+Because the raw strategy and prop rules are separated, you can later use:
+
+* Apex
+* Topstep
+* other eval/funded rule sets
+
+without rewriting the core entry logic.
+
+You mainly change:
+
+* the selected prop profile
+* the rules file/profile definition
+
+not the raw model.
+
+62. How execution is routed in your current setup
+
+Your current intended route is:
+
+Python bot
+-> PickMyTrade
+-> Tradovate
+-> Apex PA account
+
+This means the bot itself is not directly making Tradovate broker calls as the primary route in the live deployment path.
+
+Instead:
+
+* the bot creates a valid execution action
+* PickMyTrade receives and interprets that order instruction
+* PickMyTrade then routes it into Tradovate / Apex infrastructure
+
+This makes PickMyTrade your main execution bridge layer.
+
+63. Why PickMyTrade matters in the architecture
+
+PickMyTrade acts as the operational bridge between your signal engine and your prop account execution path.
+
+Its role is to:
+
+* receive order instructions from your bot
+* map them to the destination account
+* forward them to the Tradovate/Apex side
+
+So in your live workflow, PickMyTrade is effectively the central execution connector.
+
+64. What platforms are being used in the full stack
+
+The current stack uses or can use these platforms/services:
+
+A. Databento
+Role:
+
+* market data provider
+* historical warmup and live/near-live futures bar source
+
+B. TradingView
+Role:
+
+* alternate bar source / charting / monitoring / fallback bar feed path
+* also part of your broader live candle ecosystem
+
+C. PickMyTrade
+Role:
+
+* order execution bridge
+* receives bot actions and routes them toward account execution
+
+D. Tradovate
+Role:
+
+* broker-side infrastructure used in the Apex environment
+* sits behind PickMyTrade in your chosen live path
+
+E. Apex
+Role:
+
+* your funded / PA prop-firm account context
+* defines the account you are trying to trade
+
+F. Python / local repo / deployed runners
+Role:
+
+* strategy execution and orchestration environment
+* runs the strategy logic, wrappers, guard, and monitoring
+
+G. Backtesting.py
+Role:
+
+* strategy engine used both for historical simulation and deployed recent-bar signal extraction
+
+65. What happens when both models run together
+
+When you run both:
+
+* ict_fractal
+* top_bottom_ticking
+
+through run_models.py, the launcher starts both deployed apps.
+
+Each model then:
+
+* loads its own config
+* runs its own live loop
+* reads its own data path
+* generates its own actions
+* uses the shared or model-specific execution wrapper
+* targets the same prop profile / account if configured that way
+
+This means both models can conceptually trade the same account.
+
+That has important consequences:
+
+* they share account balance
+* they share prop-firm risk budget
+* they can overlap in exposure
+* they can independently generate signals in the same time window
+
+66. Why dual-model deployment requires caution
+
+If two models trade the same Apex PA account, risk control becomes more important.
+
+Even if each model individually looks fine, together they can:
+
+* increase trade count
+* increase drawdown speed
+* overlap on correlated positions
+* consume the same loss budget
+
+So dual-model deployment is possible, but should usually be staged carefully:
+
+* both models in no-live-orders mode first
+* then one live and one simulated
+* then both live at very small size
+
+67. How state is stored in deployed mode
+
+The deployed runtime keeps state files for things like:
+
+* seen signal IDs
+* last cycle summary
+* recent runtime events
+
+Why this matters:
+
+* avoids duplicate order processing
+* preserves minimal memory across cycles
+* improves recoverability and monitoring
+
+68. How monitoring works
+
+Monitoring files record structured events such as:
+
+* action processed
+* entry blocked
+* cycle error
+* runtime summary behavior
+
+These logs are useful for:
+
+* debugging deployment issues
+* checking if the bot was alive during a session
+* checking whether trades were blocked by session or prop rules
+* understanding why no order was sent
+
+69. The role of the connectivity check script
+
+The connectivity check file is not part of strategy logic.
+It is part of operational safety.
+
+Its role is to verify before live deployment that:
+
+* environment variables are loaded
+* both models are registered
+* deployed app files exist
+* deployed files compile
+* Databento can initialize
+* PickMyTrade runtime values are present
+* optionally, both models can startup together in dry-run mode
+
+This helps catch operational problems before actual live deployment.
+
+70. The role of run_models.py
+
+run_models.py is the launcher/orchestrator for deployed strategies.
+
+It does not itself contain the top_bottom_ticking trading idea.
+Its job is to:
+
+* read model selection flags
+* consult the model registry
+* launch one or more model app runners
+* pass runtime mode / prop profile / live-order settings through
+
+So it is the entry point to deployed model operation.
+
+71. End-to-end workflow from data to account
+
+A practical end-to-end live workflow looks like this:
+
+1. You start run_models.py.
+2. The launcher reads the registry and starts top_bottom_ticking app.py.
+3. app.py loads config and enters a live loop.
+4. app.py checks whether entries are allowed at the current ET session time.
+5. If allowed, app.py calls live_model.generate_live_actions().
+6. live_model loads recent bars from Databento, TradingView, or fallback path.
+7. live_model imports the shared top_bottom_ticking strategy classes.
+8. live_model runs the selected symbol and variant combinations through recent bars.
+9. The raw strategy identifies fresh setups, pending entries, and actual entry conditions.
+10. The wrapper extracts only fresh entries from the latest recent window.
+11. The app checks whether that signal was already processed.
+12. If prop/runtime rules allow it and live orders are enabled, the action is passed to execution.py.
+13. execution.py routes the action into the execution bridge layer.
+14. The bridge route is PickMyTrade.
+15. PickMyTrade forwards the execution intent to the Tradovate/Apex side.
+16. The Apex PA account receives the order on the broker side.
+17. Monitoring/state files are updated.
+18. The loop sleeps until the next cycle.
+19. End-to-end workflow in no-live-orders mode
+
+When you run with no-live-orders:
+
+* all the above can still happen up to signal generation and action processing
+* but the final actual live order send is blocked/simulated
+
+This is extremely useful because it allows you to validate:
+
+* startup
+* imports
+* session behavior
+* signal generation
+* multi-model compatibility
+* runtime logs
+
+without risking live fills.
+
+73. What is model logic versus wrapper logic
+
+Model logic:
+
+* sweep detection
+* zone creation
+* CE entry
+* stop and targets
+* partials
+* breakeven move
+* setup expiry
+* force-flat inside strategy
+
+Wrapper logic:
+
+* data source selection
+* symbol batch running
+* variant selection
+* deployed loop behavior
+* environment variable config
+* registry mapping
+* signal deduplication
+* execution routing
+* prop profile attachment
+* monitoring and state storage
+
+This distinction is essential.
+
+74. Why this architecture is good
+
+This architecture has several strengths:
+
+A. Reusability
+
+* same strategy logic can be used in backtest and deployment
+
+B. Separation of concerns
+
+* model logic is not polluted with broker-specific or prop-specific code
+
+C. Extensibility
+
+* you can add more models to deployed
+* you can add more prop profiles
+* you can add more data paths
+
+D. Safer deployment
+
+* no-live-orders mode
+* connectivity prechecks
+* state and heartbeat support
+
+E. Easier debugging
+
+* strategy behavior, execution behavior, and runtime behavior are separable
+
+75. Weak points / practical risks in the full system
+
+No architecture is perfect. Important practical risks include:
+
+A. Data-source mismatch risk
+
+* backtest data and live data may behave differently
+
+B. Multi-model account contention
+
+* two models can stress the same account budget
+
+C. Duplicate or stale signal risk
+
+* reduced by signal IDs and state tracking, but still something to monitor
+
+D. Runtime import/config mismatch risk
+
+* especially when new deployed models are added
+
+E. Execution bridge dependency
+
+* if PickMyTrade has issues, execution can fail even if the model is correct
+
+76. The cleanest mental model for the whole system
+
+If you want one mental picture, think of the stack like this:
+
+Market data platforms
+-> feed bars into
+Deployed live_model wrapper
+-> which runs
+Raw strategy logic
+-> which produces
+Fresh executable actions
+-> which are checked by
+Prop/runtime guard and state layer
+-> then routed through
+Execution bridge
+-> then sent to
+PickMyTrade
+-> then forwarded to
+Tradovate / Apex PA account
+
+77. Final one-paragraph summary of the full workflow
+
+The full top_bottom_ticking workflow starts with recent futures market data coming in from Databento or TradingView, after which the deployed live wrapper loads the raw strategy classes from the manual strategy files and runs them over recent bars using the backtesting engine as a signal extractor. The raw strategy looks for sweeps of external liquidity, arms pending setups, waits for midpoint retrace conditions, and identifies valid entries. The deployed wrapper extracts only the fresh entry opportunities, normalizes them into action objects, checks state so they are not duplicated, applies session/runtime behavior and, where relevant, prop-profile-based pre-entry guards, then routes the final action into the execution bridge. In your current architecture, that bridge goes to PickMyTrade, which then routes execution toward Tradovate and ultimately your Apex PA account. Around all of this sit config files, monitoring logs, state files, the model registry, and the run_models launcher, which together form the operational framework for running the strategy safely in backtest, forward test, or live mode.
+
+End of document.

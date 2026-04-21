@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
+import math
 import os
 import sys
 import warnings
@@ -24,7 +26,7 @@ warnings.filterwarnings(
 
 ET = ZoneInfo('America/New_York')
 DEPLOY_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = DEPLOY_DIR.parents[3]
+PROJECT_ROOT = DEPLOY_DIR.parents[3] if len(DEPLOY_DIR.parents) >= 4 else DEPLOY_DIR
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -32,6 +34,8 @@ MIN_ROWS_BY_TIMEFRAME = {'1m': 40, '5m': 40, '15m': 30, '30m': 20, '1h': 12}
 PROP_PROFILE_NAME = os.getenv('PROP_PROFILE', 'apex_pa_50k')
 LIVE_BACKTEST_CASH = 1_000_000.0
 LIVE_STALE_MINUTES = int(os.getenv('TOP_BOTTOM_TICKING_LIVE_STALE_MINUTES', '20'))
+ENABLE_FILE_LOGGING = os.getenv('TOP_BOTTOM_TICKING_FILE_LOGGING', '1').lower() not in {'0', 'false', 'no'}
+LOG_DIR = DEPLOY_DIR / 'logs'
 
 LIVE_SYMBOL_STOP_OVERRIDES = {
     'MNQ': {'min_stop_points': None, 'max_stop_points': 220.0},
@@ -77,23 +81,58 @@ ENTRY_TIME_CANDIDATES = [
 ]
 
 
-def _debug(msg: str) -> None:
-    print(f'[live_model] {msg}')
-
-
 def _utc_now() -> pd.Timestamp:
     return pd.Timestamp.now(tz='UTC')
+
+
+def _today_log_path() -> Path:
+    now_et = datetime.now(timezone.utc).astimezone(ET)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    return LOG_DIR / f'live_model_{now_et:%Y%m%d}.log'
+
+
+def get_log_file_path() -> Path:
+    return _today_log_path()
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float):
+        if math.isnan(value):
+            return 'NaN'
+        if math.isinf(value):
+            return 'Infinity' if value > 0 else '-Infinity'
+    return value
+
+
+def _debug(msg: str) -> None:
+    line = f'[live_model] {msg}'
+    print(line)
+    if ENABLE_FILE_LOGGING:
+        try:
+            with _today_log_path().open('a', encoding='utf-8') as f:
+                f.write(line + '\n')
+        except Exception:
+            pass
 
 
 # ---------- module loading ----------
 def _find_file(filename: str) -> Path:
     candidates = [
+        DEPLOY_DIR / filename,
+        PROJECT_ROOT / 'src' / 'strategies' / 'deployed' / 'top_bottom_ticking' / filename,
         PROJECT_ROOT / 'src' / 'strategies' / 'manual' / filename,
         PROJECT_ROOT / 'src' / 'strategies' / filename,
         PROJECT_ROOT / 'src' / 'data' / filename,
         PROJECT_ROOT / 'src' / filename,
         PROJECT_ROOT / filename,
-        DEPLOY_DIR / filename,
     ]
     for c in candidates:
         if c.exists():
@@ -118,11 +157,10 @@ SHARED_PATH = _find_file('top_bottom_ticking_shared.py')
 STRAT_PATH = _find_file('ict_top_bottom_ticking.py')
 DATABENTO_LIVE_PATH = _find_file('databento_live.py')
 
-_shared = _load_module('top_bottom_shared_local', SHARED_PATH)
-_strat = _load_module('top_bottom_strategy_local', STRAT_PATH)
-_db_live = _load_module('top_bottom_databento_live_local', DATABENTO_LIVE_PATH)
+_shared = _load_module('top_bottom_shared_local_runtime', SHARED_PATH)
+_strat = _load_module('ict_top_bottom_ticking_local_runtime', STRAT_PATH)
+_db_live = _load_module('databento_live_local_runtime', DATABENTO_LIVE_PATH)
 
-# IMPORTANT: live only. No parquet/cache/yfinance fallback here.
 get_live_ohlcv = _db_live.get_live_ohlcv
 INSTRUMENTS = _shared.INSTRUMENTS
 SYMBOL_SPECS = _shared.SYMBOL_SPECS
@@ -134,10 +172,13 @@ for name in ('ICT_TOP_BOTTOM_TICKING', 'ICTTopBottomTickingType2Baseline', 'ICT_
         ICT_TOP_BOTTOM_TICKING = getattr(_strat, name)
         break
 if ICT_TOP_BOTTOM_TICKING is None:
-    raise ImportError('Could not find baseline class in ict_top_bottom_ticking.py')
+    raise ImportError(
+        f'Could not find ICT strategy class in {STRAT_PATH}. '
+        f'Expected one of: ICT_TOP_BOTTOM_TICKING, '
+        f'ICTTopBottomTickingType2Baseline, ICT_TOP_BOTTOM_TICKING_TYPE2'
+    )
 
 
-# ---------- timestamp helpers ----------
 def _to_naive_et_timestamp(value: Any) -> pd.Timestamp:
     ts = pd.Timestamp(value)
     if ts.tzinfo is None:
@@ -171,26 +212,43 @@ def _coerce_naive_et(values: Any):
     return ts
 
 
+def _ensure_utc_index(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    out = df.copy()
+    idx = pd.DatetimeIndex(out.index)
+
+    if idx.tz is None:
+        idx = idx.tz_localize('UTC')
+    else:
+        idx = idx.tz_convert('UTC')
+
+    out.index = idx
+    out = out.sort_index()
+    out = out[~out.index.duplicated(keep='last')]
+    return out
+
+
 def _to_bt_index(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     idx = pd.DatetimeIndex(out.index)
-    if idx.tz is not None:
-        idx = idx.tz_convert(ET).tz_localize(None)
+
+    if idx.tz is None:
+        idx = idx.tz_localize('UTC')
+
+    idx = idx.tz_convert(ET).tz_localize(None)
     out.index = idx
     return out
 
 
-# ---------- frame validation / cleaning ----------
 def _heartbeat(symbol: str, timeframe: str, df: pd.DataFrame) -> None:
     if df.empty:
         _debug(f'{symbol} heartbeat | timeframe={timeframe} | rows=0')
         return
 
     last_ts = pd.Timestamp(df.index[-1])
-    if last_ts.tzinfo is None:
-        last_ts_utc = last_ts.tz_localize('UTC')
-    else:
-        last_ts_utc = last_ts.tz_convert('UTC')
+    last_ts_utc = last_ts.tz_localize('UTC') if last_ts.tzinfo is None else last_ts.tz_convert('UTC')
     last_ts_et = last_ts_utc.tz_convert(ET)
     last_close = float(df['Close'].iloc[-1])
 
@@ -205,7 +263,8 @@ def _clean_live_df(symbol: str, df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
 
-    out = df.copy()
+    out = _ensure_utc_index(df)
+
     required = ['Open', 'High', 'Low', 'Close']
     missing = [c for c in required if c not in out.columns]
     if missing:
@@ -273,7 +332,7 @@ def _clean_live_df(symbol: str, df: pd.DataFrame) -> pd.DataFrame:
     out = out[~out.index.duplicated(keep='last')]
 
     removed_total = before - len(out)
-    if removed_total > 0 and symbol != 'MGC':
+    if removed_total > 0:
         _debug(f'{symbol} total live rows removed during cleansing: {removed_total}')
 
     return out
@@ -284,49 +343,42 @@ def _latest_bar_is_fresh(df: pd.DataFrame, symbol: str) -> bool:
         return False
 
     latest_bar_utc = pd.Timestamp(df.index[-1])
-    if latest_bar_utc.tzinfo is None:
-        latest_bar_utc = latest_bar_utc.tz_localize('UTC')
-    else:
-        latest_bar_utc = latest_bar_utc.tz_convert('UTC')
-
+    latest_bar_utc = latest_bar_utc.tz_localize('UTC') if latest_bar_utc.tzinfo is None else latest_bar_utc.tz_convert('UTC')
     latest_bar_et = latest_bar_utc.tz_convert(ET)
     age_minutes = (_utc_now() - latest_bar_utc).total_seconds() / 60.0
+
     if age_minutes > LIVE_STALE_MINUTES:
         _debug(
             f'skipping {symbol}: refusing stale data for live mode | '
             f'latest_bar_et={latest_bar_et.isoformat()} | age_minutes={age_minutes:.1f}'
         )
         return False
+
     return True
 
 
-# ---------- strategy / signal helpers ----------
 def _safe_simple(v: Any) -> bool:
     return isinstance(v, (int, float, bool, str)) or v is None
 
 
 def _snapshot_debug_from_instance(obj: Any) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    if hasattr(obj, 'debug_counts'):
-        try:
-            debug_counts = getattr(obj, 'debug_counts')
-            if isinstance(debug_counts, dict):
-                out.update({f'debug_{k}': v for k, v in debug_counts.items()})
-        except Exception:
-            pass
+
     try:
-        for k, v in getattr(obj, '__dict__', {}).items():
-            if _safe_simple(v):
-                out[k] = v
+        if hasattr(obj, 'debug_counts'):
+            for k, v in dict(getattr(obj, 'debug_counts', {})).items():
+                if _safe_simple(v):
+                    out[k] = _json_safe(v)
     except Exception:
         pass
+
     if hasattr(obj, 'pending'):
         try:
             pending = getattr(obj, 'pending')
             if pending is not None:
                 for k, v in getattr(pending, '__dict__', {}).items():
                     if _safe_simple(v):
-                        out[f'pending_{k}'] = v
+                        out[f'pending_{k}'] = _json_safe(v)
         except Exception:
             pass
     return out
@@ -374,7 +426,6 @@ def _load_live_df(cfg: Any) -> pd.DataFrame:
     required_rows = max(_required_rows_for_timeframe(tf), SIGNAL_LOOKBACK_BARS + 5)
 
     try:
-        # live only: this comes from the running Databento live service
         live_df = get_live_ohlcv(symbol=cfg.symbol, timeframe=tf, tail_rows=tail_rows)
     except Exception as exc:
         _debug(f'{cfg.symbol} live fetch failed: {exc}')
@@ -494,47 +545,41 @@ def _make_strategy_class(cfg: Any):
     return StrategyCls
 
 
-def run_top_bottom_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _run_backtest_pass(symbol: str, df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any], Any]:
     cfg = INSTRUMENTS[symbol]
     StrategyCls = _make_strategy_class(cfg)
-    df = _load_live_df(cfg)
-    if df.empty:
-        return pd.DataFrame(), pd.DataFrame()
-
     bt_df = _to_bt_index(df)
-
-    bt = Backtest(
-        bt_df,
-        StrategyCls,
-        cash=LIVE_BACKTEST_CASH,
-        commission=0.0,
-        exclusive_orders=True,
-        trade_on_close=False,
-    )
+    bt = Backtest(bt_df, StrategyCls, cash=LIVE_BACKTEST_CASH, commission=0.0, exclusive_orders=True, trade_on_close=False)
     bt.run()
 
     raw_meta = pd.DataFrame(getattr(StrategyCls, 'last_trade_log', []))
     raw_debug = getattr(StrategyCls, 'last_debug_counts', {}) or {}
-    if raw_debug:
-        _debug(f'{symbol} strategy debug snapshot: {raw_debug}')
-    _debug(f'{symbol} raw trade log rows before prepare_meta: {len(raw_meta)}')
-
-    if raw_meta.empty:
-        _debug(f'{symbol} produced no fresh trade log rows from the strategy')
-        return pd.DataFrame(), df
-
     try:
         meta = _prepare_meta(raw_meta, cfg, 'type2_baseline', PROP_PROFILE_NAME)
     except TypeError:
         meta = _prepare_meta(raw_meta, cfg)
-
     meta = _ensure_meta_columns(meta, symbol, cfg)
-    _debug(f'{symbol} prepared trade log rows after prepare_meta: {len(meta)}')
+    return meta, raw_debug, cfg
+
+
+def run_top_bottom_for_symbol(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    cfg = INSTRUMENTS[symbol]
+    df = _load_live_df(cfg)
+    if df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    meta, raw_debug, _ = _run_backtest_pass(symbol, df)
+    if raw_debug:
+        _debug(f'{symbol} strategy debug snapshot: {json.dumps(_json_safe(raw_debug), ensure_ascii=False)}')
+        if not raw_debug.get('pending_direction'):
+            _debug(f'{symbol} no active pending setup remains after strategy pass')
+    _debug(f'{symbol} raw trade log rows before prepare_meta: {len(meta)}')
 
     if meta.empty:
-        _debug(f'{symbol} produced trade rows but none survived _prepare_meta')
+        _debug(f'{symbol} produced no fresh trade log rows from the strategy')
         return pd.DataFrame(), df
 
+    _debug(f'{symbol} prepared trade log rows after prepare_meta: {len(meta)}')
     return meta, df
 
 
@@ -592,6 +637,10 @@ def extract_fresh_entries(meta: pd.DataFrame, df: pd.DataFrame) -> list[dict[str
 
 
 def generate_live_signals() -> list[dict[str, Any]]:
+    _debug(
+        f'cycle start | model={MODEL_NAME} | symbols={list(SYMBOLS)} | '
+        f'log_file={get_log_file_path()}'
+    )
     signals: list[dict[str, Any]] = []
     for symbol in SYMBOLS:
         if symbol not in INSTRUMENTS:
@@ -607,4 +656,5 @@ def generate_live_signals() -> list[dict[str, Any]]:
             signals.extend(symbol_signals)
         except Exception as exc:
             _debug(f'{symbol} scan failed: {exc}')
+    _debug(f'cycle complete | total_signals={len(signals)}')
     return signals
