@@ -1,3 +1,310 @@
+"""
+top_bottom_ticking/parity_check.py
+
+PARITY CHECK OVERVIEW
+=====================
+
+Purpose
+-------
+This script is used to compare two ways of running the SAME strategy logic on the
+SAME market data window:
+
+1) FULL-PASS RUN
+2) LIVE-STYLE ROLLING REPLAY
+
+The goal is to verify that the strategy behaves consistently when run in a normal
+backtest-style batch pass versus a live-style incremental replay.
+
+Why this matters
+----------------
+A strategy can appear correct in a standard backtest, but behave differently in live
+execution if any of the following happen:
+
+- state is not preserved correctly across bars
+- pending setups reset incorrectly
+- bar preparation differs between backtest and live
+- lookahead assumptions exist in batch processing
+- live entry logic depends on incremental bar arrival in a way that differs from
+  full dataframe execution
+
+This parity script helps check whether the strategy logic itself is consistent.
+
+----------------------------------------------------------------------
+FULL-PASS RUN
+----------------------------------------------------------------------
+
+Definition
+----------
+The full-pass run is the normal backtest-style evaluation.
+
+The strategy is given the FULL selected dataframe at once, for example:
+- all 5-minute bars
+- from START timestamp
+- to END timestamp
+
+The model then processes the entire bar sequence in one complete run.
+
+Conceptually
+------------
+This is equivalent to saying:
+
+    "Here is the full chart for this time window.
+     Run the strategy over all of it and tell me:
+     - what trades were logged
+     - what pending setup remains
+     - what final state the strategy ended in"
+
+What it tells us
+----------------
+The full-pass summary shows the final backtest-style outcome over that window:
+- number of bars
+- number of trade log rows
+- latest bar timestamp
+- final pending setup state
+- stop/target state
+- active direction state
+- stop bound configuration values
+
+Important note
+--------------
+Even though the whole dataframe is supplied at once, a properly written strategy
+should still behave as if it is evaluating progressively bar by bar internally.
+
+So this mode is NOT intended to "cheat".
+It is simply the normal batch/backtest execution style.
+
+----------------------------------------------------------------------
+LIVE-STYLE ROLLING REPLAY
+----------------------------------------------------------------------
+
+Definition
+----------
+The live-style rolling replay simulates live trading behavior more closely.
+
+Instead of giving the strategy the whole selected window in one shot, the script:
+
+1. warms up using an initial minimum number of bars
+2. then adds ONE newly closed bar at a time
+3. reruns the strategy on only the bars available up to that moment
+
+Conceptually
+------------
+This is equivalent to saying:
+
+    "Pretend we are live.
+     At each newly closed candle, re-evaluate using only the information that
+     would have existed at that time."
+
+So the model experiences the data progressively:
+- first 40 bars
+- then 41 bars
+- then 42 bars
+- then 43 bars
+- etc.
+
+What it tells us
+----------------
+The rolling replay helps verify:
+- whether incremental execution matches backtest-style execution
+- whether state persists correctly across re-runs
+- whether pending setups are preserved correctly
+- whether entries occur only when they should
+- whether any hidden lookahead/state bug exists
+
+Rolling replay output includes:
+- replay_steps
+- emitted_signals_total
+- final pending state
+- final stop/target state
+- trade log count at the end of replay
+
+----------------------------------------------------------------------
+WHAT "PARITY" MEANS HERE
+----------------------------------------------------------------------
+
+Parity means that for the same symbol, timeframe, and bar window, we want the
+strategy's final behavior to match between:
+
+- full-pass run
+- live-style rolling replay
+
+In a healthy result, both sides should usually agree on things like:
+- final pending_direction
+- final pending_entry_ce
+- final stop / targets
+- final setup type
+- trade log row count
+- whether trades were emitted or not
+
+If the two modes diverge, it may indicate:
+- a state reset bug
+- a lookahead bug
+- a live-vs-batch data preparation mismatch
+- a resampling / cleaning mismatch
+- execution path differences in incremental vs batch mode
+
+----------------------------------------------------------------------
+IMPORTANT LIMITATION
+----------------------------------------------------------------------
+
+This script does NOT place real broker orders.
+
+It validates STRATEGY DECISION PARITY, not EXECUTION PARITY.
+
+So this script answers:
+
+    "Does the strategy logic behave the same in batch mode and live-style replay?"
+
+It does NOT answer:
+
+    "Did the broker receive and fill the order exactly the same way live would?"
+
+Broker execution, latency, rejected orders, slippage, and platform integration are
+outside the scope of this parity script.
+
+----------------------------------------------------------------------
+DATA SOURCE / REPLAY INTENT
+----------------------------------------------------------------------
+
+This parity script is intended to use replay bars for a recent intraday window,
+typically within the last 24-48 hours, so that we can compare:
+- current live-model behavior
+- strategy behavior on recent market structure
+without relying on older frozen local cache unless explicitly desired.
+
+Typical ideal use:
+- choose a recent window where live logs showed a pending setup, rejection, or no trade
+- replay that exact recent window
+- compare full-pass and rolling-replay summaries
+- inspect whether no-trade behavior is genuine or caused by a mismatch
+
+Important cache safety rule
+---------------------------
+This script must NEVER write into:
+
+    src/data/databento_cache
+
+That folder is your main historical/backtest cache.
+
+Parity replay data is instead written into:
+
+    src/data/replay_cache
+
+That makes parity replay a separate scratch cache and prevents accidental overwrite
+of long-history backtest files like:
+
+    MES_1m.parquet
+    MNQ_1m.parquet
+    MYM_1m.parquet
+    MGC_1m.parquet
+    MCL_1m.parquet
+
+----------------------------------------------------------------------
+HOW TO INTERPRET RESULTS
+----------------------------------------------------------------------
+
+Case 1: Full-pass and rolling replay both show no trades
+--------------------------------------------------------
+This usually means the strategy genuinely found no completed entries in that window.
+
+Case 2: Both show same pending/rejection state
+----------------------------------------------
+This suggests the strategy is behaving consistently and no live-vs-backtest mismatch
+is present for that window.
+
+Case 3: Full-pass shows a trade but rolling replay does not
+-----------------------------------------------------------
+This is a strong signal that something differs between batch mode and live-style
+incremental processing.
+
+Case 4: Rolling replay shows different final pending state
+----------------------------------------------------------
+This suggests state handling or setup carry-forward logic may differ between modes.
+
+----------------------------------------------------------------------
+HIGH-LEVEL WORKFLOW
+----------------------------------------------------------------------
+
+1. Parse CLI arguments:
+   - symbol
+   - timeframe
+   - start
+   - end
+   - output directory
+
+2. Check parity scratch cache in:
+   - src/data/replay_cache
+
+3. If no cached replay file exists, fetch replay bars for the requested recent
+   intraday window from Databento.
+
+4. Save replay 1-minute bars ONLY into:
+   - src/data/replay_cache
+
+5. Clean / normalize replay bars so they match strategy expectations.
+
+6. Resample 1-minute replay bars into the requested target timeframe (for example 5m).
+
+7. Run FULL-PASS strategy evaluation on the entire selected timeframe dataframe.
+
+8. Run LIVE-STYLE ROLLING REPLAY by progressively expanding the dataframe and
+   re-evaluating one closed bar at a time.
+
+9. Build summaries for:
+   - full_pass
+   - rolling_replay
+
+10. Compute a DIFF block so mismatches are easy to inspect.
+
+11. Save:
+   - parity report JSON
+   - replay bars CSV
+   - optional logs/output artifacts
+
+----------------------------------------------------------------------
+HOW TO RUN
+----------------------------------------------------------------------
+
+Single symbol example
+---------------------
+python src/strategies/deployed/top_bottom_ticking/parity_check.py \
+  --symbol MYM \
+  --timeframe 5m \
+  --start "2026-04-20T18:30:00+00:00" \
+  --end "2026-04-20T23:15:00+00:00" \
+  --output-dir /Users/Abdullahi/trading-project/trading_system/src/strategies/deployed/top_bottom_ticking/logs
+
+What this does
+--------------
+- fetches replay bars for MYM over the selected recent window
+- writes replay scratch data only into src/data/replay_cache
+- builds timeframe bars
+- runs full-pass
+- runs live-style rolling replay
+- compares the two
+- saves JSON report and bars CSV
+
+Typical output files
+--------------------
+- parity_<symbol>_<timeframe>_<start>_<end>.json
+- parity_<symbol>_<timeframe>_<start>_<end>_bars.csv
+
+----------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------
+
+Use this script when you want to answer:
+
+    "Is the strategy logic behaving the same way in backtest-style processing
+     and live-style bar-by-bar replay for this recent market window?"
+
+If yes:
+- your no-trade / pending / rejection behavior is likely genuine for that window
+
+If no:
+- investigate state handling, resampling, filtering, and incremental execution logic
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -26,6 +333,10 @@ DEFAULT_MAX_WAIT_SECONDS = 20
 # Databento OHLCV prices are fixed-precision integers for many schemas.
 # Divide by 1e9 to get the real decimal price.
 PX_SCALE = 1e9
+
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+MAIN_DATABENTO_CACHE_DIR = PROJECT_ROOT / "src" / "data" / "databento_cache"
+DEFAULT_REPLAY_CACHE_DIR = PROJECT_ROOT / "src" / "data" / "replay_cache"
 
 
 def _json_safe(value: Any) -> Any:
@@ -113,6 +424,68 @@ def _record_to_row(record: Any) -> dict[str, Any] | None:
         "Close": close_px,
         "Volume": volume,
     }
+
+
+def _ensure_dir(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _assert_not_main_cache(path: Path) -> None:
+    resolved = path.resolve()
+    main_cache = MAIN_DATABENTO_CACHE_DIR.resolve()
+
+    if resolved == main_cache:
+        raise ValueError(
+            f"Refusing to use main databento cache for parity scratch data: {resolved}"
+        )
+
+    if main_cache in resolved.parents:
+        raise ValueError(
+            f"Refusing to write inside main databento cache tree: {resolved}"
+        )
+
+
+def _build_replay_cache_file(
+    replay_cache_dir: Path,
+    symbol: str,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> Path:
+    return replay_cache_dir / (
+        f"{symbol}_1m_replay_{start:%Y%m%dT%H%M%S}_{end:%Y%m%dT%H%M%S}.parquet"
+    )
+
+
+def _load_replay_cache(replay_cache_file: Path) -> pd.DataFrame | None:
+    if not replay_cache_file.exists():
+        return None
+
+    df = pd.read_parquet(replay_cache_file)
+    if df.empty:
+        return df
+
+    if not isinstance(df.index, pd.DatetimeIndex):
+        if "ts_event" in df.columns:
+            df["ts_event"] = pd.to_datetime(df["ts_event"], utc=True)
+            df = df.set_index("ts_event")
+        else:
+            raise ValueError(
+                f"Replay cache file has no DatetimeIndex or ts_event column: {replay_cache_file}"
+            )
+
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
+    else:
+        df.index = df.index.tz_convert("UTC")
+
+    return df.sort_index()
+
+
+def _save_replay_cache(df_1m: pd.DataFrame, replay_cache_file: Path) -> None:
+    _assert_not_main_cache(replay_cache_file.parent)
+    _ensure_dir(replay_cache_file.parent)
+    df_1m.to_parquet(replay_cache_file)
 
 
 def fetch_replay_1m(symbol: str, start: pd.Timestamp, end: pd.Timestamp, max_wait_seconds: int) -> pd.DataFrame:
@@ -297,7 +670,17 @@ def main() -> int:
     parser.add_argument("--start", required=True, help="UTC/offset-aware start timestamp")
     parser.add_argument("--end", required=True, help="UTC/offset-aware end timestamp")
     parser.add_argument("--output-dir", default=".")
+    parser.add_argument(
+        "--replay-cache-dir",
+        default=str(DEFAULT_REPLAY_CACHE_DIR),
+        help="Scratch cache for parity replay bars only. Must not be inside src/data/databento_cache.",
+    )
     parser.add_argument("--max-wait-seconds", type=int, default=DEFAULT_MAX_WAIT_SECONDS)
+    parser.add_argument(
+        "--refresh-replay-cache",
+        action="store_true",
+        help="Ignore any existing parity replay cache file and fetch replay bars again.",
+    )
     args = parser.parse_args()
 
     symbol = args.symbol.upper().strip()
@@ -318,15 +701,43 @@ def main() -> int:
             "Databento Live intraday replay only supports windows inside the last 24 hours."
         )
 
-    df_1m = fetch_replay_1m(
+    out_dir = Path(args.output_dir).resolve()
+    replay_cache_dir = Path(args.replay_cache_dir).resolve()
+
+    _assert_not_main_cache(replay_cache_dir)
+    _ensure_dir(out_dir)
+    _ensure_dir(replay_cache_dir)
+
+    replay_cache_file = _build_replay_cache_file(
+        replay_cache_dir=replay_cache_dir,
         symbol=symbol,
         start=start,
         end=end,
-        max_wait_seconds=args.max_wait_seconds,
     )
 
+    df_1m: pd.DataFrame | None = None
+
+    if not args.refresh_replay_cache:
+        df_1m = _load_replay_cache(replay_cache_file)
+        if df_1m is not None:
+            print(f"Using parity replay cache: {replay_cache_file}")
+
+    if df_1m is None:
+        df_1m = fetch_replay_1m(
+            symbol=symbol,
+            start=start,
+            end=end,
+            max_wait_seconds=args.max_wait_seconds,
+        )
+
+        if df_1m.empty:
+            raise SystemExit("No rows returned from Databento intraday replay for parity check.")
+
+        _save_replay_cache(df_1m, replay_cache_file)
+        print(f"Saved parity replay cache -> {replay_cache_file}")
+
     if df_1m.empty:
-        raise SystemExit("No rows returned from Databento intraday replay for parity check.")
+        raise SystemExit("Replay rows were returned, but the replay cache dataframe is empty.")
 
     sliced = resample_ohlcv(df_1m, timeframe)
     sliced = lm._clean_live_df(symbol, sliced)
@@ -345,13 +756,11 @@ def main() -> int:
         "end": end.isoformat(),
         "rows_1m": int(len(df_1m)),
         "rows_timeframe": int(len(sliced)),
+        "replay_cache_file": str(replay_cache_file),
         "full_pass": full_summary,
         "rolling_replay": rolling_summary,
         "diff": diff,
     }
-
-    out_dir = Path(args.output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     stem = f"parity_{symbol}_{timeframe}_{start:%Y%m%dT%H%M%S}_{end:%Y%m%dT%H%M%S}"
     out_path = out_dir / f"{stem}.json"

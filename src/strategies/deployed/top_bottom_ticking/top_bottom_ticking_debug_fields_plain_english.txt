@@ -1,0 +1,505 @@
+Top Bottom Ticking Debug Fields — Plain English Guide
+
+This file explains what each debug/state field means in plain English.
+
+General idea
+------------
+The model works in stages:
+
+1. It first looks for a sweep pattern.
+2. If the sweep is good enough, it may arm a pending setup.
+3. If price reaches the pending entry correctly, it can trigger an entry.
+4. After entry, it manages the trade with partials, break-even, targets, and force-flat rules.
+
+So these fields help you see:
+- what the model noticed
+- what it rejected
+- what it armed
+- whether it entered
+- how it managed the trade afterward
+
+
+1) Sweep detection
+------------------
+
+sweep_short_seen
+Meaning:
+How many short-side sweep candidates the model detected.
+
+Plain English:
+This counts the number of times price made the kind of move that could lead to a short setup.
+
+Important:
+This does NOT mean a short trade was taken.
+It only means the model noticed a possible short-side liquidity sweep.
+
+Typical interpretation:
+“Price swept in a way that might set up a short reversal.”
+
+
+sweep_long_seen
+Meaning:
+How many long-side sweep candidates the model detected.
+
+Plain English:
+This counts the number of times price made the kind of move that could lead to a long setup.
+
+Important:
+This does NOT mean a long trade was taken.
+It only means the model noticed a possible long-side liquidity sweep.
+
+Typical interpretation:
+“Price swept in a way that might set up a long reversal.”
+
+
+2) Pending setup creation
+-------------------------
+
+pending_short_armed
+Meaning:
+How many short setups passed all early checks and were armed as pending short setups.
+
+Plain English:
+The model found a short idea, liked the structure, and prepared a short setup that could trigger if price returned to the entry area correctly.
+
+Important:
+Armed does not mean entered yet.
+It means the setup is now “ready and waiting.”
+
+
+pending_long_armed
+Meaning:
+How many long setups passed all early checks and were armed as pending long setups.
+
+Plain English:
+The model found a long idea, liked the structure, and prepared a long setup that could trigger if price returned correctly.
+
+
+3) Actual entries
+-----------------
+
+entry_short
+Meaning:
+How many short trades were actually entered.
+
+Plain English:
+A short setup did not just get detected or armed — it really triggered and became an open trade.
+
+
+entry_long
+Meaning:
+How many long trades were actually entered.
+
+Plain English:
+A long setup did not just get detected or armed — it really triggered and became an open trade.
+
+
+4) Trade management after entry
+-------------------------------
+
+partial1
+Meaning:
+How many times the trade reached the first partial take-profit.
+
+Plain English:
+The position moved enough in profit for the model to take the first piece of profit off the table.
+
+
+partial2
+Meaning:
+How many times the trade reached the second partial take-profit.
+
+Plain English:
+The position moved further in profit and the model took another piece off.
+
+
+be_move
+Meaning:
+How many times the stop was moved to break-even.
+
+Plain English:
+The trade had gone far enough in profit that the model protected the trade by moving the stop so the trade should no longer lose money, or should lose much less depending on execution.
+
+
+forced_flat
+Meaning:
+How many times an open trade was forcibly closed.
+
+Plain English:
+The model closed the trade because of a rule such as end-of-session, force-flat time, or another hard exit rule — not because target or stop was hit in the normal way.
+
+
+5) Pending setup expiration / filtering
+---------------------------------------
+
+expired_pending
+Meaning:
+How many armed pending setups expired before triggering.
+
+Plain English:
+The model had a valid setup ready, but price never triggered it in time, so the setup was cancelled.
+
+
+blocked_internal_filter
+Meaning:
+How many setups were blocked by the internal filter logic.
+
+Plain English:
+The model found something that looked like a setup, but another internal rule said “do not allow this one.”
+
+
+6) Rejection reasons
+--------------------
+
+reject_short_sweep_too_small
+Meaning:
+How many short sweep candidates were rejected because the sweep size was too small.
+
+Plain English:
+The model saw a possible short sweep, but it decided the move was not strong, deep, or meaningful enough to qualify.
+
+
+reject_long_sweep_too_small
+Meaning:
+How many long sweep candidates were rejected because the sweep size was too small.
+
+Plain English:
+The model saw a possible long sweep, but it decided the move was too weak or too small to be a valid long setup.
+
+
+reject_short_zone_too_wide
+Meaning:
+How many short setups were rejected because the entry zone was too wide.
+
+Plain English:
+The model liked the short idea, but the price zone it would need to trade was too large, so the trade would be too messy or too broad to manage properly.
+
+
+reject_long_zone_too_wide
+Meaning:
+How many long setups were rejected because the entry zone was too wide.
+
+Plain English:
+The model liked the long idea, but the entry zone was too wide and failed risk/structure quality rules.
+
+
+reject_short_stop_out_of_bounds
+Meaning:
+How many short setups were rejected because the stop distance was outside allowed limits.
+
+Plain English:
+The model calculated where the short stop-loss should go, but that stop was either:
+- too small, or
+- too large
+
+So the model refused to take the trade.
+
+This is one of the most important rejection fields.
+
+
+reject_long_stop_out_of_bounds
+Meaning:
+How many long setups were rejected because the stop distance was outside allowed limits.
+
+Plain English:
+The model found a long idea, but the stop-loss distance did not fit the allowed minimum/maximum stop settings.
+
+
+reject_short_confirmation_missing
+Meaning:
+How many short setups were rejected because required confirmation was missing.
+
+Plain English:
+The model saw a possible short setup, but it did not get the extra confirmation it wanted before allowing the trade.
+
+
+reject_long_confirmation_missing
+Meaning:
+How many long setups were rejected because required confirmation was missing.
+
+Plain English:
+The model saw a possible long setup, but the confirming price action never appeared, so it refused the trade.
+
+
+7) Pending entry was armed but never touched
+--------------------------------------------
+
+pending_short_not_touched
+Meaning:
+How many armed short pending setups were never touched by price.
+
+Plain English:
+The model prepared a short setup and waited for price to come back to the entry area, but price never came back there.
+
+
+pending_long_not_touched
+Meaning:
+How many armed long pending setups were never touched by price.
+
+Plain English:
+The model prepared a long setup and waited for price to revisit the entry area, but price never got there.
+
+
+8) Current active pending setup state
+-------------------------------------
+
+These fields describe the currently active pending setup at the end of the run.
+If there is no active pending setup, many of these will be blank, -1, or NaN.
+
+pending_direction
+Meaning:
+The direction of the current active pending setup.
+
+Possible values:
+- "short"
+- "long"
+- "" (empty string = no active pending setup)
+
+Plain English:
+If this says short, the model is currently waiting on a short setup.
+If it is blank, there is no active pending setup right now.
+
+
+pending_created_bar
+Meaning:
+The bar index where the current pending setup was created.
+
+Plain English:
+This tells you on which bar the setup was armed.
+
+If it is -1:
+There is no active pending setup.
+
+
+pending_expiry_bar
+Meaning:
+The bar index where the current pending setup will expire if not triggered.
+
+Plain English:
+This is the deadline bar.
+If price has not triggered the pending setup by then, the setup is cancelled.
+
+If it is -1:
+There is no active pending setup.
+
+
+pending_entry_ce
+Meaning:
+The calculated pending entry price.
+
+Plain English:
+This is the price where the model wants the setup to trigger.
+
+If it is NaN:
+There is no active pending entry price.
+
+
+pending_zone_high
+Meaning:
+The upper boundary of the pending entry zone.
+
+Plain English:
+This is the top of the area the model is using for the pending setup.
+
+
+pending_zone_low
+Meaning:
+The lower boundary of the pending entry zone.
+
+Plain English:
+This is the bottom of the area the model is using for the pending setup.
+
+
+pending_stop_price
+Meaning:
+The stop-loss price for the current pending setup.
+
+Plain English:
+If the setup triggers, this is where the trade would be invalidated and stopped out.
+
+
+pending_target1
+Meaning:
+The first target price for the current pending setup.
+
+Plain English:
+This is the first profit objective.
+
+
+pending_target2
+Meaning:
+The second target price for the current pending setup.
+
+Plain English:
+This is the second profit objective.
+
+
+pending_target3
+Meaning:
+The third target price for the current pending setup.
+
+Plain English:
+This is the furthest or final profit objective used by the setup logic.
+
+
+pending_external_level
+Meaning:
+The tracked external level related to the current setup.
+
+Plain English:
+This is an important higher reference level the setup is built around, such as the external swing/liquidity level being traded from or against.
+
+
+pending_setup_type
+Meaning:
+The name/type of the current setup.
+
+Plain English:
+This tells you what exact strategy pattern is active.
+Example style:
+TYPE2_SHORT_TOP_TICK
+
+If blank:
+No pending setup is currently active.
+
+
+pending_entry_variant
+Meaning:
+The entry variant being used for the current pending setup.
+
+Plain English:
+This tells you which entry style the model chose for the setup.
+
+
+pending_internal_sweep
+Meaning:
+Whether the current pending setup used an internal sweep condition.
+
+Plain English:
+True means the setup involved an internal sweep requirement.
+False means it did not.
+
+
+9) Stop configuration fields
+----------------------------
+
+effective_min_stop_points
+Meaning:
+The actual minimum stop distance currently being enforced by the model.
+
+Plain English:
+If a setup’s stop is smaller than this, the model rejects it.
+
+
+effective_max_stop_points
+Meaning:
+The actual maximum stop distance currently being enforced by the model.
+
+Plain English:
+If a setup’s stop is larger than this, the model rejects it.
+
+Very important:
+This field often explains why setups are seen but not traded.
+
+
+manual_min_stop_points
+Meaning:
+The manually configured minimum stop distance.
+
+Plain English:
+This is the base minimum stop setting from configuration.
+
+
+manual_max_stop_points
+Meaning:
+The manually configured maximum stop distance.
+
+Plain English:
+This is the base maximum stop setting from configuration.
+
+Note:
+Sometimes the effective stop values can differ from the manual values if the strategy adjusts or normalizes them internally.
+
+
+10) How to read the whole block together
+----------------------------------------
+
+A good way to read the block is in this order:
+
+A. Did the model see anything?
+- sweep_short_seen
+- sweep_long_seen
+
+B. Did those survive filtering?
+- reject_* fields
+- blocked_internal_filter
+
+C. Did anything get armed?
+- pending_short_armed
+- pending_long_armed
+
+D. Did anything get entered?
+- entry_short
+- entry_long
+
+E. Did the trade get managed?
+- partial1
+- partial2
+- be_move
+- forced_flat
+
+F. Is anything still active right now?
+- pending_direction
+- pending_entry_ce
+- pending_stop_price
+- pending_target1/2/3
+- pending_setup_type
+
+
+11) Quick examples
+------------------
+
+Example 1:
+sweep_short_seen = 10
+pending_short_armed = 0
+reject_short_stop_out_of_bounds = 10
+
+Plain English:
+The model found 10 possible short setups, but every one of them was rejected because the stop-loss distance was invalid.
+
+
+Example 2:
+sweep_long_seen = 5
+pending_long_armed = 5
+entry_long = 0
+pending_long_not_touched = 5
+
+Plain English:
+The model found 5 valid long setups and armed them, but price never came back to the entry area, so none triggered.
+
+
+Example 3:
+entry_short = 2
+partial1 = 2
+partial2 = 1
+be_move = 2
+
+Plain English:
+Two short trades entered.
+Both reached first partial.
+One reached second partial.
+Both had stops moved to break-even.
+
+
+12) Very short summary
+----------------------
+
+Think of the fields like this:
+
+- sweep_*_seen = “I noticed a possible setup”
+- reject_* = “I noticed it, but I rejected it”
+- pending_*_armed = “I approved it and prepared it”
+- entry_* = “It actually became a trade”
+- partial1 / partial2 / be_move = “I managed the trade”
+- forced_flat = “I closed it because of a hard rule”
+- pending_* fields = “This is the setup I am currently waiting on right now”

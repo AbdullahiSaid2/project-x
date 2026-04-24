@@ -1,11 +1,19 @@
 {
   "last_cycle": {
-    "cycle_time_et": "2026-04-21T09:44:10.030368-04:00",
-    "force_flat_result": null,
+    "cycle_time_et": "2026-04-23T17:53:39.845367-04:00",
+    "force_flat_result": {
+      "action": "force_flat_endpoint_not_configured",
+      "logged_at_et": "2026-04-23T17:53:39.845611-04:00",
+      "mode": "live",
+      "ok": false,
+      "reason": "force_flat_cutoff_window",
+      "session_key": "2026-04-23"
+    },
     "mode": "live",
     "model_name": "top_bottom_ticking",
     "orders_sent": 0,
-    "signals_seen": 0
+    "signals_seen": 0,
+    "skipped_reason": "force_flat_window"
   },
   "last_error": null,
   "last_force_flat": null,

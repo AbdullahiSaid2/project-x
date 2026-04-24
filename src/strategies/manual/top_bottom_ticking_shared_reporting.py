@@ -155,23 +155,32 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
         last_debug_counts: dict = {}
 
         def init(self):
+            self.prop_guard = PropFirmGuard(profile) if profile is not None else None
+            self._guard_seen_closed = 0
             super().init()
-            self.prop_guard = PropFirmGuard(profile)
             self.debug_counts.setdefault("blocked_prop_daily_loss", 0)
             self.debug_counts.setdefault("blocked_prop_consecutive_losses", 0)
             self.debug_counts.setdefault("blocked_prop_max_trades", 0)
             self.debug_counts.setdefault("blocked_prop_trailing_drawdown", 0)
-            self._guard_seen_closed = 0
             self.__class__.last_trade_log = []
             self.__class__.last_debug_counts = {}
+            self._sync_debug()
 
         def _sync_debug(self):
+            if getattr(self, "prop_guard", None) is None:
+                self.debug_counts["prop_balance"] = float("nan")
+                self.debug_counts["prop_day_realized"] = 0.0
+                self.debug_counts["prop_consecutive_losses_today"] = 0
+                self.__class__.last_debug_counts = dict(self.debug_counts)
+                return
             self.debug_counts["prop_balance"] = float(self.prop_guard.balance)
             self.debug_counts["prop_day_realized"] = float(self.prop_guard.day_realized)
             self.debug_counts["prop_consecutive_losses_today"] = int(self.prop_guard.consecutive_losses_today)
             self.__class__.last_debug_counts = dict(self.debug_counts)
 
         def _update_guard_from_closed_trades(self):
+            if getattr(self, "prop_guard", None) is None:
+                return
             try:
                 closed = list(self.closed_trades)
             except Exception:
@@ -188,6 +197,8 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
             self._sync_debug()
 
         def _guard_allows_entry(self, row: pd.Series) -> bool:
+            if getattr(self, "prop_guard", None) is None:
+                return True
             trade_day = row.get("session_date", row.get("et_date"))
             decision = self.prop_guard.can_open_trade(trade_day)
             if decision.allowed:

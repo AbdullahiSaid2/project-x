@@ -198,20 +198,25 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
         last_debug_counts: dict = {}
 
         def init(self):
-            super().init()
             self.prop_guard = PropFirmGuard(profile)
+            self._guard_seen_closed = 0
+            self.__class__.last_trade_log = []
+            self.__class__.last_debug_counts = {}
+            super().init()
             self.debug_counts.setdefault("blocked_prop_daily_loss", 0)
             self.debug_counts.setdefault("blocked_prop_consecutive_losses", 0)
             self.debug_counts.setdefault("blocked_prop_max_trades", 0)
             self.debug_counts.setdefault("blocked_prop_trailing_drawdown", 0)
-            self._guard_seen_closed = 0
-            self.__class__.last_trade_log = []
-            self.__class__.last_debug_counts = {}
+            self._sync_debug()
 
         def _sync_debug(self):
-            self.debug_counts["prop_balance"] = float(self.prop_guard.balance)
-            self.debug_counts["prop_day_realized"] = float(self.prop_guard.day_realized)
-            self.debug_counts["prop_consecutive_losses_today"] = int(self.prop_guard.consecutive_losses_today)
+            guard = getattr(self, "prop_guard", None)
+            if guard is None:
+                self.__class__.last_debug_counts = dict(getattr(self, "debug_counts", {}))
+                return
+            self.debug_counts["prop_balance"] = float(guard.balance)
+            self.debug_counts["prop_day_realized"] = float(guard.day_realized)
+            self.debug_counts["prop_consecutive_losses_today"] = int(guard.consecutive_losses_today)
             self.__class__.last_debug_counts = dict(self.debug_counts)
 
         def _update_guard_from_closed_trades(self):
@@ -264,8 +269,13 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
 def run_symbol_variant(cfg: InstrumentConfig, variant_name: str, base_cls: type, prop_profile_name: str):
     StrategyCls = _build_guarded_strategy_class(cfg, variant_name, base_cls, prop_profile_name)
     print(f"\n=== {cfg.symbol} | {variant_name} | {prop_profile_name} ===")
-    df = get_ohlcv(cfg.symbol, exchange=cfg.exchange, timeframe=cfg.timeframe, days_back=cfg.days_back).tail(cfg.tail_rows)
-    print(f"Loaded {len(df)} rows | start={df.index.min()} end={df.index.max()}")
+    df = get_ohlcv(cfg.symbol, exchange=cfg.exchange, timeframe=cfg.timeframe, days_back=cfg.days_back)
+    if cfg.tail_rows and cfg.tail_rows > 0:
+        df = df.tail(cfg.tail_rows)
+        tail_label = str(cfg.tail_rows)
+    else:
+        tail_label = "none"
+    print(f"Loaded {len(df)} rows | start={df.index.min()} end={df.index.max()} | days_back={cfg.days_back} | tail_rows={tail_label}")
     bt = Backtest(df, StrategyCls, cash=ENGINE_CASH, commission=0.0, exclusive_orders=True, trade_on_close=False)
     stats = bt.run()
     meta = pd.DataFrame(getattr(StrategyCls, "last_trade_log", []))
@@ -283,6 +293,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prop-profile", default="apex_50k_eval", choices=list_prop_profiles())
     parser.add_argument("--symbols", default="all", help="Comma-separated symbols or 'all'")
     parser.add_argument("--variants", default="all", help="Comma-separated variants or 'all'")
+    parser.add_argument("--days-back", type=int, default=None, help="Override days_back for all symbols")
+    parser.add_argument("--tail-rows", type=int, default=None, help="Override tail row cap for all symbols")
+    parser.add_argument("--no-tail", action="store_true", help="Disable tail row cap and use full loaded lookback")
     parser.add_argument("--list-profiles", action="store_true")
     args = parser.parse_args(argv)
 
@@ -294,11 +307,31 @@ def main(argv: list[str] | None = None) -> int:
     symbols = list(INSTRUMENTS) if args.symbols == "all" else [s.strip() for s in args.symbols.split(",") if s.strip()]
     variants = list(VARIANTS) if args.variants == "all" else [v.strip() for v in args.variants.split(",") if v.strip()]
 
+    instrument_overrides: Dict[str, InstrumentConfig] = {}
+    for sym in symbols:
+        base = INSTRUMENTS[sym]
+        days_back = args.days_back if args.days_back is not None else base.days_back
+        if args.no_tail:
+            tail_rows = 0
+        elif args.tail_rows is not None:
+            tail_rows = args.tail_rows
+        else:
+            tail_rows = base.tail_rows
+        instrument_overrides[sym] = InstrumentConfig(
+            symbol=base.symbol,
+            exchange=base.exchange,
+            timeframe=base.timeframe,
+            days_back=days_back,
+            tail_rows=tail_rows,
+            contracts=base.contracts,
+            dollars_per_point=base.dollars_per_point,
+        )
+
     metas = []
     debugs = []
     for sym in symbols:
         for variant in variants:
-            stats, meta, debug = run_symbol_variant(INSTRUMENTS[sym], variant, VARIANTS[variant], args.prop_profile)
+            stats, meta, debug = run_symbol_variant(instrument_overrides[sym], variant, VARIANTS[variant], args.prop_profile)
             print(f"{variant} | {sym} engine trades={stats.get('# Trades', np.nan)}")
             if not meta.empty:
                 metas.append(meta)
@@ -307,8 +340,13 @@ def main(argv: list[str] | None = None) -> int:
 
     combined = pd.concat(metas, ignore_index=True) if metas else pd.DataFrame()
     debug_df = pd.concat(debugs, ignore_index=True) if debugs else pd.DataFrame()
-    out_trades = ROOT / f"top_bottom_ticking_trade_log_{args.prop_profile}.csv"
-    out_debug = ROOT / f"top_bottom_ticking_debug_counts_{args.prop_profile}.csv"
+
+    tail_suffix = "notail" if args.no_tail else f"tail{args.tail_rows}" if args.tail_rows is not None else f"tail{INSTRUMENTS[symbols[0]].tail_rows}"
+    days_suffix = f"{args.days_back}d" if args.days_back is not None else f"{INSTRUMENTS[symbols[0]].days_back}d"
+    suffix = f"_{args.prop_profile}_{days_suffix}_{tail_suffix}"
+
+    out_trades = ROOT / f"top_bottom_ticking_trade_log{suffix}.csv"
+    out_debug = ROOT / f"top_bottom_ticking_debug_counts{suffix}.csv"
     if not combined.empty:
         combined.to_csv(out_trades, index=False)
         print(f"Saved trades -> {out_trades}")
