@@ -1,0 +1,65 @@
+MNQ:
+  exchange: tradovate
+  asset_class: equity_index
+  dollars_per_point: 2.0
+  tick_size: 0.25
+  tick_value: 0.50
+  min_stop_points: 8.0
+  max_stop_points: 45.0
+  atr_stop_mult: 1.4
+  target_r: 2.0
+  max_contracts: 6
+  breakout_lookback: 55
+  pullback_lookback: 20
+MES:
+  exchange: tradovate
+  asset_class: equity_index
+  dollars_per_point: 5.0
+  tick_size: 0.25
+  tick_value: 1.25
+  min_stop_points: 3.0
+  max_stop_points: 15.0
+  atr_stop_mult: 1.4
+  target_r: 2.0
+  max_contracts: 6
+  breakout_lookback: 55
+  pullback_lookback: 20
+MYM:
+  exchange: tradovate
+  asset_class: equity_index
+  dollars_per_point: 0.50
+  tick_size: 1.0
+  tick_value: 0.50
+  min_stop_points: 40.0
+  max_stop_points: 180.0
+  atr_stop_mult: 1.4
+  target_r: 2.0
+  max_contracts: 8
+  breakout_lookback: 55
+  pullback_lookback: 20
+MGC:
+  exchange: tradovate
+  asset_class: metals
+  dollars_per_point: 10.0
+  tick_size: 0.10
+  tick_value: 1.0
+  min_stop_points: 2.5
+  max_stop_points: 14.0
+  atr_stop_mult: 1.5
+  target_r: 2.0
+  max_contracts: 4
+  breakout_lookback: 55
+  pullback_lookback: 20
+MCL:
+  exchange: tradovate
+  asset_class: energy
+  dollars_per_point: 100.0
+  tick_size: 0.01
+  tick_value: 1.0
+  min_stop_points: 0.12
+  max_stop_points: 0.75
+  atr_stop_mult: 1.6
+  target_r: 2.0
+  max_contracts: 5
+  breakout_lookback: 55
+  pullback_lookback: 20

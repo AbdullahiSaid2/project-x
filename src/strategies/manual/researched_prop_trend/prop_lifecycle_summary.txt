@@ -1,0 +1,29 @@
+================ PROP LIFECYCLE SUMMARY ================
+Eval attempts: 202
+Eval passed: 98
+Eval failed max loss: 103
+PA accounts started: 98
+PA blown: 98
+PA active/data-ended: 0
+
+Eval pass rate: 48.51%
+Avg eval days to pass: 4.21
+Median eval days to pass: 3.00
+Avg eval trades to pass: 27.08
+Avg eval PnL at pass: $3,457.20
+
+Total PA net PnL before PA stops/data end: $191,302.50
+Avg PA net PnL: $1,952.07
+Median PA net PnL: $-218.50
+Best PA net PnL: $35,499.50
+Worst PA net PnL: $-2,213.00
+Avg PA days survived: 7.21
+Median PA days survived: 5.00
+Avg PA trades: 51.96
+
+Lifecycle events:
+event_type
+DLL_PAUSE               360
+EVAL_FAILED_MAX_LOSS    103
+EVAL_PASSED              98
+PA_BLOWN_MAX_LOSS        98

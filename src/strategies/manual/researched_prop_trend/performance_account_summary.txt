@@ -1,0 +1,11 @@
+================ PERFORMANCE ACCOUNT SUMMARY ================
+Profile: apex_50k_pa
+Trades analysed: 10733
+Start balance: $50,000.00
+Final balance: $429,728.00
+Net PnL: $379,728.00
+Daily loss breaches: 631
+Drawdown breaches: 5058
+Worst day: $-1,681.50
+Best day: $11,328.00
+Worst EOD drawdown: $-22,924.25

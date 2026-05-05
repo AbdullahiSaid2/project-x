@@ -270,7 +270,7 @@ Single symbol example
 python src/strategies/deployed/top_bottom_ticking/parity_check.py \
   --symbol MYM \
   --timeframe 5m \
-  --start "2026-04-20T18:30:00+00:00" \
+  --start "2026-04-22T18:30:00+00:00" \
   --end "2026-04-20T23:15:00+00:00" \
   --output-dir /Users/Abdullahi/trading-project/trading_system/src/strategies/deployed/top_bottom_ticking/logs
 
