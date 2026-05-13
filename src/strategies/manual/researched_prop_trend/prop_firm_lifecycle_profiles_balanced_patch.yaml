@@ -1,0 +1,60 @@
+apex_50k_eod_lifecycle_balanced:
+  prop_firm: apex
+  account_size: 50000
+
+  eval_profit_target: 3000
+  eval_max_drawdown: 2000
+  eval_daily_loss_limit: 1000
+  eval_max_calendar_days: 30
+  eval_min_trading_days: 0
+
+  pa_max_drawdown: 2000
+  pa_daily_loss_limit: 1000
+  pa_drawdown_stop_level: 50100
+  pa_safety_net_balance: 52100
+  pa_min_balance_to_request: 52600
+
+  pa_daily_profit_target: 650
+  pa_daily_soft_loss_stop: 350
+  pa_max_trades_per_day: 6
+  pa_pause_after_consecutive_losses: 2
+  pa_post_payout_buffer: 500
+
+  min_qualifying_days: 5
+  min_qualifying_day_profit: 250
+  min_payout_amount: 500
+  max_payouts_per_pa: 6
+  consistency_rule_pct: 50
+  close_pa_after_max_payouts: true
+  payout_caps: [1500, 1500, 2000, 2500, 2500, 3000]
+
+
+apex_50k_eod_lifecycle_payout_fast:
+  prop_firm: apex
+  account_size: 50000
+
+  eval_profit_target: 3000
+  eval_max_drawdown: 2000
+  eval_daily_loss_limit: 1000
+  eval_max_calendar_days: 30
+  eval_min_trading_days: 0
+
+  pa_max_drawdown: 2000
+  pa_daily_loss_limit: 1000
+  pa_drawdown_stop_level: 50100
+  pa_safety_net_balance: 52100
+  pa_min_balance_to_request: 52600
+
+  pa_daily_profit_target: 400
+  pa_daily_soft_loss_stop: 300
+  pa_max_trades_per_day: 6
+  pa_pause_after_consecutive_losses: 2
+  pa_post_payout_buffer: 500
+
+  min_qualifying_days: 5
+  min_qualifying_day_profit: 250
+  min_payout_amount: 500
+  max_payouts_per_pa: 6
+  consistency_rule_pct: 50
+  close_pa_after_max_payouts: true
+  payout_caps: [1500, 1500, 2000, 2500, 2500, 3000]

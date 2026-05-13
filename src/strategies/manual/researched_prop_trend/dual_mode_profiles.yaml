@@ -1,0 +1,29 @@
+apex_50k_dual_mode:
+
+  eval:
+    account_size: 50000
+    profit_target: 3000
+    max_drawdown: 2000
+    drawdown_type: eod
+
+    risk_per_trade: 200
+    daily_profit_target: 1000
+    daily_soft_loss_stop: 800
+    max_trades_per_day: 8
+    pause_after_consecutive_losses: 1
+
+  pa:
+    account_size: 50000
+    max_drawdown: 2000
+    drawdown_type: eod
+
+    risk_per_trade: 75
+    daily_profit_target: 400
+    daily_soft_loss_stop: 250
+    max_trades_per_day: 4
+    pause_after_consecutive_losses: 1
+
+    payout_buffer: 750
+    payout_lock_days: 3
+    reduce_risk_after_payout: true
+    reduced_risk_per_trade: 50

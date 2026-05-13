@@ -1,0 +1,43 @@
+Loading data and building features...
+
+=== loading MNQ ===
+📦 Using local cache: /Users/Abdullahi/trading-project/trading_system/src/data/databento_cache/MNQ_1m.parquet
+MNQ: rows=330758 start=2025-05-11 22:00:00 end=2026-04-20 10:25:00
+
+=== loading MYM ===
+📦 Using local cache: /Users/Abdullahi/trading-project/trading_system/src/data/databento_cache/MYM_1m.parquet
+MYM: rows=318638 start=2025-05-11 22:00:00 end=2026-04-20 10:32:00
+
+Running ict_fractal_v473_exact event engine v2 over 330779 timestamps...
+
+================ EVENT ENGINE V2 FINAL REPORT ================
+Strategy:                  ict_fractal_v473_exact
+Profile:                   apex_50k_pa
+Risk per trade:             $125.00
+Daily profit target:        500.0
+Daily soft loss stop:       350.0
+Unrealized daily lock:      True
+Account drawdown lock:      True
+Trades:                    194
+Gross PnL:                 $14,352.16
+Commissions:               $3,628.00
+Net PnL:                   $10,724.16
+Final balance:             $60,724.16
+Rejected signals:          239
+
+By symbol:
+symbol  trades  net_pnl_dollars  avg_trade  median_trade  win_rate_pct  worst_trade  best_trade
+   MNQ     100      7176.237500  71.762375     -64.15625     47.000000  -132.617857       633.0
+   MYM      94      3547.921429  37.743845    -143.58750     36.170213  -165.000000       644.0
+
+Daily lock counts:
+day_lock_reason
+none                        189
+consecutive_losses           22
+daily_equity_profit_lock     19
+daily_profit_target          14
+
+Wrote files:
+  src/backtesting/event_engine/outputs/opt_0010_ict_fractal_event_trade_log.csv
+  src/backtesting/event_engine/outputs/opt_0010_ict_fractal_event_rejected_signals.csv
+  src/backtesting/event_engine/outputs/opt_0010_ict_fractal_event_daily_summary.csv

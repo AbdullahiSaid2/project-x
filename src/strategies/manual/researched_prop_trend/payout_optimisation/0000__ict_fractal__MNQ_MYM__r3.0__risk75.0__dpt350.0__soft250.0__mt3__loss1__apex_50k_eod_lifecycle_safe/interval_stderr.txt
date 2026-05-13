@@ -1,0 +1,1 @@
+/Users/Abdullahi/trading-project/trading_system/venv/bin/python: No module named src.strategies.manual.researched_prop_trend.payout_interval_report

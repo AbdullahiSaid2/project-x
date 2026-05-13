@@ -1,0 +1,25 @@
+================ PROP LIFECYCLE PAYOUT SUMMARY ================
+Profile: apex_50k_eod_lifecycle_safe
+Prop firm: apex
+PA daily profit target: 500.0
+PA soft loss stop: 350.0
+PA max trades/day: 5
+PA post-payout buffer: 750.0
+
+Eval attempts: 11
+Eval passed: 0
+Eval failed max loss: 0
+Eval pass rate: 0.00%
+
+PA accounts started: 0
+PA blown: 0
+PA completed max payouts: 0
+PA active/data-ended: 0
+
+
+Wrote files:
+  /Users/Abdullahi/trading-project/trading_system/src/strategies/manual/researched_prop_trend/prop_lifecycle_payout_summary.txt
+  /Users/Abdullahi/trading-project/trading_system/src/strategies/manual/researched_prop_trend/prop_lifecycle_payout_cycles.csv
+  /Users/Abdullahi/trading-project/trading_system/src/strategies/manual/researched_prop_trend/prop_lifecycle_payout_events.csv
+  /Users/Abdullahi/trading-project/trading_system/src/strategies/manual/researched_prop_trend/prop_lifecycle_payout_daily.csv
+  /Users/Abdullahi/trading-project/trading_system/src/strategies/manual/researched_prop_trend/prop_lifecycle_payouts.csv
