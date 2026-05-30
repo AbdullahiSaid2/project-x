@@ -1,0 +1,18 @@
+Top Bottom Ticking AXL Build Summary
+
+Files changed:
+- ict_top_bottom_ticking.py
+- top_bottom_ticking_shared.py
+
+Main improvements:
+1. Added HTF PD-array anchor layer.
+2. Added MTF POI confluence layer.
+3. Added external/internal liquidity separation.
+4. Added close-based ChOCh reporting.
+5. Added A/B/C AXL grading.
+6. Added optional filtering mode.
+7. Added safer ODE-style B-grade entries.
+8. Added enhanced AXL reporting.
+9. Fixed force-flat window so trading resumes after 18:00 ET.
+
+No ICT_MULTI_SETUP files are used.

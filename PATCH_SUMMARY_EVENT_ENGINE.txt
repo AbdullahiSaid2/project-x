@@ -1,0 +1,11 @@
+Added:
+- src/strategies/manual/top_bottom_ticking_event_engine.py
+- README_EVENT_ENGINE.md
+
+Purpose:
+- Replays top_bottom_ticking combined trade logs as one event-driven portfolio account.
+- Adds Eval -> PA lifecycle simulation.
+- Adds portfolio-level daily loss, max loss, max trades/day, max open trades, max daily open risk.
+- Adds Monte Carlo by session day for robustness testing.
+
+This does not replace ict_top_bottom_ticking.py or top_bottom_ticking_shared.py.

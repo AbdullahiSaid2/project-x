@@ -123,6 +123,18 @@ class SymbolSpec:
     require_internal_baseline: bool
     require_internal_sniper: bool
 
+
+@dataclass(frozen=True)
+class AXLConfig:
+    mode: str = "off"
+    min_b_score: int = 5
+    min_a_score: int = 8
+    require_internal: bool = False
+    require_htf_anchor: bool = False
+    require_mtf_poi: bool = False
+    safe_entry_for_b: bool = True
+    liquidity_close_ticks: int = 20
+
 INSTRUMENTS: Dict[str, InstrumentConfig] = {
     "MNQ": InstrumentConfig("MNQ", "tradovate", "5m", 365, 120_000, 5, 2.0),
     "MES": InstrumentConfig("MES", "tradovate", "5m", 365, 120_000, 5, 5.0),
@@ -180,10 +192,11 @@ def _prepare_meta(meta: pd.DataFrame, cfg: InstrumentConfig, variant_name: str, 
     return out
 
 
-def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base_cls: type, prop_profile_name: str) -> type:
+def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base_cls: type, prop_profile_name: str, axl_config: AXLConfig | None = None) -> type:
     spec = SYMBOL_SPECS[cfg.symbol]
     profile = get_prop_profile(prop_profile_name)
     is_sniper = variant_name == "type1_sniper"
+    axl = axl_config or AXLConfig()
 
     class GuardedStrategy(base_cls):
         fixed_size = cfg.contracts
@@ -194,6 +207,17 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
         require_internal_sweep_filter = spec.require_internal_sniper if is_sniper else spec.require_internal_baseline
         min_stop_points = spec.min_stop_sniper if is_sniper else spec.min_stop_baseline
         max_stop_points = spec.max_stop_sniper if is_sniper else spec.max_stop_baseline
+
+        # AXL overlay toggles are passed from CLI and consumed by ict_top_bottom_ticking.py.
+        axl_mode = axl.mode
+        axl_min_b_score = axl.min_b_score
+        axl_min_a_score = axl.min_a_score
+        axl_require_internal = axl.require_internal
+        axl_require_htf_anchor = axl.require_htf_anchor
+        axl_require_mtf_poi = axl.require_mtf_poi
+        axl_safe_entry_for_b = axl.safe_entry_for_b
+        axl_liquidity_close_ticks = axl.liquidity_close_ticks
+
         last_trade_log: List[dict] = []
         last_debug_counts: dict = {}
 
@@ -266,8 +290,8 @@ def _build_guarded_strategy_class(cfg: InstrumentConfig, variant_name: str, base
     return GuardedStrategy
 
 
-def run_symbol_variant(cfg: InstrumentConfig, variant_name: str, base_cls: type, prop_profile_name: str):
-    StrategyCls = _build_guarded_strategy_class(cfg, variant_name, base_cls, prop_profile_name)
+def run_symbol_variant(cfg: InstrumentConfig, variant_name: str, base_cls: type, prop_profile_name: str, axl_config: AXLConfig | None = None):
+    StrategyCls = _build_guarded_strategy_class(cfg, variant_name, base_cls, prop_profile_name, axl_config)
     print(f"\n=== {cfg.symbol} | {variant_name} | {prop_profile_name} ===")
     df = get_ohlcv(cfg.symbol, exchange=cfg.exchange, timeframe=cfg.timeframe, days_back=cfg.days_back)
     if cfg.tail_rows and cfg.tail_rows > 0:
@@ -288,6 +312,92 @@ def run_symbol_variant(cfg: InstrumentConfig, variant_name: str, base_cls: type,
     return stats, meta, debug
 
 
+
+def _profit_factor(values: pd.Series) -> float:
+    wins = values[values > 0].sum()
+    losses = -values[values < 0].sum()
+    if losses == 0:
+        return float("inf") if wins > 0 else 0.0
+    return float(wins / losses)
+
+
+def _win_rate(values: pd.Series) -> float:
+    if len(values) == 0:
+        return 0.0
+    return float((values > 0).mean() * 100.0)
+
+
+def _write_group_summary(df: pd.DataFrame, group_cols: list[str], out_path: Path):
+    if df.empty:
+        return
+    required = {"gross_pnl_dollars_dynamic"}
+    if not required.issubset(set(df.columns)):
+        return
+
+    rows = []
+    for keys, g in df.groupby(group_cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        pnl = pd.to_numeric(g["gross_pnl_dollars_dynamic"], errors="coerce").fillna(0.0)
+        row = {col: key for col, key in zip(group_cols, keys)}
+        row.update(
+            {
+                "trades": int(len(g)),
+                "gross_pnl_dollars_dynamic": float(pnl.sum()),
+                "avg_pnl_dollars": float(pnl.mean()) if len(pnl) else 0.0,
+                "win_rate_pct": _win_rate(pnl),
+                "profit_factor": _profit_factor(pnl),
+                "best_trade": float(pnl.max()) if len(pnl) else 0.0,
+                "worst_trade": float(pnl.min()) if len(pnl) else 0.0,
+            }
+        )
+        rows.append(row)
+
+    if rows:
+        pd.DataFrame(rows).sort_values(group_cols).to_csv(out_path, index=False)
+        print(f"Saved summary -> {out_path}")
+
+
+def write_enhanced_summaries(combined: pd.DataFrame, suffix: str):
+    if combined.empty:
+        return
+
+    # Existing trade-level output is still the source of truth. These summaries make it
+    # easier to judge whether the AXL overlay actually improves expectancy.
+    if "calendar_exit_date_et" in combined.columns:
+        daily = combined.copy()
+        daily["calendar_exit_date_et"] = pd.to_datetime(daily["calendar_exit_date_et"], errors="coerce").dt.date
+        _write_group_summary(
+            daily,
+            ["symbol", "variant", "calendar_exit_date_et"],
+            ROOT / f"top_bottom_ticking_daily_summary{suffix}.csv",
+        )
+
+    if "exit_time_et_naive" in combined.columns:
+        monthly = combined.copy()
+        monthly["exit_month_et"] = pd.to_datetime(monthly["exit_time_et_naive"], errors="coerce").dt.to_period("M").astype(str)
+        _write_group_summary(
+            monthly,
+            ["symbol", "variant", "exit_month_et"],
+            ROOT / f"top_bottom_ticking_monthly_summary{suffix}.csv",
+        )
+
+    _write_group_summary(
+        combined,
+        ["symbol", "variant"],
+        ROOT / f"top_bottom_ticking_variant_summary{suffix}.csv",
+    )
+
+    if "axl_grade" in combined.columns:
+        axl_cols = ["symbol", "variant", "axl_grade"]
+        _write_group_summary(
+            combined,
+            axl_cols,
+            ROOT / f"top_bottom_ticking_axl_grade_summary{suffix}.csv",
+        )
+
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Top/bottom ticking backtest with separate prop-firm profiles.")
     parser.add_argument("--prop-profile", default="apex_50k_eval", choices=list_prop_profiles())
@@ -296,6 +406,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--days-back", type=int, default=None, help="Override days_back for all symbols")
     parser.add_argument("--tail-rows", type=int, default=None, help="Override tail row cap for all symbols")
     parser.add_argument("--no-tail", action="store_true", help="Disable tail row cap and use full loaded lookback")
+
+    # AXL overlay controls. Use log_only first to measure before filtering.
+    parser.add_argument("--axl-mode", default="off", choices=["off", "log_only", "filter"], help="AXL overlay mode")
+    parser.add_argument("--axl-min-b-score", type=int, default=5, help="Minimum score for B-grade AXL setups")
+    parser.add_argument("--axl-min-a-score", type=int, default=8, help="Minimum score for A-grade AXL setups")
+    parser.add_argument("--axl-require-internal", action="store_true", help="Filter mode: require internal liquidity sweep")
+    parser.add_argument("--axl-require-htf-anchor", action="store_true", help="Filter mode: require HTF PD-array anchor")
+    parser.add_argument("--axl-require-mtf-poi", action="store_true", help="Filter mode: require MTF PD-array POI")
+    parser.add_argument("--axl-disable-safe-entry-for-b", action="store_true", help="Do not move B setups to deeper ODE-style entries")
+    parser.add_argument("--axl-liquidity-close-ticks", type=int, default=20, help="Ticks used to decide whether liquidity is close to a PD array")
     parser.add_argument("--list-profiles", action="store_true")
     args = parser.parse_args(argv)
 
@@ -303,6 +423,17 @@ def main(argv: list[str] | None = None) -> int:
         for name in list_prop_profiles():
             print(name)
         return 0
+
+    axl_config = AXLConfig(
+        mode=args.axl_mode,
+        min_b_score=args.axl_min_b_score,
+        min_a_score=args.axl_min_a_score,
+        require_internal=bool(args.axl_require_internal),
+        require_htf_anchor=bool(args.axl_require_htf_anchor),
+        require_mtf_poi=bool(args.axl_require_mtf_poi),
+        safe_entry_for_b=not bool(args.axl_disable_safe_entry_for_b),
+        liquidity_close_ticks=args.axl_liquidity_close_ticks,
+    )
 
     symbols = list(INSTRUMENTS) if args.symbols == "all" else [s.strip() for s in args.symbols.split(",") if s.strip()]
     variants = list(VARIANTS) if args.variants == "all" else [v.strip() for v in args.variants.split(",") if v.strip()]
@@ -331,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
     debugs = []
     for sym in symbols:
         for variant in variants:
-            stats, meta, debug = run_symbol_variant(instrument_overrides[sym], variant, VARIANTS[variant], args.prop_profile)
+            stats, meta, debug = run_symbol_variant(instrument_overrides[sym], variant, VARIANTS[variant], args.prop_profile, axl_config)
             print(f"{variant} | {sym} engine trades={stats.get('# Trades', np.nan)}")
             if not meta.empty:
                 metas.append(meta)
@@ -343,7 +474,8 @@ def main(argv: list[str] | None = None) -> int:
 
     tail_suffix = "notail" if args.no_tail else f"tail{args.tail_rows}" if args.tail_rows is not None else f"tail{INSTRUMENTS[symbols[0]].tail_rows}"
     days_suffix = f"{args.days_back}d" if args.days_back is not None else f"{INSTRUMENTS[symbols[0]].days_back}d"
-    suffix = f"_{args.prop_profile}_{days_suffix}_{tail_suffix}"
+    axl_suffix = f"_axl{args.axl_mode}" if args.axl_mode != "off" else ""
+    suffix = f"_{args.prop_profile}_{days_suffix}_{tail_suffix}{axl_suffix}"
 
     out_trades = ROOT / f"top_bottom_ticking_trade_log{suffix}.csv"
     out_debug = ROOT / f"top_bottom_ticking_debug_counts{suffix}.csv"
@@ -351,6 +483,7 @@ def main(argv: list[str] | None = None) -> int:
         combined.to_csv(out_trades, index=False)
         print(f"Saved trades -> {out_trades}")
         print(f"Pre-entry-guard realized PnL: ${combined['gross_pnl_dollars_dynamic'].sum():.2f}")
+        write_enhanced_summaries(combined, suffix)
     if not debug_df.empty:
         debug_df.to_csv(out_debug, index=False)
         print(f"Saved debug -> {out_debug}")

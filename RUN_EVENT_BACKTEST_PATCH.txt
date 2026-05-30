@@ -1,0 +1,12 @@
+# PATCH FOR src/backtesting/event_engine/run_event_backtest.py
+
+# In load_adapter(name: str), add:
+
+if name == "ict_fractal_v2_pro":
+    from src.strategies.adapters.ict_fractal_v2_pro_event_adapter import (
+        ICTFractalV2ProAdapter,
+    )
+    return ICTFractalV2ProAdapter()
+
+
+# In parse_args(), add "ict_fractal_v2_pro" to --strategy choices.

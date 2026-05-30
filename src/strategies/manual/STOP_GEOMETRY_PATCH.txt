@@ -1,0 +1,77 @@
+
+# PATCH SNIPPET FOR ict_top_bottom_ticking_v2.py
+
+# =========================================================
+# UPDATED STOP GEOMETRY + TARGET R RECOMMENDATION
+# =========================================================
+#
+# Replace the SYMBOL_STOP_RULES section with this:
+#
+
+SYMBOL_STOP_RULES = {
+    # MNQ widened substantially to survive real ICT retracements.
+    "MNQ": {
+        "min_stop": 12.0,
+        "max_stop": 45.0,
+        "buffer": 0.50,
+    },
+
+    # MES scaled version of MNQ.
+    "MES": {
+        "min_stop": 6.0,
+        "max_stop": 22.0,
+        "buffer": 0.25,
+    },
+
+    # MYM naturally needs larger structure room.
+    "MYM": {
+        "min_stop": 35.0,
+        "max_stop": 160.0,
+        "buffer": 2.0,
+    },
+
+    # Gold.
+    "MGC": {
+        "min_stop": 1.2,
+        "max_stop": 8.0,
+        "buffer": 0.15,
+    },
+
+    # Oil.
+    "MCL": {
+        "min_stop": 0.08,
+        "max_stop": 0.8,
+        "buffer": 0.02,
+    },
+}
+
+DEFAULT_STOP_RULES = {
+    "min_stop": 6.0,
+    "max_stop": 45.0,
+    "buffer": 0.25,
+}
+
+# =========================================================
+# IMPORTANT
+# =========================================================
+#
+# Recommended new run settings:
+#
+#   --target-r 5.0
+#
+# NOT:
+#
+#   --target-r 10.0
+#
+# Reason:
+#
+# Wider structure stops reduce fake stopouts,
+# but realistic intraday expansion now fits
+# more naturally in the 3R–5R range.
+#
+# Goal now:
+#
+#   improve winrate consistency
+#   improve payout stability
+#   reduce stopout noise
+#
