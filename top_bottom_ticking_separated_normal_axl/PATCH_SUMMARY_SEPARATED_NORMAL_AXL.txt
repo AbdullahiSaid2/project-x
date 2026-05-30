@@ -1,0 +1,14 @@
+Created separate normal and AXL Top Bottom Ticking tracks:
+
+1. Normal/original:
+   - ict_top_bottom_ticking.py
+   - top_bottom_ticking_shared.py
+
+2. AXL version:
+   - ict_top_bottom_ticking_axl.py
+   - top_bottom_ticking_shared_axl.py
+
+3. Event-driven Eval/PA replay:
+   - top_bottom_ticking_event_engine.py
+
+The AXL runner imports ict_top_bottom_ticking_axl, so it no longer overwrites or depends on changing the normal strategy module. AXL trade/debug outputs are also prefixed with top_bottom_ticking_axl_* to avoid mixing reports.
